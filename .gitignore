@@ -1,0 +1,50 @@
+# Environment files
+.env
+.env.local
+.env.production
+
+# Database files
+*.db
+*.sqlite
+
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+movies-server
+movies-mcp-server
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dependency directories
+vendor/
+
+# Go sum file (will be regenerated)
+go.sum
+
+# Temporary files
+*.tmp
+*.log
+
+# Build directories
+dist/
+build/

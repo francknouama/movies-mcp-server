@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(go build:*)",
+      "Bash(make:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker exec:*)",
+      "Bash(chmod:*)",
+      "Bash(go run:*)",
+      "Bash(./test_phase4.sh:*)",
+      "Bash(./test_init.sh:*)",
+      "Bash(./test_search.sh:*)",
+      "Bash(go test:*)",
+      "Bash(./test_phase5.sh:*)",
+      "Bash(cp:*)",
+      "Bash(touch:*)",
+      "WebFetch(domain:www.imdb.com)",
+      "Bash(psql:*)",
+      "WebFetch(domain:www.themoviedb.org)",
+      "mcp__ide__getDiagnostics",
+      "Bash(find:*)"
+    ],
+    "deny": []
+  }
+}
