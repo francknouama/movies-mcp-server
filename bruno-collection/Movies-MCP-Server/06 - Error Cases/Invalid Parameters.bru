@@ -1,0 +1,79 @@
+meta {
+  name: Invalid Parameters
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/mcp
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 41,
+    "method": "tools/call",
+    "params": {
+      "name": "add_movie",
+      "arguments": {
+        "title": "",
+        "year": "invalid_year",
+        "rating": 15.0
+      }
+    }
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response is valid JSON-RPC error", function() {
+    expect(res.getBody()).to.have.property('jsonrpc', '2.0');
+    expect(res.getBody()).to.have.property('id', 41);
+    expect(res.getBody()).to.have.property('error');
+  });
+  
+  test("Error code is invalid params", function() {
+    const error = res.getBody().error;
+    expect(error).to.have.property('code', -32602);
+    expect(error).to.have.property('message');
+    expect(error.message).to.include('validation');
+  });
+  
+  test("Error details validation failures", function() {
+    const error = res.getBody().error;
+    expect(error.message).to.include('title');
+  });
+}
+
+docs {
+  # Invalid Parameters
+  
+  Tests error handling when providing invalid parameters to a tool call.
+  This example tests the add_movie tool with invalid data:
+  - Empty title (required field)
+  - Invalid year type (string instead of number)
+  - Rating out of range (15.0 > 10.0 max)
+  
+  ## Expected Response
+  
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "id": 41,
+    "error": {
+      "code": -32602,
+      "message": "Invalid parameters: title cannot be empty"
+    }
+  }
+  ```
+}

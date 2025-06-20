@@ -1,0 +1,98 @@
+meta {
+  name: Update Movie
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/mcp
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 12,
+    "method": "tools/call",
+    "params": {
+      "name": "update_movie",
+      "arguments": {
+        "id": {{movie_id || 1}},
+        "rating": 9.0,
+        "description": "A computer programmer discovers that reality as he knows it is not real. Updated with better rating."
+      }
+    }
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response is valid JSON-RPC", function() {
+    expect(res.getBody()).to.have.property('jsonrpc', '2.0');
+    expect(res.getBody()).to.have.property('id', 12);
+    expect(res.getBody()).to.have.property('result');
+  });
+  
+  test("Movie update successful", function() {
+    const result = res.getBody().result;
+    expect(result).to.have.property('content');
+    expect(result.content).to.be.an('array');
+    expect(result.content[0]).to.have.property('type', 'text');
+    expect(result.content[0].text).to.include('Successfully updated');
+  });
+  
+  test("Updated values reflected", function() {
+    const result = res.getBody().result;
+    const text = result.content[0].text;
+    const jsonMatch = text.match(/\{.*\}/s);
+    expect(jsonMatch).to.not.be.null;
+    
+    const movieData = JSON.parse(jsonMatch[0]);
+    expect(movieData.rating).to.equal(9.0);
+    expect(movieData.description).to.include('Updated with better rating');
+  });
+}
+
+docs {
+  # Update Movie
+  
+  Updates an existing movie in the database. Only provided fields will be updated.
+  
+  ## Required Parameters
+  - `id` - Movie ID (integer)
+  
+  ## Optional Parameters (at least one required)
+  - `title` - Updated movie title (string, 1-255 characters)
+  - `director` - Updated director name (string, 1-255 characters)
+  - `year` - Updated release year (integer, 1800-current+10)
+  - `genre` - Updated movie genre (string, 1-100 characters)
+  - `rating` - Updated movie rating (number, 1.0-10.0)
+  - `description` - Updated movie description (string)
+  - `poster_url` - Updated poster URL (string, max 500 characters, empty string removes poster)
+  
+  ## Expected Response
+  
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "id": 12,
+    "result": {
+      "content": [
+        {
+          "type": "text", 
+          "text": "Successfully updated movie 'The Matrix' (ID: 1)\n\n{\"id\":1,\"title\":\"The Matrix\",\"director\":\"The Wachowskis\",\"year\":1999,\"genre\":\"Sci-Fi\",\"rating\":9.0,\"description\":\"A computer programmer discovers that reality as he knows it is not real. Updated with better rating.\",\"poster_url\":\"https://example.com/matrix-poster.jpg\"}"
+        }
+      ]
+    }
+  }
+  ```
+}

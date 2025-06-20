@@ -1,0 +1,88 @@
+meta {
+  name: Read Resource
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/mcp
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 31,
+    "method": "resources/read",
+    "params": {
+      "uri": "movie://{{movie_id || 1}}"
+    }
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response is valid JSON-RPC", function() {
+    expect(res.getBody()).to.have.property('jsonrpc', '2.0');
+    expect(res.getBody()).to.have.property('id', 31);
+    expect(res.getBody()).to.have.property('result');
+  });
+  
+  test("Resource content returned", function() {
+    const result = res.getBody().result;
+    expect(result).to.have.property('contents');
+    expect(result.contents).to.be.an('array');
+    expect(result.contents[0]).to.have.property('uri');
+    expect(result.contents[0]).to.have.property('mimeType', 'application/json');
+  });
+  
+  test("Movie data is valid JSON", function() {
+    const result = res.getBody().result;
+    const content = result.contents[0];
+    expect(content).to.have.property('text');
+    
+    const movieData = JSON.parse(content.text);
+    expect(movieData).to.have.property('id');
+    expect(movieData).to.have.property('title');
+  });
+}
+
+docs {
+  # Read Resource
+  
+  Reads the content of a specific movie resource by its URI.
+  
+  ## Required Parameters
+  - `uri` - Resource URI in format "movie://ID" (string)
+  
+  ## Expected Response
+  
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "id": 31,
+    "result": {
+      "contents": [
+        {
+          "uri": "movie://1",
+          "mimeType": "application/json",
+          "text": "{\"id\":1,\"title\":\"The Matrix\",\"director\":\"The Wachowskis\",\"year\":1999,\"genre\":\"Sci-Fi\",\"rating\":8.7,\"description\":\"A computer programmer discovers that reality as he knows it is not real.\",\"poster_url\":\"https://example.com/matrix-poster.jpg\"}"
+        }
+      ]
+    }
+  }
+  ```
+  
+  ## Error Cases
+  - Invalid URI format: Returns error with code -32602
+  - Resource not found: Returns error with code -32602 and message "Movie not found"
+}

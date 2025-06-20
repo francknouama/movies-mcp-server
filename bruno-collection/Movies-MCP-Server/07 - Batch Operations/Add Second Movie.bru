@@ -1,0 +1,68 @@
+meta {
+  name: Add Second Movie
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/mcp
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 51,
+    "method": "tools/call",
+    "params": {
+      "name": "add_movie",
+      "arguments": {
+        "title": "The Dark Knight",
+        "director": "Christopher Nolan",
+        "year": 2008,
+        "genre": "Action",
+        "rating": 9.0,
+        "description": "When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests of his ability to fight injustice."
+      }
+    }
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response is valid JSON-RPC", function() {
+    expect(res.getBody()).to.have.property('jsonrpc', '2.0');
+    expect(res.getBody()).to.have.property('id', 51);
+    expect(res.getBody()).to.have.property('result');
+  });
+  
+  test("Movie creation successful", function() {
+    const result = res.getBody().result;
+    expect(result.content[0].text).to.include('Successfully created');
+    expect(result.content[0].text).to.include('The Dark Knight');
+  });
+}
+
+vars:post-response {
+  dark_knight_id: res.getBody().result.content[0].text.match(/ID: (\d+)/)?.[1]
+}
+
+docs {
+  # Bulk Add Movies - Part 2
+  
+  This is the second request in the bulk add series, adding "The Dark Knight".
+  
+  ## Movie: The Dark Knight (2008)
+  - Director: Christopher Nolan
+  - Genre: Action
+  - Rating: 9.0/10
+}

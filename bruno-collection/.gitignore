@@ -1,0 +1,11 @@
+# Bruno-specific files that might contain secrets
+.env
+.env.*
+*.local.bru
+
+# Bruno internal files
+.bruno/
+
+# Any local overrides
+*-local.bru
+local/
