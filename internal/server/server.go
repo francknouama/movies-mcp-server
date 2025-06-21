@@ -10,7 +10,7 @@ import (
 )
 
 // MoviesServer is a compatibility wrapper around MCPServer
-// This maintains backward compatibility while using the new architecture
+// This maintains backward compatibility while using the new clean architecture
 type MoviesServer struct {
 	mcpServer *MCPServer
 	db        *sql.DB
