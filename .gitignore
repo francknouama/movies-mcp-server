@@ -17,6 +17,7 @@ movies-server
 movies-mcp-server
 main_new
 server-new
+server
 migrate
 
 # Test binary
@@ -54,3 +55,7 @@ build/
 
 # Planning documents
 IMPLEMENTATION_PLAN.md
+SERVER_REFACTORING_SUMMARY.md
+
+# Claude configuration
+.claude/settings.local.json
