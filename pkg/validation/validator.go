@@ -541,6 +541,13 @@ func MCPToolName() ValidationRule {
 		"search_movies",
 		"list_top_movies",
 		"get_movie_poster",
+		"add_actor",
+		"link_actor_to_movie",
+		"get_movie_cast",
+		"get_actor_movies",
+		"search_by_decade",
+		"search_by_rating_range",
+		"search_similar_movies",
 	}
 
 	return OneOf(interfaceSlice(validTools)...)
