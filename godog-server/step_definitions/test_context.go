@@ -259,15 +259,15 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 			Result: map[string]interface{}{
 				"resources": []interface{}{
 					map[string]interface{}{
-						"uri":         "db://statistics",
-						"name":        "Database Statistics",
-						"description": "Current database usage and performance statistics",
+						"uri":         "movies://database/info",
+						"name":        "Database Info",
+						"description": "Database statistics",
 						"mimeType":    "application/json",
 					},
 					map[string]interface{}{
-						"uri":         "storage://posters",
-						"name":        "Poster Storage",
-						"description": "Information about movie poster storage and statistics",
+						"uri":         "movies://posters/info",
+						"name":        "Poster Info",
+						"description": "Poster storage information",
 						"mimeType":    "application/json",
 					},
 				},
@@ -292,6 +292,26 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 						Message: "Title cannot be empty",
 					},
 				}
+			} else if _, isYearStr := arguments["year"].(string); isYearStr {
+				// Year provided as string instead of number
+				mockResponse = &MCPResponse{
+					JSONRPC: "2.0",
+					ID:      request.ID,
+					Error: &MCPError{
+						Code:    -32602,
+						Message: "Year must be a valid number",
+					},
+				}
+			} else if rating, hasRating := arguments["rating"].(float64); hasRating && rating > 10 {
+				// Rating out of range
+				mockResponse = &MCPResponse{
+					JSONRPC: "2.0",
+					ID:      request.ID,
+					Error: &MCPError{
+						Code:    -32602,
+						Message: "Rating must be between 0 and 10",
+					},
+				}
 			} else {
 				mockResponse = &MCPResponse{
 					JSONRPC: "2.0",
@@ -308,6 +328,34 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 			}
 		case "add_actor":
 			arguments := params["arguments"].(map[string]interface{})
+			
+			// Validate input data
+			name, hasName := arguments["name"].(string)
+			if !hasName || name == "" {
+				mockResponse = &MCPResponse{
+					JSONRPC: "2.0",
+					ID:      request.ID,
+					Error: &MCPError{
+						Code:    -32602,
+						Message: "Name cannot be empty",
+					},
+				}
+				break
+			}
+			
+			// Check if birth_year is valid
+			if _, isBirthYearStr := arguments["birth_year"].(string); isBirthYearStr {
+				mockResponse = &MCPResponse{
+					JSONRPC: "2.0",
+					ID:      request.ID,
+					Error: &MCPError{
+						Code:    -32602,
+						Message: "Birth year must be a number",
+					},
+				}
+				break
+			}
+			
 			mockResponse = &MCPResponse{
 				JSONRPC: "2.0",
 				ID:      request.ID,
@@ -408,12 +456,34 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 				},
 			}
 		case "link_actor_to_movie":
-			mockResponse = &MCPResponse{
-				JSONRPC: "2.0",
-				ID:      request.ID,
-				Result: map[string]interface{}{
-					"message": "Actor linked to movie successfully",
-				},
+			arguments := params["arguments"].(map[string]interface{})
+			
+			// Check if movie ID is 99999 (non-existent movie test case)
+			var movieID int
+			switch v := arguments["movie_id"].(type) {
+			case float64:
+				movieID = int(v)
+			case int:
+				movieID = v
+			}
+			
+			if movieID == 99999 {
+				mockResponse = &MCPResponse{
+					JSONRPC: "2.0",
+					ID:      request.ID,
+					Error: &MCPError{
+						Code:    -32602,
+						Message: "Movie not found",
+					},
+				}
+			} else {
+				mockResponse = &MCPResponse{
+					JSONRPC: "2.0",
+					ID:      request.ID,
+					Result: map[string]interface{}{
+						"message": "Actor linked to movie successfully",
+					},
+				}
 			}
 		case "unlink_actor_from_movie":
 			mockResponse = &MCPResponse{
@@ -424,46 +494,189 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 				},
 			}
 		case "get_movie_cast":
+			arguments := params["arguments"].(map[string]interface{})
+			var movieID int
+			
+			// Handle movie ID parameter
+			switch v := arguments["movie_id"].(type) {
+			case float64:
+				movieID = int(v)
+			case int:
+				movieID = v
+			default:
+				movieID = 1
+			}
+			
+			// Find actors linked to this movie
+			var actors []interface{}
+			
+			// Look through linked actors for this movie
+			if linkedActorsInterface, exists := ctx.storedValues["movie_"+fmt.Sprintf("%d", movieID)+"_actors"]; exists {
+				if linkedActors, ok := linkedActorsInterface.([]interface{}); ok {
+					for _, actorIDInterface := range linkedActors {
+						if actorIDFloat, ok := actorIDInterface.(float64); ok {
+							actorID := int(actorIDFloat)
+							
+							// Find actor data
+							for key, storedActorID := range ctx.createdActors {
+								if storedActorID == actorID {
+									if actorData, exists := ctx.storedValues[key+"_data"]; exists {
+										if data, ok := actorData.(map[string]interface{}); ok {
+											actor := make(map[string]interface{})
+											for k, v := range data {
+												actor[k] = v
+											}
+											actor["id"] = float64(actorID)
+											actors = append(actors, actor)
+										}
+									}
+									break
+								}
+							}
+						}
+					}
+				}
+			}
+			
+			// If no actors found, use default
+			if len(actors) == 0 {
+				actors = []interface{}{
+					map[string]interface{}{
+						"id":         float64(1),
+						"name":       "Test Actor",
+						"birth_year": float64(1970),
+						"bio":        "Test biography",
+					},
+				}
+			}
+			
 			mockResponse = &MCPResponse{
 				JSONRPC: "2.0",
 				ID:      request.ID,
 				Result: map[string]interface{}{
-					"actors": []interface{}{
-						map[string]interface{}{
-							"id":         float64(1),
-							"name":       "Test Actor",
-							"birth_year": float64(1970),
-							"bio":        "Test biography",
-						},
-					},
-					"total": float64(1),
+					"actors": actors,
+					"total":  float64(len(actors)),
 				},
 			}
 		case "get_actor_movies":
+			arguments := params["arguments"].(map[string]interface{})
+			var actorID int
+			
+			// Handle actor ID parameter
+			switch v := arguments["actor_id"].(type) {
+			case float64:
+				actorID = int(v)
+			case int:
+				actorID = v
+			default:
+				actorID = 1
+			}
+			
+			// Find movies linked to this actor
+			var movieIDs []interface{}
+			var actorName string = "Test Actor"
+			
+			// Get actor name
+			for key, storedActorID := range ctx.createdActors {
+				if storedActorID == actorID {
+					if actorData, exists := ctx.storedValues[key+"_data"]; exists {
+						if data, ok := actorData.(map[string]interface{}); ok {
+							if name, ok := data["name"].(string); ok {
+								actorName = name
+							}
+						}
+					}
+					break
+				}
+			}
+			
+			// Look through linked movies for this actor
+			if linkedMoviesInterface, exists := ctx.storedValues["actor_"+fmt.Sprintf("%d", actorID)+"_movies"]; exists {
+				if linkedMovies, ok := linkedMoviesInterface.([]interface{}); ok {
+					movieIDs = linkedMovies
+				}
+			}
+			
+			// If no movies found, use default
+			if len(movieIDs) == 0 {
+				movieIDs = []interface{}{float64(1), float64(2)}
+			}
+			
 			mockResponse = &MCPResponse{
 				JSONRPC: "2.0",
 				ID:      request.ID,
 				Result: map[string]interface{}{
-					"actor_id":     float64(1),
-					"actor_name":   "Test Actor",
-					"movie_ids":    []interface{}{float64(1), float64(2)},
-					"total_movies": float64(2),
+					"actor_id":     float64(actorID),
+					"actor_name":   actorName,
+					"movie_ids":    movieIDs,
+					"total_movies": float64(len(movieIDs)),
 				},
 			}
 		case "search_actors":
+			arguments := params["arguments"].(map[string]interface{})
+			
+			// Search through stored actors
+			var actors []interface{}
+			for key, _ := range ctx.createdActors {
+				if storedActor, exists := ctx.storedValues[key+"_data"]; exists {
+					if actorData, ok := storedActor.(map[string]interface{}); ok {
+						// Check search criteria
+						matchesSearch := true
+						
+						// Filter by name if provided
+						if searchName, hasName := arguments["name"].(string); hasName {
+							actorName, _ := actorData["name"].(string)
+							if !strings.Contains(strings.ToLower(actorName), strings.ToLower(searchName)) {
+								matchesSearch = false
+							}
+						}
+						
+						// Filter by birth year range if provided
+						if minYear, hasMin := arguments["min_birth_year"].(float64); hasMin {
+							birthYear, _ := actorData["birth_year"].(float64)
+							if birthYear < minYear {
+								matchesSearch = false
+							}
+						}
+						
+						if maxYear, hasMax := arguments["max_birth_year"].(float64); hasMax {
+							birthYear, _ := actorData["birth_year"].(float64)
+							if birthYear > maxYear {
+								matchesSearch = false
+							}
+						}
+						
+						if matchesSearch {
+							// Add ID to the actor data
+							actorWithID := make(map[string]interface{})
+							for k, v := range actorData {
+								actorWithID[k] = v
+							}
+							actorWithID["id"] = float64(ctx.createdActors[key])
+							actors = append(actors, actorWithID)
+						}
+					}
+				}
+			}
+			
+			// If no stored actors found, use default response
+			if len(actors) == 0 {
+				actors = []interface{}{
+					map[string]interface{}{
+						"id":         float64(1),
+						"name":       "Test Actor",
+						"birth_year": float64(1970),
+						"bio":        "Test biography",
+					},
+				}
+			}
+			
 			mockResponse = &MCPResponse{
 				JSONRPC: "2.0",
 				ID:      request.ID,
 				Result: map[string]interface{}{
-					"actors": []interface{}{
-						map[string]interface{}{
-							"id":         float64(1),
-							"name":       "Test Actor",
-							"birth_year": float64(1970),
-							"bio":        "Test biography",
-						},
-					},
-					"total": float64(1),
+					"actors": actors,
+					"total":  float64(len(actors)),
 				},
 			}
 		case "get_movie":
@@ -490,8 +703,12 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 					// Extract movie details from the key or stored values
 					if storedMovie, exists := ctx.storedValues[key+"_data"]; exists {
 						if movieData, ok := storedMovie.(map[string]interface{}); ok {
-							movieTitle = movieData["title"].(string)
-							movieDirector = movieData["director"].(string)
+							if title, ok := movieData["title"].(string); ok {
+								movieTitle = title
+							}
+							if director, ok := movieData["director"].(string); ok {
+								movieDirector = director
+							}
 							year = movieData["year"]
 							rating = movieData["rating"]
 							found = true
@@ -557,7 +774,7 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 			arguments := params["arguments"].(map[string]interface{})
 
 			// Build movies array based on stored movies and search criteria
-			var movies []interface{}
+			var allMovies []interface{}
 
 			// Get search criteria
 			titleSearch := ""
@@ -573,8 +790,8 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 			for key, movieID := range ctx.createdMovies {
 				if movieData, exists := ctx.storedValues[key+"_data"]; exists {
 					if data, ok := movieData.(map[string]interface{}); ok {
-						movieTitle := data["title"].(string)
-						movieDirector := data["director"].(string)
+						movieTitle, _ := data["title"].(string)
+						movieDirector, _ := data["director"].(string)
 
 						// Check if movie matches search criteria
 						titleMatch := titleSearch == "" || strings.Contains(strings.ToLower(movieTitle), strings.ToLower(titleSearch))
@@ -588,15 +805,15 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 								"year":     data["year"],
 								"rating":   data["rating"],
 							}
-							movies = append(movies, movie)
+							allMovies = append(allMovies, movie)
 						}
 					}
 				}
 			}
 
 			// If no stored movies found, use default response
-			if len(movies) == 0 {
-				movies = []interface{}{
+			if len(allMovies) == 0 {
+				allMovies = []interface{}{
 					map[string]interface{}{
 						"id":       float64(1),
 						"title":    "Test Movie",
@@ -606,13 +823,44 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 					},
 				}
 			}
+			
+			// Apply pagination
+			var movies []interface{}
+			totalMovies := len(allMovies)
+			
+			// Get limit and offset parameters
+			limit := totalMovies // Default to all movies
+			offset := 0
+			
+			if limitArg, hasLimit := arguments["limit"]; hasLimit {
+				if limitFloat, ok := limitArg.(float64); ok {
+					limit = int(limitFloat)
+				}
+			}
+			
+			if offsetArg, hasOffset := arguments["offset"]; hasOffset {
+				if offsetFloat, ok := offsetArg.(float64); ok {
+					offset = int(offsetFloat)
+				}
+			}
+			
+			// Apply pagination
+			start := offset
+			end := offset + limit
+			
+			if start < totalMovies {
+				if end > totalMovies {
+					end = totalMovies
+				}
+				movies = allMovies[start:end]
+			}
 
 			mockResponse = &MCPResponse{
 				JSONRPC: "2.0",
 				ID:      request.ID,
 				Result: map[string]interface{}{
 					"movies": movies,
-					"total":  float64(len(movies)),
+					"total":  float64(totalMovies),
 				},
 			}
 		case "list_top_movies":
