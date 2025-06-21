@@ -1,0 +1,94 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "security:openssf-scorecard",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":separatePatchReleases"
+  ],
+  "timezone": "UTC",
+  "schedule": ["before 6am on Monday"],
+  "packageRules": [
+    {
+      "description": "Group Go dependencies",
+      "matchManagers": ["gomod"],
+      "groupName": "Go dependencies",
+      "commitMessageTopic": "Go dependencies",
+      "schedule": ["before 6am on Monday"]
+    },
+    {
+      "description": "Group GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "commitMessageTopic": "GitHub Actions",
+      "pinDigests": true
+    },
+    {
+      "description": "Group Docker images",
+      "matchManagers": ["dockerfile"],
+      "groupName": "Docker images",
+      "commitMessageTopic": "Docker images"
+    },
+    {
+      "description": "Auto-merge patch updates for GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true
+    },
+    {
+      "description": "Auto-merge Go patch updates if tests pass",
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "requiredStatusChecks": ["CI Pipeline"]
+    },
+    {
+      "description": "Require approval for major updates",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true,
+      "additionalBranchPrefix": "major-"
+    },
+    {
+      "description": "High priority security updates",
+      "matchPackagePatterns": ["*"],
+      "vulnerabilityAlerts": {
+        "enabled": true
+      },
+      "osvVulnerabilityAlerts": true,
+      "prPriority": 10
+    }
+  ],
+  "gomod": {
+    "enabled": true,
+    "postUpdateOptions": ["gomodTidy", "gomodUpdateImportPaths"]
+  },
+  "dockerfile": {
+    "enabled": true
+  },
+  "github-actions": {
+    "enabled": true,
+    "pinDigests": true
+  },
+  "labels": ["dependencies", "renovate"],
+  "assignees": ["@francknouama"],
+  "reviewers": ["@francknouama"],
+  "prHourlyLimit": 5,
+  "prConcurrentLimit": 10,
+  "branchConcurrentLimit": 20,
+  "commitMessage": {
+    "prefix": "chore:",
+    "includeScopeInSubject": false
+  },
+  "prTitle": "{{semanticPrefix}}{{#if isPin}}Pin{{else}}Update{{/if}} {{depName}} {{#unless isReplacement}}{{#if isMajor}}to v{{newMajor}}{{else}}{{#if isSingleVersion}}to {{newVersion}}{{else}}{{newValue}}{{/if}}{{/if}}{{/unless}}",
+  "prBodyTemplate": "{{{header}}}{{{table}}}{{{notes}}}{{{changelogs}}}{{{configDescription}}}{{{footer}}}",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on Monday"]
+  },
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "schedule": ["at any time"]
+  }
+}

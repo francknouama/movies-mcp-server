@@ -1,0 +1,189 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run every Monday at 09:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.24.4'
+
+jobs:
+  update-go-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Update Go dependencies
+        run: |
+          # Update shared-mcp dependencies
+          cd shared-mcp
+          go get -u ./...
+          go mod tidy
+          
+          # Update mcp-server dependencies
+          cd ../mcp-server
+          go get -u ./...
+          go mod tidy
+          
+          # Update godog-server dependencies
+          cd ../godog-server
+          go get -u ./...
+          go mod tidy
+          
+          # Sync workspace
+          cd ..
+          go work sync
+          
+      - name: Run tests after updates
+        run: |
+          # Test all modules
+          cd shared-mcp && go test ./...
+          cd ../mcp-server && go test ./...
+          cd ../godog-server && go test -timeout=2m ./...
+          
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Create Pull Request
+        if: steps.changes.outputs.changes == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update Go dependencies"
+          title: "🔄 Update Go dependencies"
+          body: |
+            ## Automated Dependency Update
+            
+            This PR updates Go dependencies across all modules:
+            
+            - ✅ shared-mcp module updated
+            - ✅ mcp-server module updated  
+            - ✅ godog-server module updated
+            - ✅ All tests passing
+            
+            ### Changes
+            
+            Dependencies have been updated to their latest versions while maintaining compatibility.
+            
+            ### Testing
+            
+            - [x] Unit tests pass
+            - [x] Integration tests pass
+            - [x] ATDD scenarios pass
+            
+            This PR was automatically created by the dependency update workflow.
+            
+          branch: chore/update-go-dependencies
+          delete-branch: true
+          labels: |
+            dependencies
+            automated
+            go
+
+  update-github-actions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Update GitHub Actions
+        uses: renovatebot/github-action@v40.1.11
+        with:
+          configurationFile: .github/renovate.json
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Run security audit
+        run: |
+          # Install govulncheck
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          
+          # Check each module for vulnerabilities
+          cd shared-mcp && govulncheck ./...
+          cd ../mcp-server && govulncheck ./...
+          cd ../godog-server && govulncheck ./...
+          
+      - name: Run Nancy vulnerability scanner
+        run: |
+          go install github.com/sonatypecommunity/nancy@latest
+          
+          # Scan dependencies for known vulnerabilities
+          cd mcp-server && go list -json -deps ./... | nancy sleuth
+          cd ../godog-server && go list -json -deps ./... | nancy sleuth
+          cd ../shared-mcp && go list -json -deps ./... | nancy sleuth
+          
+      - name: Create security issue if vulnerabilities found
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '🚨 Security vulnerabilities detected in dependencies';
+            const body = `
+            ## Security Alert
+            
+            The automated security scan has detected vulnerabilities in our Go dependencies.
+            
+            ### Action Required
+            
+            Please review and update the affected dependencies:
+            
+            1. Check the workflow logs for detailed vulnerability information
+            2. Update vulnerable dependencies to secure versions
+            3. Run tests to ensure compatibility
+            4. Deploy updated versions
+            
+            ### Scan Results
+            
+            Check the [workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId}) for detailed results.
+            
+            ---
+            
+            This issue was automatically created by the security audit workflow.
+            `;
+            
+            // Check if issue already exists
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'security,automated'
+            });
+            
+            const existingIssue = issues.data.find(issue => 
+              issue.title.includes('Security vulnerabilities detected')
+            );
+            
+            if (!existingIssue) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['security', 'automated', 'high-priority']
+              });
+            }

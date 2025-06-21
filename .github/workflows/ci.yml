@@ -1,0 +1,313 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  GO_VERSION: '1.24.4'
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      mcp-server: ${{ steps.changes.outputs.mcp-server }}
+      godog-server: ${{ steps.changes.outputs.godog-server }}
+      shared-mcp: ${{ steps.changes.outputs.shared-mcp }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            mcp-server:
+              - 'mcp-server/**'
+              - 'shared-mcp/**'
+              - 'go.work'
+            godog-server:
+              - 'godog-server/**'
+              - 'shared-mcp/**'
+              - 'go.work'
+            shared-mcp:
+              - 'shared-mcp/**'
+              - 'go.work'
+
+  test-shared-mcp:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.shared-mcp == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-shared-${{ hashFiles('shared-mcp/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-shared-
+            
+      - name: Install dependencies
+        working-directory: shared-mcp
+        run: go mod download
+        
+      - name: Run tests
+        working-directory: shared-mcp
+        run: go test -v -race -coverprofile=coverage.out ./...
+        
+      - name: Generate coverage report
+        working-directory: shared-mcp
+        run: go tool cover -html=coverage.out -o coverage.html
+        
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-mcp-coverage
+          path: shared-mcp/coverage.html
+
+  test-mcp-server:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.mcp-server == 'true'
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: movies_mcp_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: movies_mcp_test
+      DB_SSLMODE: disable
+      
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-mcp-${{ hashFiles('mcp-server/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-mcp-
+            
+      - name: Install dependencies
+        working-directory: mcp-server
+        run: go mod download
+        
+      - name: Build application
+        working-directory: mcp-server
+        run: go build -o build/movies-server cmd/server/main.go
+        
+      - name: Run database migrations
+        working-directory: mcp-server
+        run: ./build/movies-server -migrate-only
+          
+      - name: Run unit tests
+        working-directory: mcp-server
+        run: go test -v -race -coverprofile=coverage.out ./...
+        
+      - name: Run integration tests
+        working-directory: mcp-server
+        run: go test -v -tags=integration ./tests/integration/...
+        
+      - name: Generate coverage report
+        working-directory: mcp-server
+        run: go tool cover -html=coverage.out -o coverage.html
+        
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-server-coverage
+          path: mcp-server/coverage.html
+          
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-server-binary
+          path: mcp-server/build/movies-server
+
+  test-godog-server:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.godog-server == 'true'
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: movies_mcp_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5433:5432
+          
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5433
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: movies_mcp_test
+      DB_SSLMODE: disable
+      USE_REAL_SERVER: false
+      
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-godog-${{ hashFiles('godog-server/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-godog-
+            
+      - name: Install dependencies
+        working-directory: godog-server
+        run: go mod download
+        
+      - name: Run ATDD tests (Mock Mode)
+        working-directory: godog-server
+        run: go test -v -timeout=5m
+        
+      - name: Build MCP server for real tests
+        working-directory: mcp-server
+        run: |
+          mkdir -p build
+          go build -o build/movies-server cmd/server/main.go
+        
+      - name: Run ATDD tests (Real Server Mode)
+        working-directory: godog-server
+        env:
+          USE_REAL_SERVER: true
+        run: |
+          # Run migrations first
+          cd ../mcp-server && ./build/movies-server -migrate-only
+          
+          # Run ATDD tests with real server
+          cd ../godog-server
+          go test -v -timeout=10m
+          
+      - name: Generate ATDD report
+        if: always()
+        working-directory: godog-server
+        run: |
+          go test -v -timeout=5m > atdd-report.txt 2>&1 || true
+          
+      - name: Upload ATDD report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atdd-test-report
+          path: godog-server/atdd-report.txt
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Run golangci-lint for shared-mcp
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: shared-mcp
+          args: --timeout=5m
+          
+      - name: Run golangci-lint for mcp-server
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: mcp-server
+          args: --timeout=5m
+          
+      - name: Run golangci-lint for godog-server
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: godog-server
+          args: --timeout=5m
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Run Gosec Security Scanner
+        uses: securecodewarrior/github-action-gosec@master
+        with:
+          args: './...'
+          
+      - name: Run Nancy vulnerability scanner
+        run: |
+          go install github.com/sonatypecommunity/nancy@latest
+          go list -json -deps ./... | nancy sleuth
+
+  validate-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Verify go.work consistency
+        run: |
+          go work sync
+          git diff --exit-code go.work
+          
+      - name: Check for outdated dependencies
+        run: |
+          cd mcp-server && go list -u -m -json all | go run -tags=tools github.com/psampaz/go-mod-outdated@latest -update -direct
+          cd ../godog-server && go list -u -m -json all | go run -tags=tools github.com/psampaz/go-mod-outdated@latest -update -direct
+          cd ../shared-mcp && go list -u -m -json all | go run -tags=tools github.com/psampaz/go-mod-outdated@latest -update -direct

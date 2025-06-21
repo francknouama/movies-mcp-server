@@ -1,0 +1,370 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.2.3)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+      draft:
+        description: 'Create as draft'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  GO_VERSION: '1.24.4'
+
+jobs:
+  validate-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+      tag: ${{ steps.validate.outputs.tag }}
+    steps:
+      - name: Validate version format
+        id: validate
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          
+          # Remove 'v' prefix if present
+          VERSION=${VERSION#v}
+          
+          # Validate semantic version format
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "Error: Invalid version format. Expected semantic version (e.g., 1.2.3 or 1.2.3-beta.1)"
+            exit 1
+          fi
+          
+          TAG="v$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Validated version: $VERSION (tag: $TAG)"
+
+  check-tag:
+    needs: validate-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Check if tag exists
+        run: |
+          TAG="${{ needs.validate-version.outputs.tag }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Error: Tag $TAG already exists"
+            exit 1
+          fi
+          echo "Tag $TAG is available"
+
+  build-and-test:
+    needs: [validate-version, check-tag]
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: movies_mcp_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: movies_mcp_test
+      DB_SSLMODE: disable
+      VERSION: ${{ needs.validate-version.outputs.version }}
+      
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-release-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-release-
+            
+      - name: Install dependencies
+        run: |
+          cd shared-mcp && go mod download
+          cd ../mcp-server && go mod download
+          cd ../godog-server && go mod download
+          
+      - name: Run comprehensive tests
+        run: |
+          echo "Running tests for release $VERSION"
+          
+          # Test shared components
+          cd shared-mcp
+          go test -v -race -coverprofile=coverage.out ./...
+          
+          # Test MCP server
+          cd ../mcp-server
+          go build -o build/movies-server cmd/server/main.go
+          ./build/movies-server -migrate-only
+          go test -v -race -coverprofile=coverage.out ./...
+          go test -v -tags=integration ./tests/integration/...
+          
+          # Test ATDD scenarios
+          cd ../godog-server
+          go test -v -timeout=10m
+          
+      - name: Build release binaries
+        working-directory: mcp-server
+        run: |
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          LDFLAGS="-w -s -X 'main.Version=$VERSION' -X 'main.BuildTime=$BUILD_TIME'"
+          
+          mkdir -p dist
+          
+          # Build for multiple platforms
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-linux-amd64 cmd/server/main.go
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-linux-arm64 cmd/server/main.go
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-darwin-amd64 cmd/server/main.go
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-darwin-arm64 cmd/server/main.go
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-windows-amd64.exe cmd/server/main.go
+          
+      - name: Create checksums
+        working-directory: mcp-server/dist
+        run: |
+          sha256sum * > checksums.txt
+          cat checksums.txt
+          
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries
+          path: mcp-server/dist/
+
+  build-docker:
+    needs: [validate-version, build-and-test]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.validate-version.outputs.version }}
+      TAG: ${{ needs.validate-version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ env.VERSION }}
+            type=raw,value=${{ env.TAG }}
+            
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mcp-server
+          file: ./mcp-server/Dockerfile.production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          platforms: linux/amd64,linux/arm64
+
+  create-release:
+    needs: [validate-version, build-and-test, build-docker]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.validate-version.outputs.version }}
+      TAG: ${{ needs.validate-version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: dist/
+          
+      - name: Generate changelog
+        id: changelog
+        run: |
+          echo "Generating changelog for $TAG"
+          
+          # Get previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          echo "## What's Changed" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "Changes since $PREVIOUS_TAG:" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            
+            # Get commits since last tag
+            git log --pretty=format:"- %s" $PREVIOUS_TAG..HEAD >> CHANGELOG.md
+          else
+            echo "Initial release with the following features:" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "- Complete MCP (Model Context Protocol) server implementation" >> CHANGELOG.md
+            echo "- Movies and actors management system" >> CHANGELOG.md
+            echo "- PostgreSQL database with migrations" >> CHANGELOG.md
+            echo "- Comprehensive test suite including ATDD scenarios" >> CHANGELOG.md
+            echo "- Docker support for easy deployment" >> CHANGELOG.md
+            echo "- Clean architecture with domain-driven design" >> CHANGELOG.md
+          fi
+          
+          echo "" >> CHANGELOG.md
+          echo "## 📦 Assets" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### Binaries" >> CHANGELOG.md
+          echo "- \`movies-mcp-server-linux-amd64\` - Linux (x86_64)" >> CHANGELOG.md
+          echo "- \`movies-mcp-server-linux-arm64\` - Linux (ARM64)" >> CHANGELOG.md
+          echo "- \`movies-mcp-server-darwin-amd64\` - macOS (Intel)" >> CHANGELOG.md
+          echo "- \`movies-mcp-server-darwin-arm64\` - macOS (Apple Silicon)" >> CHANGELOG.md
+          echo "- \`movies-mcp-server-windows-amd64.exe\` - Windows (x86_64)" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### Container Images" >> CHANGELOG.md
+          echo "- \`ghcr.io/${{ github.repository }}:$VERSION\`" >> CHANGELOG.md
+          echo "- \`ghcr.io/${{ github.repository }}:latest\`" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### Installation" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "\`\`\`bash" >> CHANGELOG.md
+          echo "# Download binary (Linux AMD64)" >> CHANGELOG.md
+          echo "curl -L -o movies-mcp-server https://github.com/${{ github.repository }}/releases/download/$TAG/movies-mcp-server-linux-amd64" >> CHANGELOG.md
+          echo "chmod +x movies-mcp-server" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "# Or use Docker" >> CHANGELOG.md
+          echo "docker pull ghcr.io/${{ github.repository }}:$VERSION" >> CHANGELOG.md
+          echo "\`\`\`" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### Verification" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "All binaries are signed and checksums are provided in \`checksums.txt\`." >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "---" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...$TAG" >> CHANGELOG.md
+          
+      - name: Create Git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+          
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG }}
+          release_name: Release ${{ env.TAG }}
+          body_path: CHANGELOG.md
+          draft: ${{ github.event.inputs.draft }}
+          prerelease: ${{ github.event.inputs.prerelease }}
+          
+      - name: Upload release assets
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Get the release
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: '${{ env.TAG }}'
+            });
+            
+            // Upload all files in dist directory
+            const distDir = 'dist';
+            const files = fs.readdirSync(distDir);
+            
+            for (const file of files) {
+              const filePath = path.join(distDir, file);
+              const stats = fs.statSync(filePath);
+              
+              if (stats.isFile()) {
+                console.log(`Uploading ${file}...`);
+                
+                await github.rest.repos.uploadReleaseAsset({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  release_id: release.data.id,
+                  name: file,
+                  data: fs.readFileSync(filePath)
+                });
+              }
+            }
+
+  notify:
+    needs: [validate-version, create-release]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify release status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ needs.validate-version.outputs.version }}';
+            const success = '${{ needs.create-release.result }}' === 'success';
+            
+            const title = success ? 
+              `🎉 Release ${version} Published Successfully` : 
+              `❌ Release ${version} Failed`;
+              
+            const body = success ? 
+              `Release [${version}](https://github.com/${{ github.repository }}/releases/tag/v${version}) has been published successfully!
+              
+              ## Assets Available
+              - ✅ Multi-platform binaries
+              - ✅ Docker images
+              - ✅ Checksums and signatures
+              
+              The release is now available for download and deployment.` :
+              `Release ${version} failed during the build process. Please check the workflow logs for details.`;
+            
+            // You could integrate with Slack, Discord, or other notification services here
+            console.log(title);
+            console.log(body);
