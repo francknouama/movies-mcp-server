@@ -1,245 +1,79 @@
-# Movies MCP Server
+# MCP Servers Workspace
 
-A Model Context Protocol (MCP) server that provides a comprehensive movie database with advanced search, CRUD operations, and image support. Built with Go and PostgreSQL, this server enables AI assistants to manage and query movie information through a standardized protocol.
+This repository contains multiple Model Context Protocol (MCP) servers organized as a Go workspace.
 
-## Features
+## Structure
 
-- **Full CRUD Operations**: Create, read, update, and delete movies
-- **Advanced Search**: Search by title, genre, director, actors, or any text field
-- **Image Support**: Store and retrieve movie posters with base64 encoding
-- **Resource Endpoints**: Access database statistics, genre lists, and bulk data
-- **Production Ready**: Includes health checks, metrics, logging, and monitoring
-- **Docker Support**: Complete Docker setup for easy deployment
-- **Comprehensive Testing**: Unit and integration tests with high coverage
-
-## Quick Start
-
-### Prerequisites
-
-- Go 1.24.4 or later
-- Docker and Docker Compose
-- PostgreSQL 17 (or use Docker)
-- Make (optional but recommended)
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/francknouama/movies-mcp-server.git
-cd movies-mcp-server
+```
+.
+├── go.work                 # Go workspace configuration
+├── movies-mcp-server/      # Movies database MCP server
+│   ├── go.mod
+│   ├── cmd/               # Application entrypoints
+│   ├── internal/          # Private application code
+│   └── pkg/               # Public packages
+└── godog-server/          # Cucumber/Godog testing MCP server
+    ├── go.mod
+    ├── cmd/               # Application entrypoints
+    ├── internal/          # Private application code
+    └── pkg/               # Public packages
 ```
 
-2. Copy the environment file:
-```bash
-cp .env.example .env
-```
+## Servers
 
-3. Start the database:
-```bash
-make docker-up
-```
+### Movies MCP Server
+A comprehensive movie database server with advanced search, CRUD operations, and image support. Built with Go and PostgreSQL.
 
-4. Set up the database:
-```bash
-make db-setup
-make db-migrate
-make db-seed
-```
+[Full documentation →](./movies-mcp-server/README.md)
 
-5. Build the server:
-```bash
-make build
-```
+### Godog MCP Server
+A Cucumber BDD testing server that enables AI assistants to run and manage Godog tests through the MCP protocol.
 
-6. Run the server:
-```bash
-./build/movies-server
-```
-
-## MCP Tools
-
-The server implements the following MCP tools:
-
-### Movie Operations
-- `get_movie` - Retrieve a movie by ID
-- `add_movie` - Add a new movie with optional poster
-- `update_movie` - Update movie details including poster
-- `delete_movie` - Remove a movie from the database
-
-### Search and Query
-- `search_movies` - Advanced search with multiple criteria
-- `list_top_movies` - Get top-rated movies with filtering
-
-## MCP Resources
-
-Access movie data through these resource URIs:
-
-- `movies://database/all` - All movies in JSON format
-- `movies://database/stats` - Database statistics
-- `movies://database/genres` - List of all genres
-- `movies://database/directors` - List of all directors
-- `movies://posters/{movie-id}` - Individual movie poster
-- `movies://posters/collection` - Gallery of all posters
-
-## Usage Examples
-
-### Initialize Connection
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "initialize",
-  "params": {
-    "protocolVersion": "2024-11-05",
-    "capabilities": {},
-    "clientInfo": {
-      "name": "example-client",
-      "version": "1.0.0"
-    }
-  }
-}
-```
-
-### Add a Movie
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "method": "tools/call",
-  "params": {
-    "name": "add_movie",
-    "arguments": {
-      "title": "The Matrix",
-      "director": "The Wachowskis",
-      "release_year": 1999,
-      "genre": "Sci-Fi",
-      "rating": 8.7,
-      "description": "A computer hacker learns about the true nature of reality",
-      "poster_url": "https://example.com/matrix-poster.jpg"
-    }
-  }
-}
-```
-
-### Search Movies
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 3,
-  "method": "tools/call",
-  "params": {
-    "name": "search_movies",
-    "arguments": {
-      "query": "sci-fi",
-      "search_type": "genre"
-    }
-  }
-}
-```
-
-## Configuration
-
-The server uses environment variables for configuration. See `.env.example` for all available options:
-
-```bash
-# Database configuration
-DATABASE_URL=postgres://movies_user:movies_password@localhost:5432/movies_db?sslmode=disable
-
-# Server configuration
-LOG_LEVEL=info
-SERVER_TIMEOUT=30s
-MAX_CONNECTIONS=100
-
-# Image handling
-MAX_IMAGE_SIZE_MB=10
-ALLOWED_IMAGE_TYPES=image/jpeg,image/png,image/webp
-```
+[Full documentation →](./godog-server/README.md)
 
 ## Development
 
-### Running Tests
-```bash
-# Run all tests
-make test
+This repository uses Go workspaces (introduced in Go 1.18) to manage multiple modules. Each server is a separate Go module that can be developed and versioned independently.
 
-# Run with coverage
-make test-coverage
-
-# Run integration tests
-DATABASE_URL=... make test-integration
-```
-
-### Database Migrations
-```bash
-# Apply migrations
-make db-migrate
-
-# Rollback one migration
-make db-migrate-down
-
-# Reset database
-make db-migrate-reset
-```
+### Prerequisites
+- Go 1.24.4 or later
+- Docker and Docker Compose (for movies-server)
+- Godog CLI (for godog-server)
 
 ### Building
+
+Build all servers:
 ```bash
-# Build for current platform
-make build
-
-# Build for multiple platforms
 make build-all
-
-# Build Docker image
-make docker-build
 ```
 
-## Monitoring
+Build specific server:
+```bash
+# Movies MCP server
+cd movies-mcp-server && go build -o movies-mcp-server cmd/server/main.go
 
-The server includes Prometheus metrics and health endpoints:
-
-- `/health` - Health check endpoint
-- `/metrics` - Prometheus metrics
-
-A Grafana dashboard is included in `monitoring/grafana-dashboard.json`.
-
-## Bruno Collection
-
-Interactive API testing is available through the included Bruno collection in `bruno-collection/`. This provides pre-configured requests for all MCP operations.
-
-## Architecture
-
-The server follows clean architecture principles:
-
+# Godog server
+cd godog-server && go build -o godog-server cmd/server/main.go
 ```
-├── cmd/               # Application entrypoints
-├── internal/          # Private application code
-│   ├── config/       # Configuration management
-│   ├── database/     # Database layer
-│   ├── models/       # Domain models
-│   └── server/       # MCP server implementation
-├── pkg/              # Public packages
-│   ├── errors/       # Error handling
-│   ├── health/       # Health checks
-│   ├── logging/      # Structured logging
-│   └── metrics/      # Prometheus metrics
-├── migrations/       # Database migrations
-└── scripts/          # Utility scripts
+
+### Testing
+
+Run all tests:
+```bash
+make test-all
 ```
+
+### Adding a New Server
+
+1. Create a new directory for your server
+2. Initialize a Go module: `cd new-server && go mod init your-module-name`
+3. Add it to the workspace: `go work use ./new-server`
+4. Follow the existing server patterns for structure
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+See individual server READMEs for specific contribution guidelines.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Built for the [Model Context Protocol](https://modelcontextprotocol.io/) ecosystem
-- PostgreSQL for reliable data storage
-- The Go community for excellent libraries and tools
+Each server may have its own license. Check the LICENSE file in each server directory.

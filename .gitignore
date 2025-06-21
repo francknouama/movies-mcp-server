@@ -7,27 +7,47 @@
 *.db
 *.sqlite
 
-# Binaries
+# Binaries for both modules
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-movies-server
-movies-mcp-server
+
+# Movies MCP server binaries
+movies-mcp-server/movies-server
+movies-mcp-server/movies-mcp-server
+movies-mcp-server/server
+movies-mcp-server/*.test
+movies-mcp-server/migrate
+movies-mcp-server/integration.test
+movies-mcp-server/mcp.test
+
+# Godog server binaries  
+godog-server/godog-server
+godog-server/*.test
+
+# Legacy binaries (can be removed after cleanup)
 main_new
 server-new
-server
 migrate
 
-# Test binary
+# Test binaries and coverage
 *.test
-
-# Output of the go coverage tool
 *.out
+coverage.html
+*/coverage.html
 
-# Go workspace file
-go.work
+# Go workspace sum file (keep go.work in version control)
+go.work.sum
+
+# Module-specific reports and logs
+movies-mcp-server/reports/
+godog-server/reports/
+movies-mcp-server/logs/
+godog-server/logs/
+movies-mcp-server/*.log
+godog-server/*.log
 
 # IDE files
 .vscode/
@@ -42,20 +62,37 @@ Thumbs.db
 # Dependency directories
 vendor/
 
-# Go sum file (will be regenerated)
-go.sum
-
 # Temporary files
 *.tmp
-*.log
 
 # Build directories
 dist/
 build/
+movies-mcp-server/build/
+godog-server/build/
 
-# Planning documents
-IMPLEMENTATION_PLAN.md
-SERVER_REFACTORING_SUMMARY.md
+# Documentation build outputs
+*/doc/
+*/docs/_build/
+
+# Test results and artifacts  
+TEST-*.xml
+test-results/
+*/test-results/
+
+# Godog-specific ignores
+godog-server/features/
+
+# Movies MCP server specific ignores
+movies-mcp-server/postgres-data/
+movies-mcp-server/redis-data/
 
 # Claude configuration
 .claude/settings.local.json
+
+# Mac extended attributes
+._*
+
+# Windows files
+Thumbs.db
+Desktop.ini
