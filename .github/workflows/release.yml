@@ -64,8 +64,37 @@ jobs:
           fi
           echo "Tag $TAG is available"
 
+  check-ci-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if CI passes on main
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: workflows } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yml',
+              branch: 'main',
+              status: 'completed',
+              per_page: 1
+            });
+            
+            if (workflows.length === 0) {
+              core.setFailed('No CI workflow runs found on main branch');
+              return;
+            }
+            
+            const latestRun = workflows[0];
+            if (latestRun.conclusion !== 'success') {
+              core.setFailed(`Latest CI run on main branch failed: ${latestRun.conclusion}`);
+              return;
+            }
+            
+            console.log(`Latest CI run on main branch passed: ${latestRun.html_url}`);
+
   build-and-test:
-    needs: [validate-version, check-tag]
+    needs: [validate-version, check-tag, check-ci-status]
     runs-on: ubuntu-latest
     
     services:
@@ -164,7 +193,7 @@ jobs:
           path: mcp-server/dist/
 
   build-docker:
-    needs: [validate-version, build-and-test]
+    needs: [validate-version, build-and-test, check-ci-status]
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.validate-version.outputs.version }}
@@ -208,7 +237,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
   create-release:
-    needs: [validate-version, build-and-test, build-docker]
+    needs: [validate-version, build-and-test, build-docker, check-ci-status]
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.validate-version.outputs.version }}
