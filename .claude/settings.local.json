@@ -19,7 +19,24 @@
       "Bash(psql:*)",
       "WebFetch(domain:www.themoviedb.org)",
       "mcp__ide__getDiagnostics",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(docker volume rm:*)",
+      "Bash(docker run:*)",
+      "Bash(rg:*)",
+      "Bash(for file in /Users/franck/workspace/movies-mcp-server/internal/interfaces/mcp/{movie_handlers.go,actor_handlers.go,context_manager.go,prompt_handlers.go,prompt_handlers_test.go})",
+      "Bash(do sed -i '' 's|\"\"movies-mcp-server/internal/models\"\"|\"\"movies-mcp-server/internal/interfaces/dto\"\"\\n\\t\"\"movies-mcp-server/internal/models\"\"|g' \"$file\")",
+      "Bash(done)",
+      "Bash(do sed -i '' 's/models\\.\\(InvalidParams\\|InternalError\\|ToolCallResponse\\|ContentBlock\\|PromptsListResponse\\|Prompt\\|PromptArgument\\|ResourcesListResponse\\|Resource\\)/dto.\\1/g' \"$file\")",
+      "Bash(go mod tidy:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)",
+      "Bash(timeout:*)",
+      "Bash(true)",
+      "Bash(go clean:*)",
+      "Bash(go list:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

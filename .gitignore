@@ -15,6 +15,9 @@
 *.dylib
 movies-server
 movies-mcp-server
+main_new
+server-new
+migrate
 
 # Test binary
 *.test
@@ -48,3 +51,6 @@ go.sum
 # Build directories
 dist/
 build/
+
+# Planning documents
+IMPLEMENTATION_PLAN.md

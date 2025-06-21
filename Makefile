@@ -2,10 +2,14 @@
 
 # Variables
 BINARY_NAME=movies-server
-GO_VERSION=1.21
+BINARY_NAME_CLEAN=movies-server-clean
+GO_VERSION=1.24.4
 MAIN_PATH=cmd/server/main.go
+MAIN_PATH_CLEAN=cmd/server-new/main.go
+MIGRATE_PATH=tools/migrate/main.go
 BUILD_DIR=build
 DOCKER_IMAGE=movies-mcp-server
+DOCKER_IMAGE_CLEAN=movies-mcp-server-clean
 DOCKER_TAG=latest
 
 # Go commands
@@ -128,22 +132,72 @@ deps-update:
 	@$(GOGET) -u ./...
 	@$(GOMOD) tidy
 
+# Clean Architecture Targets
+build-clean:
+	@echo "$(GREEN)Building $(BINARY_NAME_CLEAN) (Clean Architecture)...$(NC)"
+	@mkdir -p $(BUILD_DIR)
+	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME_CLEAN) $(MAIN_PATH_CLEAN)
+	@echo "$(GREEN)Build complete: $(BUILD_DIR)/$(BINARY_NAME_CLEAN)$(NC)"
+
+build-migrate:
+	@echo "$(GREEN)Building migration tool...$(NC)"
+	@mkdir -p $(BUILD_DIR)
+	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/migrate $(MIGRATE_PATH)
+	@echo "$(GREEN)Build complete: $(BUILD_DIR)/migrate$(NC)"
+
+run-clean: build-clean
+	@echo "$(GREEN)Running $(BINARY_NAME_CLEAN) (Clean Architecture)...$(NC)"
+	@./$(BUILD_DIR)/$(BINARY_NAME_CLEAN)
+
 # Docker targets
 docker-build:
-	@echo "$(GREEN)Building Docker image...$(NC)"
-	@docker build -f docker/Dockerfile -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
+	@echo "$(GREEN)Building Docker image (Legacy)...$(NC)"
+	@docker build -f Dockerfile -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
+
+docker-build-clean:
+	@echo "$(GREEN)Building Docker image (Clean Architecture)...$(NC)"
+	@docker build -f Dockerfile.clean -t $(DOCKER_IMAGE_CLEAN):$(DOCKER_TAG) .
 
 docker-run:
-	@echo "$(GREEN)Running Docker container...$(NC)"
+	@echo "$(GREEN)Running Docker container (Legacy)...$(NC)"
 	@docker run -it --rm $(DOCKER_IMAGE):$(DOCKER_TAG)
 
+docker-run-clean:
+	@echo "$(GREEN)Running Docker container (Clean Architecture)...$(NC)"
+	@docker run -it --rm $(DOCKER_IMAGE_CLEAN):$(DOCKER_TAG)
+
+# Docker Compose targets
 docker-compose-up:
-	@echo "$(GREEN)Starting services with docker-compose...$(NC)"
-	@docker-compose -f docker/docker-compose.yml up -d
+	@echo "$(GREEN)Starting services with docker-compose (Legacy)...$(NC)"
+	@docker-compose up -d
+
+docker-compose-up-clean:
+	@echo "$(GREEN)Starting services with docker-compose (Clean Architecture)...$(NC)"
+	@docker-compose -f docker-compose.clean.yml up -d --build
+
+docker-compose-up-dev:
+	@echo "$(GREEN)Starting development services...$(NC)"
+	@docker-compose -f docker-compose.dev.yml up -d
 
 docker-compose-down:
-	@echo "$(GREEN)Stopping services...$(NC)"
-	@docker-compose -f docker/docker-compose.yml down
+	@echo "$(GREEN)Stopping services (Legacy)...$(NC)"
+	@docker-compose down
+
+docker-compose-down-clean:
+	@echo "$(GREEN)Stopping services (Clean Architecture)...$(NC)"
+	@docker-compose -f docker-compose.clean.yml down
+
+docker-compose-down-dev:
+	@echo "$(GREEN)Stopping development services...$(NC)"
+	@docker-compose -f docker-compose.dev.yml down
+
+docker-compose-logs:
+	@echo "$(GREEN)Showing logs (Clean Architecture)...$(NC)"
+	@docker-compose -f docker-compose.clean.yml logs -f
+
+docker-compose-logs-dev:
+	@echo "$(GREEN)Showing development logs...$(NC)"
+	@docker-compose -f docker-compose.dev.yml logs -f
 
 # Migration tool installation
 install-migrate:
@@ -203,28 +257,58 @@ release: clean build-all
 # Help target
 help:
 	@echo "$(GREEN)Movies MCP Server - Available targets:$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Basic Targets:$(NC)"
 	@echo "  $(YELLOW)make$(NC)              - Build and test (default)"
-	@echo "  $(YELLOW)make build$(NC)        - Build the binary"
-	@echo "  $(YELLOW)make build-all$(NC)    - Build for all platforms"
-	@echo "  $(YELLOW)make run$(NC)          - Build and run the server"
+	@echo "  $(YELLOW)make build$(NC)        - Build the binary (legacy)"
+	@echo "  $(YELLOW)make build-clean$(NC)  - Build clean architecture binary"
+	@echo "  $(YELLOW)make build-migrate$(NC) - Build migration tool"
+	@echo "  $(YELLOW)make run$(NC)          - Build and run the server (legacy)"
+	@echo "  $(YELLOW)make run-clean$(NC)    - Build and run clean architecture"
 	@echo "  $(YELLOW)make clean$(NC)        - Clean build artifacts"
+	@echo ""
+	@echo "$(YELLOW)Testing:$(NC)"
 	@echo "  $(YELLOW)make test$(NC)         - Run unit tests"
 	@echo "  $(YELLOW)make test-coverage$(NC) - Run tests with coverage"
 	@echo "  $(YELLOW)make test-init$(NC)    - Test MCP initialization"
 	@echo "  $(YELLOW)make test-all$(NC)     - Run all integration tests"
+	@echo ""
+	@echo "$(YELLOW)Code Quality:$(NC)"
 	@echo "  $(YELLOW)make fmt$(NC)          - Format code"
 	@echo "  $(YELLOW)make vet$(NC)          - Run go vet"
 	@echo "  $(YELLOW)make lint$(NC)         - Run linter"
 	@echo "  $(YELLOW)make check$(NC)        - Run all code quality checks"
+	@echo ""
+	@echo "$(YELLOW)Dependencies:$(NC)"
 	@echo "  $(YELLOW)make deps$(NC)         - Download dependencies"
 	@echo "  $(YELLOW)make deps-update$(NC)  - Update dependencies"
-	@echo "  $(YELLOW)make docker-build$(NC) - Build Docker image"
-	@echo "  $(YELLOW)make docker-run$(NC)   - Run Docker container"
+	@echo ""
+	@echo "$(YELLOW)Docker (Legacy):$(NC)"
+	@echo "  $(YELLOW)make docker-build$(NC) - Build Docker image (legacy)"
+	@echo "  $(YELLOW)make docker-run$(NC)   - Run Docker container (legacy)"
+	@echo "  $(YELLOW)make docker-compose-up$(NC) - Start legacy services"
+	@echo "  $(YELLOW)make docker-compose-down$(NC) - Stop legacy services"
+	@echo ""
+	@echo "$(YELLOW)Docker (Clean Architecture):$(NC)"
+	@echo "  $(YELLOW)make docker-build-clean$(NC) - Build clean architecture image"
+	@echo "  $(YELLOW)make docker-run-clean$(NC) - Run clean architecture container"
+	@echo "  $(YELLOW)make docker-compose-up-clean$(NC) - Start clean architecture stack"
+	@echo "  $(YELLOW)make docker-compose-down-clean$(NC) - Stop clean architecture stack"
+	@echo "  $(YELLOW)make docker-compose-logs$(NC) - Show clean architecture logs"
+	@echo ""
+	@echo "$(YELLOW)Docker (Development):$(NC)"
+	@echo "  $(YELLOW)make docker-compose-up-dev$(NC) - Start development databases"
+	@echo "  $(YELLOW)make docker-compose-down-dev$(NC) - Stop development databases"
+	@echo "  $(YELLOW)make docker-compose-logs-dev$(NC) - Show development logs"
+	@echo ""
+	@echo "$(YELLOW)Database:$(NC)"
 	@echo "  $(YELLOW)make db-setup$(NC)     - Set up database"
 	@echo "  $(YELLOW)make db-migrate$(NC)   - Run migrations"
 	@echo "  $(YELLOW)make db-migrate-down$(NC) - Rollback migrations"
 	@echo "  $(YELLOW)make db-migrate-reset$(NC) - Reset database"
 	@echo "  $(YELLOW)make db-seed$(NC)      - Seed database with sample data"
+	@echo ""
+	@echo "$(YELLOW)Release:$(NC)"
 	@echo "  $(YELLOW)make install$(NC)      - Install binary to GOPATH"
 	@echo "  $(YELLOW)make release$(NC)      - Create release artifacts"
 	@echo "  $(YELLOW)make help$(NC)         - Show this help"
@@ -232,5 +316,6 @@ help:
 # Version info
 version:
 	@echo "$(GREEN)Movies MCP Server$(NC)"
-	@echo "Version: 0.1.0"
+	@echo "Legacy Version: 0.1.0"
+	@echo "Clean Architecture Version: 0.2.0"
 	@echo "Go Version Required: $(GO_VERSION)"
