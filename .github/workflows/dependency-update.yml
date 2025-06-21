@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: '1.24.4'
+  GO_VERSION: '1.22.5'
 
 jobs:
   update-go-dependencies:
@@ -130,7 +130,7 @@ jobs:
           
       - name: Run Nancy vulnerability scanner
         run: |
-          go install github.com/sonatypecommunity/nancy@latest
+          go install github.com/sonatype-nexus-community/nancy@latest
           
           # Scan dependencies for known vulnerabilities
           cd mcp-server && go list -json -deps ./... | nancy sleuth

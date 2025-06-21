@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
 
 env:
-  GO_VERSION: '1.24.4'
+  GO_VERSION: '1.22.5'
 
 jobs:
   changes:
@@ -283,12 +283,12 @@ jobs:
           
       - name: Run Gosec Security Scanner
         run: |
-          go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
           gosec ./...
           
       - name: Run Nancy vulnerability scanner
         run: |
-          go install github.com/sonatypecommunity/nancy@latest
+          go install github.com/sonatype-nexus-community/nancy@latest
           go list -json -deps ./... | nancy sleuth
 
   validate-dependencies:
@@ -306,8 +306,11 @@ jobs:
           go work sync
           git diff --exit-code go.work
           
+      - name: Install go-mod-outdated
+        run: go install github.com/psampaz/go-mod-outdated@latest
+          
       - name: Check for outdated dependencies
         run: |
-          cd mcp-server && go list -u -m -json all | go run -tags=tools github.com/psampaz/go-mod-outdated@latest -update -direct
-          cd ../godog-server && go list -u -m -json all | go run -tags=tools github.com/psampaz/go-mod-outdated@latest -update -direct
-          cd ../shared-mcp && go list -u -m -json all | go run -tags=tools github.com/psampaz/go-mod-outdated@latest -update -direct
+          cd mcp-server && go list -u -m -json all | go-mod-outdated -update -direct
+          cd ../godog-server && go list -u -m -json all | go-mod-outdated -update -direct
+          cd ../shared-mcp && go list -u -m -json all | go-mod-outdated -update -direct

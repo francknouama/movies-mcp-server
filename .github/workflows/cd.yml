@@ -20,7 +20,7 @@ on:
         - production
 
 env:
-  GO_VERSION: '1.24.4'
+  GO_VERSION: '1.22.5'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -100,11 +100,11 @@ jobs:
           mkdir -p build
           # Build for testing (native architecture)
           go build \
-            -ldflags="-w -s -X 'main.Version=${{ steps.version.outputs.version }}' -X 'main.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)'" \
+            -ldflags="-w -s -X 'main.Version=${{ steps.version.outputs.version }}' -X 'main.BuildTime=$(date -u +%Y-%m-%dT%H:%M%SZ)'" \
             -o build/movies-server cmd/server/main.go
           # Build for container (linux/amd64)
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-            -ldflags="-w -s -X 'main.Version=${{ steps.version.outputs.version }}' -X 'main.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)'" \
+            -ldflags="-w -s -X 'main.Version=${{ steps.version.outputs.version }}' -X 'main.BuildTime=$(date -u +%Y-%m-%dT%H:%M%SZ)'" \
             -o build/movies-server-linux cmd/server/main.go
           
       - name: Set up Docker Buildx

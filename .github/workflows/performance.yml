@@ -20,7 +20,7 @@ on:
         default: '50'
 
 env:
-  GO_VERSION: '1.24.4'
+  GO_VERSION: '1.22.5'
   TEST_DURATION: ${{ github.event.inputs.duration || '5m' }}
   CONCURRENT_USERS: ${{ github.event.inputs.concurrent_users || '50' }}
 
