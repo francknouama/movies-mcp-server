@@ -1,17 +1,30 @@
 # Movies MCP Server - Deployment Guide
 
-This guide covers deploying the Movies MCP Server to various production environments.
+This guide covers deploying the Movies MCP Server, a Model Context Protocol (MCP) server for movie database management built with Clean Architecture and Domain-Driven Design.
 
 ## Table of Contents
 
+- [MCP Server Overview](#mcp-server-overview)
 - [Prerequisites](#prerequisites)
 - [Environment Configuration](#environment-configuration)
-- [Docker Deployment](#docker-deployment)
-- [Cloud Platform Deployment](#cloud-platform-deployment)
+- [Deployment Methods](#deployment-methods)
 - [Database Setup](#database-setup)
+- [MCP Client Integration](#mcp-client-integration)
 - [Monitoring and Logging](#monitoring-and-logging)
 - [Security Considerations](#security-considerations)
 - [Troubleshooting](#troubleshooting)
+
+## MCP Server Overview
+
+The Movies MCP Server is a **Model Context Protocol (MCP)** server that communicates via **stdin/stdout**, not HTTP. It's designed to be integrated into MCP-compatible clients (like Claude Desktop) rather than deployed as a standalone web service.
+
+### Key Characteristics
+
+- **Communication**: stdin/stdout using MCP protocol
+- **Architecture**: Clean Architecture with Domain-Driven Design
+- **Database**: PostgreSQL with full-text search capabilities
+- **Image Support**: Binary image storage with base64 encoding
+- **Monitoring**: Optional HTTP endpoints for health checks and metrics only
 
 ## Prerequisites
 
@@ -33,269 +46,273 @@ This guide covers deploying the Movies MCP Server to various production environm
 
 ```bash
 # Database Configuration
-DATABASE_URL=postgres://user:password@host:5432/movies_db
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=movies_db
+DB_NAME=movies_mcp
 DB_USER=movies_user
-DB_PASSWORD=secure_password
-DB_SSL_MODE=require
+DB_PASSWORD=movies_password
+DB_SSLMODE=disable
+
+# Alternative: Single connection string
+DATABASE_URL=postgres://movies_user:movies_password@localhost:5432/movies_mcp?sslmode=disable
 
 # Server Configuration
-PORT=8080
-HTTP_PORT=8080  # For MCP over HTTP testing
 LOG_LEVEL=info
-LOG_FORMAT=json
-
-# Security
-JWT_SECRET=your-super-secure-jwt-secret-here
-API_KEY=your-api-key-for-authentication
-
-# External Services
-REDIS_URL=redis://localhost:6379
-METRICS_PORT=9090
-
-# Performance
-MAX_CONNECTIONS=100
-QUERY_TIMEOUT=30s
-IDLE_TIMEOUT=5m
+SERVER_TIMEOUT=30s
 ```
 
 ### Optional Environment Variables
 
 ```bash
-# Monitoring
-PROMETHEUS_ENABLED=true
-GRAFANA_ENABLED=true
-HEALTH_CHECK_INTERVAL=30s
+# Connection Pool Settings
+DB_MAX_OPEN_CONNS=25
+DB_MAX_IDLE_CONNS=5
+DB_CONN_MAX_LIFETIME=1h
 
-# Caching
-CACHE_TTL=1h
-CACHE_MAX_SIZE=1000
+# Image Processing
+MAX_IMAGE_SIZE=5242880  # 5MB
+ALLOWED_IMAGE_TYPES=image/jpeg,image/png,image/webp
+ENABLE_THUMBNAILS=true
+THUMBNAIL_SIZE=200x200
 
-# Development
-DEBUG=false
-PROFILE=false
-TRACE_ENABLED=false
+# Monitoring (HTTP endpoints)
+METRICS_ENABLED=true
+METRICS_INTERVAL=30s
+HEALTH_CHECK_PORT=8080
 ```
 
-## Docker Deployment
+## Deployment Methods
 
-### Using Docker Compose (Recommended)
+### 1. Docker Deployment (Recommended)
 
-1. **Clone the repository:**
+#### Using Docker Compose - Clean Architecture
+
 ```bash
+# Clone the repository
 git clone <repository-url>
 cd movies-mcp-server
+
+# Start the clean architecture stack
+docker-compose -f docker-compose.clean.yml up -d
+
+# Verify deployment
+docker-compose -f docker-compose.clean.yml ps
+docker-compose -f docker-compose.clean.yml logs movies-server-clean
 ```
 
-2. **Create environment file:**
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
+#### Using Docker Compose - Full Production Stack
 
-3. **Deploy with Docker Compose:**
 ```bash
+# Start with monitoring stack
 docker-compose up -d
+
+# This includes:
+# - PostgreSQL database
+# - Movies MCP Server
+# - Redis (caching)
+# - Prometheus (metrics)
+# - Grafana (visualization)
+# - pgAdmin (database management)
 ```
 
-4. **Verify deployment:**
-```bash
-docker-compose ps
-docker-compose logs movies-mcp-server
-```
+#### Using Production Dockerfile
 
-### Using Production Dockerfile
-
-1. **Build production image:**
 ```bash
+# Build production image
 docker build -f Dockerfile.production -t movies-mcp-server:latest .
-```
 
-2. **Run with external database:**
-```bash
+# Run with external database
 docker run -d \
   --name movies-mcp-server \
   --restart unless-stopped \
-  -p 8080:8080 \
-  -e DATABASE_URL=postgres://user:pass@host:5432/movies_db \
+  -e DATABASE_URL=postgres://user:pass@host:5432/movies_mcp \
   -e LOG_LEVEL=info \
   movies-mcp-server:latest
 ```
 
-### Docker Swarm Deployment
+### 2. Binary Deployment
 
-1. **Initialize swarm:**
-```bash
-docker swarm init
-```
-
-2. **Deploy stack:**
-```bash
-docker stack deploy -c docker-compose.yml movies-stack
-```
-
-## Cloud Platform Deployment
-
-### AWS ECS
-
-1. **Create task definition:**
-```json
-{
-  "family": "movies-mcp-server",
-  "taskRoleArn": "arn:aws:iam::ACCOUNT:role/ecsTaskRole",
-  "executionRoleArn": "arn:aws:iam::ACCOUNT:role/ecsTaskExecutionRole",
-  "networkMode": "awsvpc",
-  "requiresCompatibilities": ["FARGATE"],
-  "cpu": "512",
-  "memory": "1024",
-  "containerDefinitions": [
-    {
-      "name": "movies-mcp-server",
-      "image": "YOUR_ECR_REPO/movies-mcp-server:latest",
-      "portMappings": [
-        {
-          "containerPort": 8080,
-          "protocol": "tcp"
-        }
-      ],
-      "environment": [
-        {
-          "name": "LOG_LEVEL",
-          "value": "info"
-        }
-      ],
-      "secrets": [
-        {
-          "name": "DATABASE_URL",
-          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT:secret:movies-db-url"
-        }
-      ],
-      "logConfiguration": {
-        "logDriver": "awslogs",
-        "options": {
-          "awslogs-group": "/ecs/movies-mcp-server",
-          "awslogs-region": "us-west-2",
-          "awslogs-stream-prefix": "ecs"
-        }
-      }
-    }
-  ]
-}
-```
-
-2. **Create ECS service:**
-```bash
-aws ecs create-service \
-  --cluster movies-cluster \
-  --service-name movies-mcp-service \
-  --task-definition movies-mcp-server \
-  --desired-count 2 \
-  --launch-type FARGATE \
-  --network-configuration "awsvpcConfiguration={subnets=[subnet-12345],securityGroups=[sg-12345],assignPublicIp=ENABLED}"
-```
-
-### Google Cloud Run
-
-1. **Build and push image:**
-```bash
-gcloud builds submit --tag gcr.io/PROJECT_ID/movies-mcp-server
-```
-
-2. **Deploy to Cloud Run:**
-```bash
-gcloud run deploy movies-mcp-server \
-  --image gcr.io/PROJECT_ID/movies-mcp-server \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars LOG_LEVEL=info \
-  --set-secrets DATABASE_URL=movies-db-url:latest
-```
-
-### Azure Container Instances
+#### Build from Source
 
 ```bash
-az container create \
-  --resource-group movies-rg \
-  --name movies-mcp-server \
-  --image movies-mcp-server:latest \
-  --cpu 1 \
-  --memory 2 \
-  --ports 8080 \
-  --environment-variables LOG_LEVEL=info \
-  --secure-environment-variables DATABASE_URL=$DATABASE_URL
+# Clone repository
+git clone <repository-url>
+cd movies-mcp-server
+
+# Build clean architecture version
+make build-clean
+
+# Set up database
+make db-setup
+make db-migrate
+
+# Run the server
+./build/movies-server-clean
+```
+
+#### Cross-Platform Builds
+
+```bash
+# Build for multiple platforms
+make build-all
+
+# Output:
+# - build/movies-server-clean-linux-amd64
+# - build/movies-server-clean-linux-arm64  
+# - build/movies-server-clean-darwin-amd64
+# - build/movies-server-clean-darwin-arm64
+# - build/movies-server-clean-windows-amd64.exe
+```
+
+### 3. Local Development Deployment
+
+**Note**: MCP servers are not deployed to the cloud as standalone services. They run locally as processes controlled by MCP clients.
+
+```bash
+# For local development with Docker
+make docker-compose-up-dev
+
+# For local binary development
+make build-clean test
+
+# For production-like local environment
+make docker-compose-up-clean
 ```
 
 ## Database Setup
 
-### PostgreSQL Production Setup
+### PostgreSQL Configuration
 
-1. **Create database and user:**
 ```sql
-CREATE DATABASE movies_db;
-CREATE USER movies_user WITH ENCRYPTED PASSWORD 'secure_password';
-GRANT ALL PRIVILEGES ON DATABASE movies_db TO movies_user;
+-- Create database and user
+CREATE DATABASE movies_mcp;
+CREATE USER movies_user WITH ENCRYPTED PASSWORD 'movies_password';
+GRANT ALL PRIVILEGES ON DATABASE movies_mcp TO movies_user;
+
+-- Enable required extensions
+\c movies_mcp;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 ```
 
-2. **Run migrations:**
+### Migration System
+
+The server includes a custom migration tool:
+
 ```bash
-# Using the application
-./movies-mcp-server --migrate
+# Automatic migrations (default)
+./movies-server-clean
 
-# Or using psql
-psql -h hostname -U movies_user -d movies_db -f migrations/001_initial.sql
+# Skip migrations
+./movies-server-clean --skip-migrations
+
+# Run migrations manually
+./movies-server-clean --migrations ./migrations
 ```
 
-3. **Configure connection pooling:**
-```bash
-# Using PgBouncer
-echo "movies_db = host=db_host port=5432 dbname=movies_db" >> pgbouncer.ini
+### Database Schema
+
+The schema includes:
+- **movies** table with full-text search indexes
+- **actors** table with biography support
+- **movie_actors** many-to-many relationships
+- **Binary image storage** with MIME type support
+- **Automatic timestamps** and audit triggers
+
+## MCP Client Integration
+
+### Claude Desktop Configuration
+
+Add to your Claude Desktop configuration:
+
+```json
+{
+  "mcpServers": {
+    "movies-mcp-server": {
+      "command": "/path/to/movies-server-clean",
+      "env": {
+        "DATABASE_URL": "postgres://movies_user:movies_password@localhost:5432/movies_mcp"
+      }
+    }
+  }
+}
 ```
 
-### Cloud Database Options
+### Alternative MCP Clients
 
-#### AWS RDS
-```bash
-aws rds create-db-instance \
-  --db-instance-identifier movies-db \
-  --db-instance-class db.t3.micro \
-  --engine postgres \
-  --engine-version 13.7 \
-  --allocated-storage 20 \
-  --storage-encrypted \
-  --master-username movies_user \
-  --master-user-password secure_password
-```
+For other MCP clients, ensure they can:
+1. Execute the binary with proper environment variables
+2. Communicate via stdin/stdout using MCP protocol
+3. Handle MCP resources (for image data)
 
-#### Google Cloud SQL
-```bash
-gcloud sql instances create movies-db \
-  --database-version POSTGRES_13 \
-  --tier db-f1-micro \
-  --region us-central1 \
-  --storage-auto-increase
-```
+### Available MCP Tools
+
+The server provides these tools:
+- `get_movie` - Retrieve movie details
+- `add_movie` - Add new movies
+- `update_movie` - Update existing movies
+- `delete_movie` - Remove movies
+- `search_movies` - Full-text search
+- `list_top_movies` - Get top-rated movies
+- Actor management tools
+- Compound operations for complex queries
+
+### Available MCP Resources
+
+- `movies://database/all` - All movies (JSON)
+- `movies://database/stats` - Database statistics
+- `movies://posters/{id}` - Movie poster images (base64)
+- `movies://posters/collection` - Poster gallery
 
 ## Monitoring and Logging
 
+### Health Check Endpoints
+
+The server optionally provides HTTP endpoints:
+
+```bash
+# Health checks
+curl http://localhost:8080/health        # Overall health
+curl http://localhost:8080/health/db     # Database connectivity
+curl http://localhost:8080/ready         # Readiness probe
+
+# Metrics (Prometheus format)
+curl http://localhost:8080/metrics
+```
+
 ### Prometheus Metrics
 
-The server exposes metrics on `/metrics` endpoint:
-- Request duration histograms
-- Request count counters
-- Active connections gauge
-- Database operation metrics
+Available metrics:
+- `movies_requests_total` - Total requests by tool
+- `movies_request_duration_seconds` - Request duration histogram
+- `movies_db_connections_active` - Active database connections
+- `movies_db_operations_total` - Database operations count
 
 ### Grafana Dashboard
 
 Import the provided dashboard:
+
 ```bash
-curl -X POST \
-  http://grafana:3000/api/dashboards/db \
-  -H "Content-Type: application/json" \
-  -d @monitoring/grafana-dashboard.json
+# Start Grafana with Docker Compose
+docker-compose up -d grafana
+
+# Access at http://localhost:3000 (admin/admin)
+# Import dashboard from monitoring/grafana-dashboard.json
+```
+
+### Structured Logging
+
+The server uses structured JSON logging:
+
+```json
+{
+  "timestamp": "2024-01-01T12:00:00Z",
+  "level": "info",
+  "message": "Tool executed successfully",
+  "tool": "get_movie",
+  "duration": "15ms",
+  "movie_id": 123
+}
 ```
 
 ### Log Aggregation
@@ -324,55 +341,86 @@ fluentd:
 
 ## Security Considerations
 
-### Network Security
-- Use TLS/SSL for all connections
-- Implement network segmentation
-- Configure firewall rules
-- Use VPN for database access
+### MCP Security Model
+
+- **Process Isolation**: MCP servers run as separate processes
+- **No Network Exposure**: Communication only via stdin/stdout
+- **Client-Controlled**: MCP client manages server lifecycle
 
 ### Application Security
-- Enable CORS restrictions
-- Implement rate limiting
-- Use strong JWT secrets
-- Validate all inputs
-- Implement audit logging
+
+- **Input Validation**: All inputs validated at domain boundaries
+- **SQL Injection Prevention**: Prepared statements only
+- **Type Safety**: Domain models prevent invalid states
+- **Image Size Limits**: Configurable max image sizes
+- **MIME Type Validation**: Only allowed image types
 
 ### Container Security
-- Use non-root user in containers
-- Scan images for vulnerabilities
-- Use minimal base images
-- Keep dependencies updated
-- Implement security policies
 
-### Example Security Headers
-```go
-// Add to your HTTP server
-w.Header().Set("X-Content-Type-Options", "nosniff")
-w.Header().Set("X-Frame-Options", "DENY")
-w.Header().Set("X-XSS-Protection", "1; mode=block")
-w.Header().Set("Strict-Transport-Security", "max-age=31536000")
-```
+- **Non-root Execution**: Containers run as non-root user
+- **Distroless Base Images**: Minimal attack surface
+- **Security Scanning**: Images scanned for vulnerabilities
+- **Read-only Root Filesystem**: Immutable containers
+
+### Database Security
+
+- **Connection Encryption**: SSL/TLS for database connections
+- **Credential Management**: Environment-based secrets
+- **Connection Pooling**: Prevents connection exhaustion
+- **Query Timeout**: Prevents long-running queries
 
 ## Troubleshooting
 
 ### Common Issues
 
 #### Database Connection Issues
+
 ```bash
 # Test database connectivity
 psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "SELECT 1;"
 
-# Check connection pool
-curl http://localhost:8080/health/db
+# Check server logs
+docker logs movies-mcp-server 2>&1 | grep -E "(ERROR|FATAL)"
+
+# Verify environment variables
+env | grep -E "(DB_|DATABASE_)"
+```
+
+#### MCP Communication Issues
+
+```bash
+# Test MCP protocol manually
+echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}},"id":1}' | ./movies-server-clean
+
+# Check client configuration
+# Verify binary path and environment variables in MCP client config
+```
+
+#### Migration Issues
+
+```bash
+# Check migration status
+psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "SELECT * FROM schema_migrations;"
+
+# Run migrations manually
+./movies-server-clean --migrations ./migrations
+
+# Reset database (development only)
+make db-reset db-migrate
 ```
 
 #### Performance Issues
+
 ```bash
 # Check resource usage
 docker stats movies-mcp-server
 
-# View application metrics
-curl http://localhost:9090/metrics | grep movies_
+# Analyze slow queries
+docker exec -it postgres psql -U movies_user -d movies_mcp -c "
+SELECT query, mean_exec_time, calls 
+FROM pg_stat_statements 
+ORDER BY mean_exec_time DESC 
+LIMIT 10;"
 ```
 
 #### Log Analysis
@@ -386,67 +434,71 @@ docker logs movies-mcp-server 2>&1 | grep ERROR
 
 ### Debug Mode
 
-Enable debug mode for troubleshooting:
+Enable debug logging:
+
 ```bash
-export DEBUG=true
 export LOG_LEVEL=debug
-./movies-mcp-server
+./movies-server-clean
 ```
 
-### Health Checks
-
-The server provides multiple health check endpoints:
-- `/health` - Overall health status
-- `/health/db` - Database connectivity
-- `/health/redis` - Redis connectivity (if enabled)
-- `/ready` - Readiness for traffic
 
 ### Backup and Recovery
 
-#### Database Backup
+### Backup and Recovery
+
 ```bash
 # Create backup
 pg_dump -h $DB_HOST -U $DB_USER $DB_NAME > movies_backup.sql
 
 # Restore backup
 psql -h $DB_HOST -U $DB_USER -d $DB_NAME < movies_backup.sql
-```
 
-#### Automated Backups
-```bash
-# Add to crontab
+# Automated backups
 0 2 * * * pg_dump -h $DB_HOST -U $DB_USER $DB_NAME | gzip > /backups/movies_$(date +\%Y\%m\%d).sql.gz
 ```
 
 ## Scaling Considerations
 
 ### Horizontal Scaling
-- Deploy multiple instances behind a load balancer
-- Use external cache (Redis) for session storage
-- Implement connection pooling for database
+
+MCP servers are typically deployed per client instance:
+- Each MCP client runs its own server process
+- No shared state between instances
+- Database connection pooling handles concurrent access
 
 ### Vertical Scaling
-- Monitor CPU and memory usage
-- Adjust container resource limits
-- Optimize database queries
 
-### Load Balancing
-```nginx
-# nginx.conf
-upstream movies_backend {
-    server movies-1:8080;
-    server movies-2:8080;
-    server movies-3:8080;
-}
+- Monitor memory usage (especially for image processing)
+- Adjust database connection pool sizes
+- Optimize PostgreSQL configuration for workload
 
-server {
-    listen 80;
-    location / {
-        proxy_pass http://movies_backend;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
+### Database Scaling
+
+```sql
+-- Optimize for read-heavy workloads
+ALTER SYSTEM SET shared_buffers = '256MB';
+ALTER SYSTEM SET effective_cache_size = '1GB';
+ALTER SYSTEM SET work_mem = '16MB';
+ALTER SYSTEM SET maintenance_work_mem = '256MB';
 ```
 
-This deployment guide provides comprehensive instructions for deploying the Movies MCP Server in various production environments with proper security, monitoring, and scaling considerations.
+## Quick Start Commands
+
+```bash
+# Docker development setup
+make docker-compose-up-dev
+
+# Build and test locally
+make build-clean test
+
+# Production deployment
+make docker-compose-up-clean
+
+# Database operations
+make db-setup db-migrate db-seed
+
+# Monitoring
+make monitoring-up
+```
+
+This deployment guide provides comprehensive instructions for deploying the Movies MCP Server with proper security, monitoring, and scaling considerations tailored to the MCP protocol architecture.
