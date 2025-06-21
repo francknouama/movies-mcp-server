@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"movies-mcp-server/pkg/logging"
-	"movies-mcp-server/internal/models"
+	"movies-mcp-server/internal/interfaces/dto"
 )
 
 // ErrorCode represents standardized error codes
@@ -132,25 +132,25 @@ func (e *ApplicationError) AsRetryable() *ApplicationError {
 }
 
 // ToJSONRPCError converts to JSON-RPC error format
-func (e *ApplicationError) ToJSONRPCError() *models.JSONRPCError {
+func (e *ApplicationError) ToJSONRPCError() *dto.JSONRPCError {
 	// Map application error codes to JSON-RPC codes
 	var rpcCode int
 	switch e.Code {
 	case ParseError:
-		rpcCode = models.ParseError
+		rpcCode = dto.ParseError
 	case InvalidRequest:
-		rpcCode = models.InvalidRequest
+		rpcCode = dto.InvalidRequest
 	case MethodNotFound:
-		rpcCode = models.MethodNotFound
+		rpcCode = dto.MethodNotFound
 	case InvalidParams, ValidationError:
-		rpcCode = models.InvalidParams
+		rpcCode = dto.InvalidParams
 	case InternalError, DatabaseError, ImageProcessingError, ServiceUnavailable:
-		rpcCode = models.InternalError
+		rpcCode = dto.InternalError
 	default:
-		rpcCode = models.InternalError
+		rpcCode = dto.InternalError
 	}
 
-	return &models.JSONRPCError{
+	return &dto.JSONRPCError{
 		Code:    rpcCode,
 		Message: e.Message,
 		Data:    e.Details,
@@ -187,7 +187,7 @@ func NewErrorHandler(logger *logging.Logger) *ErrorHandler {
 }
 
 // Handle processes an error and returns appropriate response
-func (eh *ErrorHandler) Handle(err error, requestID interface{}) *models.JSONRPCError {
+func (eh *ErrorHandler) Handle(err error, requestID interface{}) *dto.JSONRPCError {
 	if err == nil {
 		return nil
 	}
