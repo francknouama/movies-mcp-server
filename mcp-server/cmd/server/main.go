@@ -29,6 +29,7 @@ func main() {
 		showVersion    = flag.Bool("version", false, "Show version information")
 		showHelp       = flag.Bool("help", false, "Show help information")
 		skipMigrations = flag.Bool("skip-migrations", false, "Skip database migrations")
+		migrateOnly    = flag.Bool("migrate-only", false, "Run migrations and exit")
 		migrationsPath = flag.String("migrations", "./migrations", "Path to database migrations")
 	)
 
@@ -92,6 +93,12 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Fprintf(os.Stderr, "Database migrations completed successfully\n")
+	}
+
+	// Exit if only running migrations
+	if *migrateOnly {
+		fmt.Fprintf(os.Stderr, "Migrations completed, exiting as requested\n")
+		os.Exit(0)
 	}
 
 	fmt.Fprintf(os.Stderr, "Connected to database: %s\n", cfg.Database.Name)
