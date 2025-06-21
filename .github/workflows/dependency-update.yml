@@ -118,21 +118,23 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           
-      - name: Run security audit
+      - name: Run govulncheck audit
         run: |
-          # Install govulncheck
           go install golang.org/x/vuln/cmd/govulncheck@latest
-          
-          # Check each module for vulnerabilities
           cd shared-mcp && govulncheck ./...
           cd ../mcp-server && govulncheck ./...
           cd ../godog-server && govulncheck ./...
-          
+      
+      - name: Run gosec security scanner
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          cd shared-mcp && gosec ./...
+          cd ../mcp-server && gosec ./...
+          cd ../godog-server && gosec ./...
+      
       - name: Run Nancy vulnerability scanner
         run: |
           go install github.com/sonatype-nexus-community/nancy@latest
-          
-          # Scan dependencies for known vulnerabilities
           cd mcp-server && go list -json -deps ./... | nancy sleuth
           cd ../godog-server && go list -json -deps ./... | nancy sleuth
           cd ../shared-mcp && go list -json -deps ./... | nancy sleuth
@@ -187,3 +189,24 @@ jobs:
                 labels: ['security', 'automated', 'high-priority']
               });
             }
+            
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.59.1
+      - name: Lint shared-mcp
+        run: |
+          cd shared-mcp && golangci-lint run --timeout=5m || exit 1
+      - name: Lint mcp-server
+        run: |
+          cd mcp-server && golangci-lint run --timeout=5m || exit 1
+      - name: Lint godog-server
+        run: |
+          cd godog-server && golangci-lint run --timeout=5m || exit 1
