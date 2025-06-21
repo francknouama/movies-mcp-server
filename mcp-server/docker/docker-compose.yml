@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: movies_postgres
+    environment:
+      POSTGRES_DB: movies_mcp
+      POSTGRES_USER: movies_user
+      POSTGRES_PASSWORD: movies_password
+      POSTGRES_HOST_AUTH_METHOD: md5
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U movies_user -d movies_mcp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - movies_network
+
+  movies-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: movies_mcp_server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: movies_mcp
+      DB_USER: movies_user
+      DB_PASSWORD: movies_password
+      DB_SSLMODE: disable
+      LOG_LEVEL: info
+    stdin_open: true
+    tty: true
+    networks:
+      - movies_network
+    profiles:
+      - full
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  movies_network:
+    driver: bridge

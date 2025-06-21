@@ -1,0 +1,75 @@
+meta {
+  name: Movie Not Found
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/mcp
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "tools/call",
+    "params": {
+      "name": "get_movie",
+      "arguments": {
+        "id": 99999
+      }
+    }
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response is valid JSON-RPC error", function() {
+    expect(res.getBody()).to.have.property('jsonrpc', '2.0');
+    expect(res.getBody()).to.have.property('id', 42);
+    expect(res.getBody()).to.have.property('error');
+  });
+  
+  test("Error code is invalid params", function() {
+    const error = res.getBody().error;
+    expect(error).to.have.property('code', -32602);
+    expect(error).to.have.property('message');
+    expect(error.message).to.include('Movie not found');
+  });
+}
+
+docs {
+  # Movie Not Found
+  
+  Tests error handling when trying to access a movie that doesn't exist.
+  
+  ## Expected Response
+  
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "id": 42,
+    "error": {
+      "code": -32602,
+      "message": "Movie not found"
+    }
+  }
+  ```
+  
+  ## Note
+  This error applies to all movie operations that require an ID:
+  - get_movie
+  - update_movie  
+  - delete_movie
+  - resources/read with movie:// URI
+}

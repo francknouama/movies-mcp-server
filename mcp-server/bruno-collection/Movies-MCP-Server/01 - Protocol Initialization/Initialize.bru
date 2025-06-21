@@ -1,0 +1,89 @@
+meta {
+  name: Initialize
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/mcp
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "{{protocol_version}}",
+      "capabilities": {
+        "tools": {},
+        "resources": {}
+      },
+      "clientInfo": {
+        "name": "Bruno Test Client",
+        "version": "1.0.0"
+      }
+    }
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response is valid JSON-RPC", function() {
+    expect(res.getBody()).to.have.property('jsonrpc', '2.0');
+    expect(res.getBody()).to.have.property('id', 1);
+    expect(res.getBody()).to.have.property('result');
+  });
+  
+  test("Server capabilities returned", function() {
+    const result = res.getBody().result;
+    expect(result).to.have.property('capabilities');
+    expect(result.capabilities).to.have.property('tools');
+    expect(result.capabilities).to.have.property('resources');
+  });
+  
+  test("Server info returned", function() {
+    const result = res.getBody().result;
+    expect(result).to.have.property('serverInfo');
+    expect(result.serverInfo).to.have.property('name', 'movies-mcp-server');
+    expect(result.serverInfo).to.have.property('version');
+  });
+}
+
+docs {
+  # Initialize MCP Connection
+  
+  This request initializes the Model Context Protocol connection with the Movies MCP Server.
+  
+  ## Expected Response
+  
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {
+        "tools": {},
+        "resources": {
+          "subscribe": false
+        }
+      },
+      "serverInfo": {
+        "name": "movies-mcp-server",
+        "version": "0.1.0"
+      }
+    }
+  }
+  ```
+}

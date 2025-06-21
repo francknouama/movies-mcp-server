@@ -1,0 +1,283 @@
+# Prometheus alerting rules for Movies MCP Server
+
+groups:
+  - name: movies-mcp-server
+    rules:
+      # High error rate alert
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(movies_http_requests_total{status_code=~"4..|5.."}[5m])) /
+            sum(rate(movies_http_requests_total[5m]))
+          ) * 100 > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: movies-mcp-server
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }}% for Movies MCP Server (threshold: 5%)"
+
+      # Critical error rate alert
+      - alert: CriticalErrorRate
+        expr: |
+          (
+            sum(rate(movies_http_requests_total{status_code=~"5.."}[5m])) /
+            sum(rate(movies_http_requests_total[5m]))
+          ) * 100 > 10
+        for: 1m
+        labels:
+          severity: critical
+          service: movies-mcp-server
+        annotations:
+          summary: "Critical error rate detected"
+          description: "Server error rate is {{ $value }}% for Movies MCP Server (threshold: 10%)"
+
+      # High response time alert
+      - alert: HighResponseTime
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(movies_http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 1
+        for: 3m
+        labels:
+          severity: warning
+          service: movies-mcp-server
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s (threshold: 1s)"
+
+      # Service down alert
+      - alert: ServiceDown
+        expr: up{job="movies-mcp-server"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: movies-mcp-server
+        annotations:
+          summary: "Movies MCP Server is down"
+          description: "Movies MCP Server instance {{ $labels.instance }} is down"
+
+      # High memory usage alert
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            go_memstats_alloc_bytes{job="movies-mcp-server"} /
+            go_memstats_sys_bytes{job="movies-mcp-server"}
+          ) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: movies-mcp-server
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }} (threshold: 80%)"
+
+      # Database connection issues
+      - alert: DatabaseConnectionIssues
+        expr: |
+          increase(movies_db_errors_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          service: movies-mcp-server
+        annotations:
+          summary: "Database connection issues detected"
+          description: "{{ $value }} database errors in the last 5 minutes"
+
+      # High database query duration
+      - alert: HighDatabaseQueryDuration
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(movies_db_query_duration_seconds_bucket[5m])) by (le, operation)
+          ) > 5
+        for: 3m
+        labels:
+          severity: warning
+          service: movies-mcp-server
+        annotations:
+          summary: "High database query duration"
+          description: "95th percentile database query duration for {{ $labels.operation }} is {{ $value }}s (threshold: 5s)"
+
+      # Too many active connections
+      - alert: TooManyActiveConnections
+        expr: movies_active_connections > 90
+        for: 2m
+        labels:
+          severity: warning
+          service: movies-mcp-server
+        annotations:
+          summary: "Too many active connections"
+          description: "{{ $value }} active connections (threshold: 90)"
+
+      # Low cache hit rate
+      - alert: LowCacheHitRate
+        expr: |
+          (
+            rate(movies_cache_hits_total[10m]) /
+            (rate(movies_cache_hits_total[10m]) + rate(movies_cache_misses_total[10m]))
+          ) * 100 < 50
+        for: 5m
+        labels:
+          severity: warning
+          service: movies-mcp-server
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value }}% (threshold: 50%)"
+
+      # High goroutine count
+      - alert: HighGoroutineCount
+        expr: go_goroutines{job="movies-mcp-server"} > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: movies-mcp-server
+        annotations:
+          summary: "High goroutine count"
+          description: "{{ $value }} goroutines running on {{ $labels.instance }} (threshold: 1000)"
+
+  - name: infrastructure
+    rules:
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }} (threshold: 80%)"
+
+      # High memory usage (system)
+      - alert: HighSystemMemoryUsage
+        expr: |
+          (
+            (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) /
+            node_memory_MemTotal_bytes
+          ) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High system memory usage"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }} (threshold: 85%)"
+
+      # High disk usage
+      - alert: HighDiskUsage
+        expr: |
+          (
+            (node_filesystem_size_bytes{fstype!="tmpfs"} - node_filesystem_free_bytes{fstype!="tmpfs"}) /
+            node_filesystem_size_bytes{fstype!="tmpfs"}
+          ) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }} (threshold: 85%)"
+
+      # Node down
+      - alert: NodeDown
+        expr: up{job="node-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: infrastructure
+        annotations:
+          summary: "Node is down"
+          description: "Node {{ $labels.instance }} has been down for more than 1 minute"
+
+  - name: database
+    rules:
+      # PostgreSQL down
+      - alert: PostgreSQLDown
+        expr: up{job="postgres-exporter"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL instance {{ $labels.instance }} is down"
+
+      # High database connections
+      - alert: HighDatabaseConnections
+        expr: |
+          (
+            pg_stat_activity_count /
+            pg_settings_max_connections
+          ) * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "High database connection usage"
+          description: "Database connection usage is {{ $value }}% (threshold: 80%)"
+
+      # Database lock waits
+      - alert: DatabaseLockWaits
+        expr: |
+          increase(pg_stat_database_conflicts_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Database lock conflicts detected"
+          description: "{{ $value }} lock conflicts in the last 5 minutes"
+
+      # Slow queries
+      - alert: SlowQueries
+        expr: |
+          pg_stat_activity_max_tx_duration{state="active"} > 300
+        for: 1m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Query running for {{ $value }} seconds"
+
+  - name: redis
+    rules:
+      # Redis down
+      - alert: RedisDown
+        expr: up{job="redis-exporter"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis instance {{ $labels.instance }} is down"
+
+      # High Redis memory usage
+      - alert: HighRedisMemoryUsage
+        expr: |
+          (
+            redis_memory_used_bytes /
+            redis_memory_max_bytes
+          ) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "High Redis memory usage"
+          description: "Redis memory usage is {{ $value }}% (threshold: 80%)"
+
+      # High Redis connections
+      - alert: HighRedisConnections
+        expr: redis_connected_clients > 100
+        for: 2m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "High Redis connection count"
+          description: "{{ $value }} Redis connections (threshold: 100)"

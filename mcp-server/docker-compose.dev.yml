@@ -1,0 +1,110 @@
+# ==============================================================================
+# Docker Compose for Development - Clean Architecture
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Development
+  postgres-dev:
+    image: postgres:17-alpine
+    container_name: movies-mcp-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: movies_mcp_dev
+      POSTGRES_USER: dev_user
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d/migrations:ro
+    networks:
+      - movies-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev_user -d movies_mcp_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # Test Database (for integration tests)
+  postgres-test:
+    image: postgres:17-alpine
+    container_name: movies-mcp-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: movies_mcp_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d/migrations:ro
+    networks:
+      - movies-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d movies_mcp_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # Redis for Development
+  redis-dev:
+    image: redis:7-alpine
+    container_name: movies-mcp-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6381:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - movies-dev-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # pgAdmin for Development
+  pgadmin-dev:
+    image: dpage/pgadmin4:latest
+    container_name: movies-mcp-pgadmin-dev
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: dev@example.com
+      PGADMIN_DEFAULT_PASSWORD: dev
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5052:80"
+    volumes:
+      - pgadmin_dev_data:/var/lib/pgadmin
+    networks:
+      - movies-dev-network
+    depends_on:
+      - postgres-dev
+      - postgres-test
+
+# Volumes for development data
+volumes:
+  postgres_dev_data:
+    driver: local
+  postgres_test_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+  pgadmin_dev_data:
+    driver: local
+
+# Development network
+networks:
+  movies-dev-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16

@@ -1,0 +1,74 @@
+# Documentation
+*.md
+docs/
+mcp_movies_implementation_plan.md
+PHASED_IMPLEMENTATION.md
+
+# Git
+.git
+.gitignore
+.github/
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+movies-mcp-server
+*.exe
+*.dll
+*.so
+*.dylib
+build/
+dist/
+
+# Test files
+*_test.go
+test_*.sh
+testdata/
+coverage.out
+coverage.html
+
+# Dependencies
+vendor/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# IDE files
+.DS_Store
+Thumbs.db
+
+# Docker files (avoid recursive copy)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Scripts (unless needed for runtime)
+scripts/setup_db.sh
+scripts/seed.sh
+
+# Keep only necessary migration files
+!migrations/

@@ -1,0 +1,402 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Movies MCP Server Dashboard",
+    "tags": ["movies", "mcp", "golang"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(movies_http_requests_total, instance)",
+          "current": {
+            "value": "$__all",
+            "text": "All"
+          },
+          "includeAll": true,
+          "allValue": ".*"
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(movies_http_requests_total{instance=~\"$instance\"}[5m]))",
+            "legendFormat": "Requests/sec"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 50
+                },
+                {
+                  "color": "red",
+                  "value": 100
+                }
+              ]
+            },
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Error Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(movies_http_requests_total{instance=~\"$instance\",status_code=~\"4..|5..\"}[5m])) / sum(rate(movies_http_requests_total{instance=~\"$instance\"}[5m])) * 100",
+            "legendFormat": "Error %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 1
+                },
+                {
+                  "color": "red",
+                  "value": 5
+                }
+              ]
+            },
+            "unit": "percent"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 6,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Response Time (P95)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(movies_http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
+            "legendFormat": "P95 Latency"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.5
+                },
+                {
+                  "color": "red",
+                  "value": 1
+                }
+              ]
+            },
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 4,
+        "title": "Active Connections",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "movies_active_connections{instance=~\"$instance\"}",
+            "legendFormat": "Active Connections"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 50
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 18,
+          "y": 0
+        }
+      },
+      {
+        "id": 5,
+        "title": "Request Rate by Endpoint",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(movies_http_requests_total{instance=~\"$instance\"}[5m])) by (endpoint)",
+            "legendFormat": "{{endpoint}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 6,
+        "title": "Response Time Percentiles",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(movies_http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
+            "legendFormat": "P50"
+          },
+          {
+            "expr": "histogram_quantile(0.90, sum(rate(movies_http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
+            "legendFormat": "P90"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(movies_http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
+            "legendFormat": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(movies_http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
+            "legendFormat": "P99"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Duration (seconds)",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 7,
+        "title": "Database Operations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(movies_db_operations_total{instance=~\"$instance\"}[5m])) by (operation)",
+            "legendFormat": "{{operation}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Operations/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 0,
+          "y": 17
+        }
+      },
+      {
+        "id": 8,
+        "title": "Database Query Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(movies_db_query_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le, operation))",
+            "legendFormat": "{{operation}} P95"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Duration (seconds)",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 12,
+          "y": 17
+        }
+      },
+      {
+        "id": 9,
+        "title": "HTTP Status Codes",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(movies_http_requests_total{instance=~\"$instance\"}[5m])) by (status_code)",
+            "legendFormat": "{{status_code}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 0,
+          "y": 26
+        }
+      },
+      {
+        "id": 10,
+        "title": "Go Runtime Metrics",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "go_memstats_alloc_bytes{instance=~\"$instance\"}",
+            "legendFormat": "Memory Allocated"
+          },
+          {
+            "expr": "go_goroutines{instance=~\"$instance\"}",
+            "legendFormat": "Goroutines"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Count/Bytes",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 12,
+          "y": 26
+        }
+      },
+      {
+        "id": 11,
+        "title": "Cache Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(movies_cache_hits_total{instance=~\"$instance\"}[5m])",
+            "legendFormat": "Cache Hits/sec"
+          },
+          {
+            "expr": "rate(movies_cache_misses_total{instance=~\"$instance\"}[5m])",
+            "legendFormat": "Cache Misses/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Operations/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 0,
+          "y": 35
+        }
+      },
+      {
+        "id": 12,
+        "title": "Tool Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(movies_tool_calls_total{instance=~\"$instance\"}[5m])) by (tool_name)",
+            "legendFormat": "{{tool_name}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Calls/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 12,
+          "y": 35
+        }
+      }
+    ]
+  }
+}

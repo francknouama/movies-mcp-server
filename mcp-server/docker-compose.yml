@@ -1,0 +1,185 @@
+# ==============================================================================
+# Docker Compose for Movies MCP Server Development
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17-alpine
+    container_name: movies-mcp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: movies_mcp
+      POSTGRES_USER: movies_user
+      POSTGRES_PASSWORD: movies_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=en_US.UTF-8 --lc-ctype=en_US.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./testdata/seed_data.sql:/docker-entrypoint-initdb.d/01-seed.sql:ro
+    networks:
+      - movies-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U movies_user -d movies_mcp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Movies MCP Server
+  movies-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: dev
+        BUILD_TIME: ${BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}
+        GIT_COMMIT: ${GIT_COMMIT:-$(git rev-parse --short HEAD || echo 'unknown')}
+    container_name: movies-mcp-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database configuration
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: movies_mcp
+      DB_USER: movies_user
+      DB_PASSWORD: movies_password
+      DB_SSLMODE: disable
+      DB_MAX_OPEN_CONNS: 25
+      DB_MAX_IDLE_CONNS: 5
+      DB_CONN_MAX_LIFETIME: 1h
+      MIGRATIONS_PATH: file:///migrations
+      
+      # Server configuration
+      LOG_LEVEL: debug
+      SERVER_TIMEOUT: 30s
+      
+      # Image processing
+      MAX_IMAGE_SIZE: 5242880
+      ALLOWED_IMAGE_TYPES: image/jpeg,image/png,image/webp
+      ENABLE_THUMBNAILS: true
+      THUMBNAIL_SIZE: 200x200
+      
+      # Monitoring
+      METRICS_ENABLED: true
+      METRICS_INTERVAL: 30s
+    ports:
+      - "8080:8080"  # Health check port
+    networks:
+      - movies-network
+    volumes:
+      # Mount for development (optional, remove in production)
+      - type: bind
+        source: ./testdata
+        target: /testdata
+        read_only: true
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/movies-mcp-server", "-health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Redis (for caching and session management)
+  redis:
+    image: redis:7-alpine
+    container_name: movies-mcp-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./docker/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - movies-network
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Prometheus (for metrics collection)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: movies-mcp-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - movies-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+
+  # Grafana (for metrics visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: movies-mcp-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - movies-network
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+
+  # pgAdmin (for database management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: movies-mcp-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./docker/pgadmin_servers.json:/pgadmin4/servers.json:ro
+    networks:
+      - movies-network
+    depends_on:
+      - postgres
+
+# Volumes for persistent data
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+# Network for service communication
+networks:
+  movies-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
