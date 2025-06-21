@@ -103,7 +103,7 @@ func main() {
 	// Create logger for the server
 	logger := log.New(os.Stderr, "[MCP] ", log.LstdFlags)
 
-	// Create and run the MCP server
+	// Create and run the MCP server with new clean architecture
 	srv := server.NewMCPServer(os.Stdin, os.Stdout, logger, container)
 
 	// Run server in a goroutine
