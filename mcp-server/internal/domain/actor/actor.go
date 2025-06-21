@@ -110,13 +110,13 @@ func (a *Actor) UpdatedAt() time.Time {
 // SetBio sets the actor's biography
 func (a *Actor) SetBio(bio string) {
 	oldBio := a.bio
-	
+
 	// Emit domain event if bio actually changed
 	if oldBio != bio {
 		event := NewActorBioChangedEvent(a.id, oldBio, bio, a.Version()+1)
 		a.AddEvent(event)
 	}
-	
+
 	a.bio = bio
 	a.touch()
 }
@@ -131,11 +131,11 @@ func (a *Actor) AddMovie(movieID shared.MovieID) error {
 	}
 
 	a.movieIDs = append(a.movieIDs, movieID)
-	
+
 	// Emit domain event for actor linked to movie
 	event := NewActorLinkedToMovieEvent(a.id, movieID, a.Version()+1)
 	a.AddEvent(event)
-	
+
 	a.touch()
 	return nil
 }
@@ -146,11 +146,11 @@ func (a *Actor) RemoveMovie(movieID shared.MovieID) error {
 		if id.Value() == movieID.Value() {
 			// Remove by slicing
 			a.movieIDs = append(a.movieIDs[:i], a.movieIDs[i+1:]...)
-			
+
 			// Emit domain event for actor unlinked from movie
 			event := NewActorUnlinkedFromMovieEvent(a.id, movieID, a.Version()+1)
 			a.AddEvent(event)
-			
+
 			a.touch()
 			return nil
 		}

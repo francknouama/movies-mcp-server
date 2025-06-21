@@ -15,18 +15,18 @@ type Container struct {
 	// Repositories
 	MovieRepository *postgres.MovieRepository
 	ActorRepository *postgres.ActorRepository
-	
+
 	// Application Services
 	MovieService *movieApp.Service
 	ActorService *actorApp.Service
-	
+
 	// Interface Handlers
-	MovieHandlers         *mcp.MovieHandlers
-	ActorHandlers         *mcp.ActorHandlers
-	PromptHandlers        *mcp.PromptHandlers
-	CompoundToolHandlers  *mcp.CompoundToolHandlers
-	ContextManager        *mcp.ContextManager
-	ToolValidator         *mcp.ToolValidator
+	MovieHandlers        *mcp.MovieHandlers
+	ActorHandlers        *mcp.ActorHandlers
+	PromptHandlers       *mcp.PromptHandlers
+	CompoundToolHandlers *mcp.CompoundToolHandlers
+	ContextManager       *mcp.ContextManager
+	ToolValidator        *mcp.ToolValidator
 }
 
 // NewContainer creates and wires up all application dependencies
@@ -34,11 +34,11 @@ func NewContainer(db *sql.DB) *Container {
 	// Infrastructure Layer - Repositories
 	movieRepo := postgres.NewMovieRepository(db)
 	actorRepo := postgres.NewActorRepository(db)
-	
+
 	// Application Layer - Services
 	movieService := movieApp.NewService(movieRepo)
 	actorService := actorApp.NewService(actorRepo)
-	
+
 	// Interface Layer - Handlers
 	movieHandlers := mcp.NewMovieHandlers(movieService)
 	actorHandlers := mcp.NewActorHandlers(actorService)
@@ -46,18 +46,18 @@ func NewContainer(db *sql.DB) *Container {
 	compoundToolHandlers := mcp.NewCompoundToolHandlers(movieService)
 	contextManager := mcp.NewContextManager(movieService)
 	toolValidator := mcp.NewToolValidator(schemas.GetToolSchemas())
-	
+
 	return &Container{
-		MovieRepository:       movieRepo,
-		ActorRepository:       actorRepo,
-		MovieService:          movieService,
-		ActorService:          actorService,
-		MovieHandlers:         movieHandlers,
-		ActorHandlers:         actorHandlers,
-		PromptHandlers:        promptHandlers,
-		CompoundToolHandlers:  compoundToolHandlers,
-		ContextManager:        contextManager,
-		ToolValidator:         toolValidator,
+		MovieRepository:      movieRepo,
+		ActorRepository:      actorRepo,
+		MovieService:         movieService,
+		ActorService:         actorService,
+		MovieHandlers:        movieHandlers,
+		ActorHandlers:        actorHandlers,
+		PromptHandlers:       promptHandlers,
+		CompoundToolHandlers: compoundToolHandlers,
+		ContextManager:       contextManager,
+		ToolValidator:        toolValidator,
 	}
 }
 
@@ -67,7 +67,7 @@ func NewTestContainer() *Container {
 	// We'll create minimal handlers that can respond to protocol requests
 	promptHandlers := mcp.NewPromptHandlers()
 	toolValidator := mcp.NewToolValidator(schemas.GetToolSchemas())
-	
+
 	return &Container{
 		MovieRepository:      nil, // Not needed for protocol testing
 		ActorRepository:      nil, // Not needed for protocol testing

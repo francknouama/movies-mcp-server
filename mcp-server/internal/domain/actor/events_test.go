@@ -2,7 +2,7 @@ package actor
 
 import (
 	"testing"
-	
+
 	"github.com/francknouama/movies-mcp-server/mcp-server/internal/domain/shared"
 )
 
@@ -96,11 +96,11 @@ func TestActorCreatedEvent(t *testing.T) {
 		if event.EventType() != "ActorCreated" {
 			t.Errorf("Expected ActorCreated event, got %s", event.EventType())
 		}
-		
+
 		if event.AggregateType() != "Actor" {
 			t.Errorf("Expected Actor aggregate type, got %s", event.AggregateType())
 		}
-		
+
 		if event.AggregateID() != "42" {
 			t.Errorf("Expected aggregate ID '42', got %s", event.AggregateID())
 		}

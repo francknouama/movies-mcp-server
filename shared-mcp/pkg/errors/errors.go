@@ -35,10 +35,10 @@ const (
 	InternalError  = -32603
 
 	// Custom Godog MCP error codes
-	GodogNotFound      = -40001
-	FeatureParseError  = -40002
-	TestExecutionError = -40003
-	StepDefinitionError = -40004
+	GodogNotFound         = -40001
+	FeatureParseError     = -40002
+	TestExecutionError    = -40003
+	StepDefinitionError   = -40004
 	ReportGenerationError = -40005
 )
 

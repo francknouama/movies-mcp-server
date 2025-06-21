@@ -126,7 +126,7 @@ func (rm *ResourceManager) handlePosterCollection(uri string, sender ResponseSen
 // RegisterPosterResource registers a dynamic poster resource
 func (rm *ResourceManager) RegisterPosterResource(movieID int, movieTitle string) {
 	uri := fmt.Sprintf("movies://posters/%d", movieID)
-	
+
 	rm.registry.RegisterResource(
 		uri,
 		func(uri string, sender ResponseSender) {

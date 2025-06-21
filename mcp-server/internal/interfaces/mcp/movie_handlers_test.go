@@ -21,11 +21,11 @@ type MovieServiceInterfaceForHandlers interface {
 
 // MockMovieServiceForMovieHandlers implements the MovieServiceInterface for testing
 type MockMovieServiceForMovieHandlers struct {
-	CreateFunc           func(ctx context.Context, cmd movieApp.CreateMovieCommand) (*movieApp.MovieDTO, error)
-	GetByIDFunc          func(ctx context.Context, id int) (*movieApp.MovieDTO, error)
-	UpdateFunc           func(ctx context.Context, cmd movieApp.UpdateMovieCommand) (*movieApp.MovieDTO, error)
-	DeleteFunc           func(ctx context.Context, id int) error
-	SearchMoviesFunc     func(ctx context.Context, query movieApp.SearchMoviesQuery) ([]*movieApp.MovieDTO, error)
+	CreateFunc            func(ctx context.Context, cmd movieApp.CreateMovieCommand) (*movieApp.MovieDTO, error)
+	GetByIDFunc           func(ctx context.Context, id int) (*movieApp.MovieDTO, error)
+	UpdateFunc            func(ctx context.Context, cmd movieApp.UpdateMovieCommand) (*movieApp.MovieDTO, error)
+	DeleteFunc            func(ctx context.Context, id int) error
+	SearchMoviesFunc      func(ctx context.Context, query movieApp.SearchMoviesQuery) ([]*movieApp.MovieDTO, error)
 	FindSimilarMoviesFunc func(ctx context.Context, movieID int, limit int) ([]*movieApp.MovieDTO, error)
 }
 
@@ -244,12 +244,12 @@ func (h *MovieHandlersTestable) HandleDeleteMovie(id interface{}, arguments map[
 
 func TestMovieHandlers_HandleAddMovie(t *testing.T) {
 	tests := []struct {
-		name         string
-		arguments    map[string]interface{}
-		mockService  func() *MockMovieServiceForMovieHandlers
-		expectError  bool
-		errorCode    int
-		checkResult  func(t *testing.T, result interface{})
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockMovieServiceForMovieHandlers
+		expectError bool
+		errorCode   int
+		checkResult func(t *testing.T, result interface{})
 	}{
 		{
 			name: "successful movie creation",
@@ -384,12 +384,12 @@ func TestMovieHandlers_HandleAddMovie(t *testing.T) {
 
 func TestMovieHandlers_HandleGetMovie(t *testing.T) {
 	tests := []struct {
-		name         string
-		arguments    map[string]interface{}
-		mockService  func() *MockMovieServiceForMovieHandlers
-		expectError  bool
-		errorCode    int
-		checkResult  func(t *testing.T, result interface{})
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockMovieServiceForMovieHandlers
+		expectError bool
+		errorCode   int
+		checkResult func(t *testing.T, result interface{})
 	}{
 		{
 			name:      "successful get movie",
@@ -487,12 +487,12 @@ func TestMovieHandlers_HandleGetMovie(t *testing.T) {
 
 func TestMovieHandlers_HandleSearchMovies(t *testing.T) {
 	tests := []struct {
-		name         string
-		arguments    map[string]interface{}
-		mockService  func() *MockMovieServiceForMovieHandlers
-		expectError  bool
-		errorCode    int
-		checkResult  func(t *testing.T, result interface{})
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockMovieServiceForMovieHandlers
+		expectError bool
+		errorCode   int
+		checkResult func(t *testing.T, result interface{})
 	}{
 		{
 			name: "successful search by title",
@@ -592,11 +592,11 @@ func TestMovieHandlers_HandleSearchMovies(t *testing.T) {
 
 func TestMovieHandlers_HandleDeleteMovie(t *testing.T) {
 	tests := []struct {
-		name         string
-		arguments    map[string]interface{}
-		mockService  func() *MockMovieServiceForMovieHandlers
-		expectError  bool
-		errorCode    int
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockMovieServiceForMovieHandlers
+		expectError bool
+		errorCode   int
 	}{
 		{
 			name:      "successful delete",

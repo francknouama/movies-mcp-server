@@ -21,7 +21,7 @@ func NewServer(db *sql.DB) *MoviesServer {
 	logger := log.New(os.Stderr, "[movies-mcp] ", log.LstdFlags)
 	container := composition.NewContainer(db)
 	mcpServer := NewMCPServer(os.Stdin, os.Stdout, logger, container)
-	
+
 	return &MoviesServer{
 		mcpServer: mcpServer,
 		db:        db,
@@ -33,12 +33,13 @@ func NewServerWithConfig(db *sql.DB, cfg *config.Config) *MoviesServer {
 	logger := log.New(os.Stderr, "[movies-mcp] ", log.LstdFlags)
 	container := composition.NewContainer(db)
 	mcpServer := NewMCPServer(os.Stdin, os.Stdout, logger, container)
-	
+
 	return &MoviesServer{
 		mcpServer: mcpServer,
 		db:        db,
 	}
 }
+
 // Run starts the server and handles incoming requests
 func (s *MoviesServer) Run() error {
 	return s.mcpServer.Run()

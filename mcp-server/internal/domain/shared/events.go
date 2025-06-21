@@ -2,6 +2,7 @@ package shared
 
 import (
 	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -9,19 +10,19 @@ import (
 type DomainEvent interface {
 	// EventID returns the unique identifier for this event
 	EventID() string
-	
+
 	// EventType returns the type of event (e.g., "MovieCreated")
 	EventType() string
-	
+
 	// AggregateID returns the ID of the aggregate that generated this event
 	AggregateID() string
-	
+
 	// AggregateType returns the type of aggregate (e.g., "Movie", "Actor")
 	AggregateType() string
-	
+
 	// OccurredAt returns when the event occurred
 	OccurredAt() time.Time
-	
+
 	// Version returns the aggregate version when this event was created
 	Version() int
 }

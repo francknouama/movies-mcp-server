@@ -25,26 +25,26 @@ type TestContext struct {
 	lastResponseBody []byte
 	lastMCPResponse  *MCPResponse
 	lastError        error
-	
+
 	// Test data storage
-	createdMovies   map[string]int      // key -> movie_id
-	createdActors   map[string]int      // key -> actor_id
-	storedValues    map[string]interface{} // for workflow storage
-	
+	createdMovies map[string]int         // key -> movie_id
+	createdActors map[string]int         // key -> actor_id
+	storedValues  map[string]interface{} // for workflow storage
+
 	// Database connection for direct queries
-	dbConnString    string
-	
+	dbConnString string
+
 	// Configuration
-	useRealServer   bool
-	
+	useRealServer bool
+
 	// Synchronization
-	mutex           sync.RWMutex
+	mutex sync.RWMutex
 }
 
 // NewTestContext creates a new test context
 func NewTestContext() *TestContext {
 	useRealServer := os.Getenv("USE_REAL_SERVER") == "true"
-	
+
 	dbHost := os.Getenv("DB_HOST")
 	if dbHost == "" {
 		dbHost = "localhost"
@@ -69,18 +69,18 @@ func NewTestContext() *TestContext {
 	if dbSSLMode == "" {
 		dbSSLMode = "disable"
 	}
-	
+
 	dbConnString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		dbUser, dbPassword, dbHost, dbPort, dbName, dbSSLMode)
-	
+
 	return &TestContext{
-		mcpServerURL:    "http://localhost:8080", // Default MCP server endpoint
-		httpClient:      &http.Client{Timeout: 30 * time.Second},
-		createdMovies:   make(map[string]int),
-		createdActors:   make(map[string]int),
-		storedValues:    make(map[string]interface{}),
-		dbConnString:    dbConnString,
-		useRealServer:   useRealServer,
+		mcpServerURL:  "http://localhost:8080", // Default MCP server endpoint
+		httpClient:    &http.Client{Timeout: 30 * time.Second},
+		createdMovies: make(map[string]int),
+		createdActors: make(map[string]int),
+		storedValues:  make(map[string]interface{}),
+		dbConnString:  dbConnString,
+		useRealServer: useRealServer,
 	}
 }
 
@@ -111,11 +111,11 @@ type MCPError struct {
 func (ctx *TestContext) SendMCPRequest(request *MCPRequest) error {
 	ctx.mutex.Lock()
 	defer ctx.mutex.Unlock()
-	
+
 	if ctx.useRealServer {
 		return ctx.sendRealMCPRequest(request)
 	}
-	
+
 	return ctx.sendMockMCPRequest(request)
 }
 
@@ -124,13 +124,13 @@ func (ctx *TestContext) sendRealMCPRequest(request *MCPRequest) error {
 	if ctx.mcpServerStdin == nil {
 		return fmt.Errorf("MCP server stdin not available")
 	}
-	
+
 	// Marshal request to JSON
 	requestBytes, err := json.Marshal(request)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
-	
+
 	// Send request to server stdin with newline
 	requestLine := string(requestBytes) + "\n"
 	_, err = ctx.mcpServerStdin.Write([]byte(requestLine))
@@ -138,31 +138,31 @@ func (ctx *TestContext) sendRealMCPRequest(request *MCPRequest) error {
 		ctx.lastError = err
 		return fmt.Errorf("failed to send request: %w", err)
 	}
-	
+
 	// Read response from server stdout
 	if ctx.mcpServerStdout == nil {
 		return fmt.Errorf("MCP server stdout not available")
 	}
-	
+
 	scanner := bufio.NewScanner(ctx.mcpServerStdout)
 	if !scanner.Scan() {
 		ctx.lastError = fmt.Errorf("no response from server")
 		return ctx.lastError
 	}
-	
+
 	responseBytes := scanner.Bytes()
 	ctx.lastResponseBody = responseBytes
-	
+
 	// Parse the response immediately
 	var response MCPResponse
 	if err := json.Unmarshal(responseBytes, &response); err != nil {
 		ctx.lastError = fmt.Errorf("failed to parse response: %w", err)
 		return ctx.lastError
 	}
-	
+
 	ctx.lastMCPResponse = &response
 	ctx.lastError = nil
-	
+
 	return nil
 }
 
@@ -170,12 +170,12 @@ func (ctx *TestContext) sendRealMCPRequest(request *MCPRequest) error {
 func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 	// Mock response based on request method
 	var mockResponse *MCPResponse
-	
+
 	switch request.Method {
 	case "initialize":
 		params := request.Params.(map[string]interface{})
 		protocolVersion := params["protocolVersion"].(string)
-		
+
 		// Handle invalid protocol versions
 		if protocolVersion != "2024-11-05" {
 			mockResponse = &MCPResponse{
@@ -276,11 +276,11 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 	case "tools/call":
 		params := request.Params.(map[string]interface{})
 		toolName := params["name"].(string)
-		
+
 		switch toolName {
 		case "add_movie":
 			arguments := params["arguments"].(map[string]interface{})
-			
+
 			// Check for invalid data scenarios
 			title, hasTitle := arguments["title"].(string)
 			if !hasTitle || title == "" {
@@ -322,7 +322,7 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 		case "get_actor":
 			arguments := params["arguments"].(map[string]interface{})
 			var actorID int
-			
+
 			// Handle both int and float64 types
 			switch v := arguments["actor_id"].(type) {
 			case float64:
@@ -332,12 +332,12 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 			default:
 				actorID = 1 // Default fallback
 			}
-			
+
 			// Try to find actor in stored context
 			var actorName, actorBio string
 			var birthYear int
 			found := false
-			
+
 			for key, storedID := range ctx.createdActors {
 				if storedID == actorID {
 					// Extract actor details from the key or stored values
@@ -363,14 +363,14 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 					}
 				}
 			}
-			
+
 			// Default values if not found
 			if !found {
 				actorName = "Test Actor"
-				actorBio = "Test biography" 
+				actorBio = "Test biography"
 				birthYear = 1970
 			}
-			
+
 			mockResponse = &MCPResponse{
 				JSONRPC: "2.0",
 				ID:      request.ID,
@@ -469,7 +469,7 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 		case "get_movie":
 			arguments := params["arguments"].(map[string]interface{})
 			var movieID int
-			
+
 			// Handle both int and float64 types
 			switch v := arguments["movie_id"].(type) {
 			case float64:
@@ -479,12 +479,12 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 			default:
 				movieID = 1 // Default fallback
 			}
-			
+
 			// Try to find movie in stored context
 			var movieTitle, movieDirector string
 			var year, rating interface{}
 			found := false
-			
+
 			for key, storedID := range ctx.createdMovies {
 				if storedID == movieID {
 					// Extract movie details from the key or stored values
@@ -500,7 +500,7 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 					}
 				}
 			}
-			
+
 			// Check if this is an error case (non-existent movie)
 			if !found && movieID == 99999 {
 				mockResponse = &MCPResponse{
@@ -519,7 +519,7 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 					year = float64(2020)
 					rating = float64(8.5)
 				}
-				
+
 				mockResponse = &MCPResponse{
 					JSONRPC: "2.0",
 					ID:      request.ID,
@@ -555,10 +555,10 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 			}
 		case "search_movies":
 			arguments := params["arguments"].(map[string]interface{})
-			
+
 			// Build movies array based on stored movies and search criteria
 			var movies []interface{}
-			
+
 			// Get search criteria
 			titleSearch := ""
 			directorSearch := ""
@@ -568,18 +568,18 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 			if director, hasDirector := arguments["director"]; hasDirector {
 				directorSearch = director.(string)
 			}
-			
+
 			// Check stored movies for matches
 			for key, movieID := range ctx.createdMovies {
 				if movieData, exists := ctx.storedValues[key+"_data"]; exists {
 					if data, ok := movieData.(map[string]interface{}); ok {
 						movieTitle := data["title"].(string)
 						movieDirector := data["director"].(string)
-						
+
 						// Check if movie matches search criteria
 						titleMatch := titleSearch == "" || strings.Contains(strings.ToLower(movieTitle), strings.ToLower(titleSearch))
 						directorMatch := directorSearch == "" || strings.Contains(strings.ToLower(movieDirector), strings.ToLower(directorSearch))
-						
+
 						if titleMatch && directorMatch {
 							movie := map[string]interface{}{
 								"id":       float64(movieID),
@@ -593,7 +593,7 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 					}
 				}
 			}
-			
+
 			// If no stored movies found, use default response
 			if len(movies) == 0 {
 				movies = []interface{}{
@@ -606,7 +606,7 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 					},
 				}
 			}
-			
+
 			mockResponse = &MCPResponse{
 				JSONRPC: "2.0",
 				ID:      request.ID,
@@ -635,7 +635,7 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 		default:
 			// Check if this should be an error case based on arguments
 			arguments := params["arguments"].(map[string]interface{})
-			
+
 			// Handle error cases for various tools
 			if name, hasName := arguments["name"].(string); hasName && (name == "Invalid Movie" || name == "Invalid Actor") {
 				mockResponse = &MCPResponse{
@@ -707,7 +707,7 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 	case "resources/read":
 		params := request.Params.(map[string]interface{})
 		uri := params["uri"].(string)
-		
+
 		switch uri {
 		case "db://statistics":
 			mockResponse = &MCPResponse{
@@ -757,10 +757,10 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 			},
 		}
 	}
-	
+
 	ctx.lastMCPResponse = mockResponse
 	ctx.lastError = nil
-	
+
 	return nil
 }
 
@@ -768,11 +768,11 @@ func (ctx *TestContext) sendMockMCPRequest(request *MCPRequest) error {
 func (ctx *TestContext) GetLastMCPResponse() (*MCPResponse, error) {
 	ctx.mutex.RLock()
 	defer ctx.mutex.RUnlock()
-	
+
 	if ctx.lastMCPResponse == nil {
 		return nil, fmt.Errorf("no response available")
 	}
-	
+
 	return ctx.lastMCPResponse, nil
 }
 
@@ -827,13 +827,13 @@ func (ctx *TestContext) StartMCPServer() error {
 		fmt.Printf("Mock MCP server started (USE_REAL_SERVER not set)\n")
 		return nil
 	}
-	
+
 	// Start real MCP server
 	fmt.Printf("Starting real MCP server...\n")
-	
+
 	// Path to the MCP server binary
 	serverPath := "../mcp-server/build/movies-server"
-	
+
 	// Set environment variables for the server
 	env := os.Environ()
 	env = append(env, fmt.Sprintf("DB_HOST=%s", os.Getenv("DB_HOST")))
@@ -842,36 +842,36 @@ func (ctx *TestContext) StartMCPServer() error {
 	env = append(env, fmt.Sprintf("DB_PASSWORD=%s", os.Getenv("DB_PASSWORD")))
 	env = append(env, fmt.Sprintf("DB_NAME=%s", os.Getenv("DB_NAME")))
 	env = append(env, fmt.Sprintf("DB_SSLMODE=%s", os.Getenv("DB_SSLMODE")))
-	
+
 	ctx.mcpServerCmd = exec.Command(serverPath, "-skip-migrations")
 	ctx.mcpServerCmd.Env = env
-	
+
 	// Set up stdin pipe
 	stdin, err := ctx.mcpServerCmd.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stdin pipe: %w", err)
 	}
 	ctx.mcpServerStdin = stdin
-	
+
 	// Set up stdout pipe
 	stdout, err := ctx.mcpServerCmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 	ctx.mcpServerStdout = stdout
-	
+
 	// Capture stderr for debugging
 	stderr, err := ctx.mcpServerCmd.StderrPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
-	
+
 	// Start the server
 	err = ctx.mcpServerCmd.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start MCP server: %w", err)
 	}
-	
+
 	// Read stderr in background to see what's happening
 	go func() {
 		scanner := bufio.NewScanner(stderr)
@@ -879,10 +879,10 @@ func (ctx *TestContext) StartMCPServer() error {
 			fmt.Printf("[MCP Server STDERR]: %s\n", scanner.Text())
 		}
 	}()
-	
+
 	// Wait a moment for server to start
 	time.Sleep(3 * time.Second)
-	
+
 	fmt.Printf("Real MCP server started successfully\n")
 	return nil
 }
@@ -892,7 +892,7 @@ func (ctx *TestContext) StopMCPServer() error {
 	if !ctx.useRealServer {
 		return nil // No real server to stop
 	}
-	
+
 	// Close pipes first
 	if ctx.mcpServerStdin != nil {
 		ctx.mcpServerStdin.Close()
@@ -900,14 +900,14 @@ func (ctx *TestContext) StopMCPServer() error {
 	if ctx.mcpServerStdout != nil {
 		ctx.mcpServerStdout.Close()
 	}
-	
+
 	// Kill the process
 	if ctx.mcpServerCmd != nil && ctx.mcpServerCmd.Process != nil {
 		err := ctx.mcpServerCmd.Process.Kill()
 		if err != nil {
 			return fmt.Errorf("failed to stop MCP server: %w", err)
 		}
-		
+
 		// Wait for process to exit
 		ctx.mcpServerCmd.Wait()
 		fmt.Printf("Real MCP server stopped\n")
@@ -919,18 +919,18 @@ func (ctx *TestContext) StopMCPServer() error {
 func (ctx *TestContext) CleanDatabase() error {
 	// Clean the database directly instead of using MCP tools
 	// This avoids violating the MCP contract by not requiring test-specific tools
-	
+
 	// For now, just clear the stored IDs and let the database handle cleanup
 	// In a real test environment, you would connect to the database directly
 	// and run DELETE statements
-	
+
 	// Clear stored IDs
 	ctx.mutex.Lock()
 	ctx.createdMovies = make(map[string]int)
 	ctx.createdActors = make(map[string]int)
 	ctx.storedValues = make(map[string]interface{})
 	ctx.mutex.Unlock()
-	
+
 	return nil
 }
 

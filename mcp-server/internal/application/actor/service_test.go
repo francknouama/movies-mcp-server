@@ -39,7 +39,7 @@ func (m *MockActorRepository) Save(ctx context.Context, actor *actor.Actor) erro
 	if m.saveFunc != nil {
 		return m.saveFunc(ctx, actor)
 	}
-	
+
 	// Only assign a new ID for new actors (ID 1 is the temporary ID from NewActor)
 	if actor.ID().Value() == 1 {
 		// Assign new ID
@@ -48,7 +48,7 @@ func (m *MockActorRepository) Save(ctx context.Context, actor *actor.Actor) erro
 		m.nextID++
 	}
 	// For existing actors (ID > 1), don't change the ID
-	
+
 	m.actors[actor.ID().Value()] = actor
 	return nil
 }
@@ -57,7 +57,7 @@ func (m *MockActorRepository) Delete(ctx context.Context, id shared.ActorID) err
 	if m.deleteFunc != nil {
 		return m.deleteFunc(ctx, id)
 	}
-	
+
 	if _, exists := m.actors[id.Value()]; !exists {
 		return errors.New("actor not found")
 	}
@@ -69,12 +69,12 @@ func (m *MockActorRepository) FindByCriteria(ctx context.Context, criteria actor
 	var result []*actor.Actor
 	for _, actorItem := range m.actors {
 		match := true
-		
+
 		// Filter by name
 		if criteria.Name != "" && actorItem.Name() != criteria.Name {
 			match = false
 		}
-		
+
 		// Filter by birth year range
 		if criteria.MinBirthYear > 0 && actorItem.BirthYear().Value() < criteria.MinBirthYear {
 			match = false
@@ -82,12 +82,12 @@ func (m *MockActorRepository) FindByCriteria(ctx context.Context, criteria actor
 		if criteria.MaxBirthYear > 0 && actorItem.BirthYear().Value() > criteria.MaxBirthYear {
 			match = false
 		}
-		
+
 		// Filter by movie ID
 		if !criteria.MovieID.IsZero() && !actorItem.HasMovie(criteria.MovieID) {
 			match = false
 		}
-		
+
 		if match {
 			result = append(result, actorItem)
 		}
@@ -108,7 +108,7 @@ func (m *MockActorRepository) FindByName(ctx context.Context, name string) ([]*a
 func (m *MockActorRepository) FindByMovieID(ctx context.Context, movieID shared.MovieID) ([]*actor.Actor, error) {
 	var result []*actor.Actor
 	seen := make(map[int]bool)
-	
+
 	for _, actor := range m.actors {
 		if actor.HasMovie(movieID) && !seen[actor.ID().Value()] {
 			result = append(result, actor)
@@ -418,7 +418,7 @@ func TestService_RepositoryError(t *testing.T) {
 	repo.saveFunc = func(ctx context.Context, a *actor.Actor) error {
 		return errors.New("database error")
 	}
-	
+
 	service := NewService(repo)
 
 	cmd := CreateActorCommand{

@@ -16,22 +16,22 @@ type Repository interface {
 type MovieReader interface {
 	// FindByID retrieves a movie by its ID
 	FindByID(ctx context.Context, id shared.MovieID) (*Movie, error)
-	
+
 	// FindByCriteria retrieves movies based on search criteria
 	FindByCriteria(ctx context.Context, criteria SearchCriteria) ([]*Movie, error)
-	
+
 	// FindByTitle searches movies by title (partial match)
 	FindByTitle(ctx context.Context, title string) ([]*Movie, error)
-	
+
 	// FindByDirector retrieves movies by director
 	FindByDirector(ctx context.Context, director string) ([]*Movie, error)
-	
+
 	// FindByGenre retrieves movies that have a specific genre
 	FindByGenre(ctx context.Context, genre string) ([]*Movie, error)
-	
+
 	// FindTopRated retrieves top-rated movies
 	FindTopRated(ctx context.Context, limit int) ([]*Movie, error)
-	
+
 	// CountAll returns the total number of movies
 	CountAll(ctx context.Context) (int, error)
 }
@@ -40,27 +40,27 @@ type MovieReader interface {
 type MovieWriter interface {
 	// Save persists a movie (insert or update)
 	Save(ctx context.Context, movie *Movie) error
-	
+
 	// Delete removes a movie by ID
 	Delete(ctx context.Context, id shared.MovieID) error
-	
+
 	// DeleteAll removes all movies (for testing)
 	DeleteAll(ctx context.Context) error
 }
 
 // SearchCriteria represents search parameters for movies
 type SearchCriteria struct {
-	Title        string
-	Director     string
-	Genre        string
-	MinYear      int
-	MaxYear      int
-	MinRating    float64
-	MaxRating    float64
-	Limit        int
-	Offset       int
-	OrderBy      OrderBy
-	OrderDir     OrderDirection
+	Title     string
+	Director  string
+	Genre     string
+	MinYear   int
+	MaxYear   int
+	MinRating float64
+	MaxRating float64
+	Limit     int
+	Offset    int
+	OrderBy   OrderBy
+	OrderDir  OrderDirection
 }
 
 // OrderBy represents fields that can be used for ordering

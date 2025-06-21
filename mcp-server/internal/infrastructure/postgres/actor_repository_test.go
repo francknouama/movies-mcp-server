@@ -13,9 +13,9 @@ func createTestActor(t *testing.T) *actor.Actor {
 	if err != nil {
 		t.Fatalf("Failed to create test actor: %v", err)
 	}
-	
+
 	actor.SetBio("This is a test actor biography.")
-	
+
 	return actor
 }
 
@@ -63,7 +63,7 @@ func TestActorRepository_Integration_Save_Update(t *testing.T) {
 	testActor := createTestActor(t)
 
 	ctx := context.Background()
-	
+
 	// Save initially
 	err := repo.Save(ctx, testActor)
 	if err != nil {
@@ -115,7 +115,7 @@ func TestActorRepository_Integration_MovieRelationships(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test movie: %v", err)
 	}
-	
+
 	err = movieRepo.Save(ctx, testMovie)
 	if err != nil {
 		t.Fatalf("Failed to save test movie: %v", err)
@@ -253,7 +253,7 @@ func TestActorRepository_Integration_Delete(t *testing.T) {
 	testActor := createTestActor(t)
 
 	ctx := context.Background()
-	
+
 	// Save actor
 	err := repo.Save(ctx, testActor)
 	if err != nil {
@@ -288,7 +288,7 @@ func TestActorRepository_Integration_DeleteWithMovieRelationships(t *testing.T) 
 	if err != nil {
 		t.Fatalf("Failed to create test movie: %v", err)
 	}
-	
+
 	err = movieRepo.Save(ctx, testMovie)
 	if err != nil {
 		t.Fatalf("Failed to save test movie: %v", err)

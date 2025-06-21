@@ -2,41 +2,42 @@ package mcp
 
 import (
 	"testing"
+
 	"github.com/francknouama/movies-mcp-server/mcp-server/internal/interfaces/dto"
 )
 
 func TestPromptHandlers_HandlePromptsList(t *testing.T) {
 	handlers := NewPromptHandlers()
-	
+
 	var result interface{}
 	var errorCalled bool
-	
+
 	sendResult := func(id interface{}, res interface{}) {
 		result = res
 	}
-	
+
 	sendError := func(id interface{}, code int, message string, data interface{}) {
 		errorCalled = true
 		t.Errorf("Unexpected error: %s", message)
 	}
-	
+
 	// Test prompts list
 	handlers.HandlePromptsList(1, nil, sendResult, sendError)
-	
+
 	if errorCalled {
 		t.Fatal("Handler returned an error")
 	}
-	
+
 	response, ok := result.(dto.PromptsListResponse)
 	if !ok {
 		t.Fatal("Expected PromptsListResponse")
 	}
-	
+
 	// Verify we have prompts
 	if len(response.Prompts) == 0 {
 		t.Error("Expected at least one prompt template")
 	}
-	
+
 	// Verify prompt structure
 	expectedPrompts := []string{
 		"movie_recommendation",
@@ -45,11 +46,11 @@ func TestPromptHandlers_HandlePromptsList(t *testing.T) {
 		"genre_exploration",
 		"movie_comparison",
 	}
-	
+
 	promptMap := make(map[string]bool)
 	for _, prompt := range response.Prompts {
 		promptMap[prompt.Name] = true
-		
+
 		// Verify each prompt has required fields
 		if prompt.Name == "" {
 			t.Error("Prompt missing name")
@@ -58,7 +59,7 @@ func TestPromptHandlers_HandlePromptsList(t *testing.T) {
 			t.Error("Prompt missing description")
 		}
 	}
-	
+
 	// Verify all expected prompts are present
 	for _, expected := range expectedPrompts {
 		if !promptMap[expected] {
@@ -69,7 +70,7 @@ func TestPromptHandlers_HandlePromptsList(t *testing.T) {
 
 func TestPromptHandlers_HandlePromptGet(t *testing.T) {
 	handlers := NewPromptHandlers()
-	
+
 	tests := []struct {
 		name      string
 		args      map[string]interface{}
@@ -143,26 +144,26 @@ func TestPromptHandlers_HandlePromptGet(t *testing.T) {
 			expectErr: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var result interface{}
 			var errorCode int
 			var errorMsg string
 			errorCalled := false
-			
+
 			sendResult := func(id interface{}, res interface{}) {
 				result = res
 			}
-			
+
 			sendError := func(id interface{}, code int, message string, data interface{}) {
 				errorCalled = true
 				errorCode = code
 				errorMsg = message
 			}
-			
+
 			handlers.HandlePromptGet(1, tt.args, sendResult, sendError)
-			
+
 			if tt.expectErr {
 				if !errorCalled {
 					t.Error("Expected error but none occurred")
@@ -177,17 +178,17 @@ func TestPromptHandlers_HandlePromptGet(t *testing.T) {
 				if errorCalled {
 					t.Errorf("Unexpected error: %s", errorMsg)
 				}
-				
+
 				response, ok := result.(dto.PromptGetResponse)
 				if !ok {
 					t.Fatal("Expected PromptGetResponse")
 				}
-				
+
 				// Verify response has messages
 				if len(response.Messages) == 0 {
 					t.Error("Expected at least one message in prompt response")
 				}
-				
+
 				// Verify message structure
 				for _, msg := range response.Messages {
 					if msg.Role == "" {
@@ -207,7 +208,7 @@ func TestPromptHandlers_HandlePromptGet(t *testing.T) {
 
 func TestPromptHandlers_PromptGeneration(t *testing.T) {
 	handlers := NewPromptHandlers()
-	
+
 	// Test movie recommendation prompt generation
 	t.Run("Movie recommendation prompt", func(t *testing.T) {
 		args := map[string]interface{}{
@@ -215,18 +216,18 @@ func TestPromptHandlers_PromptGeneration(t *testing.T) {
 			"min_rating": 8.5,
 			"year_range": "2020-2024",
 		}
-		
+
 		response := handlers.generateMovieRecommendationPrompt(args)
-		
+
 		if len(response.Messages) != 1 {
 			t.Errorf("Expected 1 message, got %d", len(response.Messages))
 		}
-		
+
 		msg := response.Messages[0]
 		if msg.Role != "user" {
 			t.Errorf("Expected user role, got %s", msg.Role)
 		}
-		
+
 		// Verify prompt contains expected elements
 		text := msg.Content.Text
 		expectedStrings := []string{"Action", "8.5", "2020-2024"}
@@ -236,16 +237,16 @@ func TestPromptHandlers_PromptGeneration(t *testing.T) {
 			}
 		}
 	})
-	
+
 	// Test director filmography prompt generation
 	t.Run("Director filmography prompt", func(t *testing.T) {
 		args := map[string]interface{}{
 			"director_name": "Christopher Nolan",
 			"focus_period":  "2010-2020",
 		}
-		
+
 		response := handlers.generateDirectorFilmographyPrompt(args)
-		
+
 		text := response.Messages[0].Content.Text
 		if !containsString(text, "Christopher Nolan") {
 			t.Error("Expected prompt to contain director name")
@@ -258,7 +259,7 @@ func TestPromptHandlers_PromptGeneration(t *testing.T) {
 
 // Helper function
 func containsString(text, substr string) bool {
-	return len(substr) > 0 && len(text) >= len(substr) && 
+	return len(substr) > 0 && len(text) >= len(substr) &&
 		(text == substr || containsSubstring(text, substr))
 }
 

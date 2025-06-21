@@ -16,16 +16,16 @@ type Repository interface {
 type ActorReader interface {
 	// FindByID retrieves an actor by their ID
 	FindByID(ctx context.Context, id shared.ActorID) (*Actor, error)
-	
+
 	// FindByCriteria retrieves actors based on search criteria
 	FindByCriteria(ctx context.Context, criteria SearchCriteria) ([]*Actor, error)
-	
+
 	// FindByName searches actors by name (partial match)
 	FindByName(ctx context.Context, name string) ([]*Actor, error)
-	
+
 	// FindByMovieID retrieves actors who appeared in a specific movie
 	FindByMovieID(ctx context.Context, movieID shared.MovieID) ([]*Actor, error)
-	
+
 	// CountAll returns the total number of actors
 	CountAll(ctx context.Context) (int, error)
 }
@@ -34,10 +34,10 @@ type ActorReader interface {
 type ActorWriter interface {
 	// Save persists an actor (insert or update)
 	Save(ctx context.Context, actor *Actor) error
-	
+
 	// Delete removes an actor by ID
 	Delete(ctx context.Context, id shared.ActorID) error
-	
+
 	// DeleteAll removes all actors (for testing)
 	DeleteAll(ctx context.Context) error
 }

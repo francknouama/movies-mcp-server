@@ -243,10 +243,10 @@ func (h *MovieHandlers) HandleSearchByDecade(id any, arguments map[string]any, s
 
 	// Search movies in decade
 	query := movieApp.SearchMoviesQuery{
-		MinYear: minYear,
-		MaxYear: maxYear,
-		Limit:   50,
-		OrderBy: "year",
+		MinYear:  minYear,
+		MaxYear:  maxYear,
+		Limit:    50,
+		OrderBy:  "year",
 		OrderDir: "asc",
 	}
 
@@ -391,10 +391,10 @@ func (h *MovieHandlers) parseSearchMoviesRequest(arguments map[string]any) (*dto
 
 func (h *MovieHandlers) parseDecade(decade string) (int, int, error) {
 	decade = strings.TrimSpace(decade)
-	
+
 	// Handle formats like "1990s", "90s", "1990"
 	decade = strings.TrimSuffix(decade, "s")
-	
+
 	var baseYear int
 	if len(decade) == 2 {
 		// Handle "90" -> 1990
@@ -417,11 +417,11 @@ func (h *MovieHandlers) parseDecade(decade string) (int, int, error) {
 	} else {
 		return 0, 0, fmt.Errorf("invalid decade format")
 	}
-	
+
 	// Convert to decade boundaries
 	decadeStart := (baseYear / 10) * 10
 	decadeEnd := decadeStart + 9
-	
+
 	return decadeStart, decadeEnd, nil
 }
 

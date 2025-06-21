@@ -278,12 +278,12 @@ func TestMovie_UpdateTimestamp(t *testing.T) {
 	}
 
 	originalUpdatedAt := movie.UpdatedAt()
-	
+
 	// Sleep to ensure timestamp changes
 	time.Sleep(1 * time.Millisecond)
-	
+
 	movie.touch() // This should be called internally by business operations
-	
+
 	if !movie.UpdatedAt().After(originalUpdatedAt) {
 		t.Error("Expected UpdatedAt to be updated after modification")
 	}

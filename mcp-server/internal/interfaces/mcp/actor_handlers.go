@@ -243,9 +243,9 @@ func (h *ActorHandlers) HandleGetActorMovies(id any, arguments map[string]any, s
 
 	// Return the actor's movie IDs
 	response := map[string]interface{}{
-		"actor_id":  actorID,
-		"actor_name": actorDTO.Name,
-		"movie_ids": actorDTO.MovieIDs,
+		"actor_id":     actorID,
+		"actor_name":   actorDTO.Name,
+		"movie_ids":    actorDTO.MovieIDs,
 		"total_movies": len(actorDTO.MovieIDs),
 	}
 

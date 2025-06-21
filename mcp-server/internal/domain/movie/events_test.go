@@ -2,7 +2,7 @@ package movie
 
 import (
 	"testing"
-	
+
 	"github.com/francknouama/movies-mcp-server/mcp-server/internal/domain/shared"
 )
 
@@ -103,11 +103,11 @@ func TestMovieCreatedEvent(t *testing.T) {
 		if event.EventType() != "MovieCreated" {
 			t.Errorf("Expected MovieCreated event, got %s", event.EventType())
 		}
-		
+
 		if event.AggregateType() != "Movie" {
 			t.Errorf("Expected Movie aggregate type, got %s", event.AggregateType())
 		}
-		
+
 		if event.AggregateID() != "42" {
 			t.Errorf("Expected aggregate ID '42', got %s", event.AggregateID())
 		}

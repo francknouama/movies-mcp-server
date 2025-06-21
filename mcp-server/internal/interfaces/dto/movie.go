@@ -23,18 +23,18 @@ type UpdateMovieRequest struct {
 
 // SearchMoviesRequest represents the MCP request to search movies
 type SearchMoviesRequest struct {
-	Query       string  `json:"query,omitempty"`
-	Title       string  `json:"title,omitempty"`
-	Director    string  `json:"director,omitempty"`
-	Genre       string  `json:"genre,omitempty"`
-	MinYear     int     `json:"min_year,omitempty"`
-	MaxYear     int     `json:"max_year,omitempty"`
-	MinRating   float64 `json:"min_rating,omitempty"`
-	MaxRating   float64 `json:"max_rating,omitempty"`
-	Limit       int     `json:"limit,omitempty"`
-	Offset      int     `json:"offset,omitempty"`
-	OrderBy     string  `json:"order_by,omitempty"`
-	OrderDir    string  `json:"order_dir,omitempty"`
+	Query     string  `json:"query,omitempty"`
+	Title     string  `json:"title,omitempty"`
+	Director  string  `json:"director,omitempty"`
+	Genre     string  `json:"genre,omitempty"`
+	MinYear   int     `json:"min_year,omitempty"`
+	MaxYear   int     `json:"max_year,omitempty"`
+	MinRating float64 `json:"min_rating,omitempty"`
+	MaxRating float64 `json:"max_rating,omitempty"`
+	Limit     int     `json:"limit,omitempty"`
+	Offset    int     `json:"offset,omitempty"`
+	OrderBy   string  `json:"order_by,omitempty"`
+	OrderDir  string  `json:"order_dir,omitempty"`
 }
 
 // SearchByDecadeRequest represents the MCP request to search movies by decade

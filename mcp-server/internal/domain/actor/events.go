@@ -2,7 +2,7 @@ package actor
 
 import (
 	"strconv"
-	
+
 	"github.com/francknouama/movies-mcp-server/mcp-server/internal/domain/shared"
 )
 

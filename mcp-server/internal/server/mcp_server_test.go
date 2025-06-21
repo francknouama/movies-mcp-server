@@ -47,7 +47,7 @@ func TestNewMCPServer(t *testing.T) {
 func TestMCPServer_Initialize(t *testing.T) {
 	// Test the initialize request through the protocol
 	initRequest := `{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}`
-	
+
 	input := strings.NewReader(initRequest)
 	output := &bytes.Buffer{}
 	logger := log.New(&bytes.Buffer{}, "", 0)
@@ -78,7 +78,7 @@ func TestMCPServer_ToolsListIntegration(t *testing.T) {
 
 	// Check that registry has tools (even if handlers are nil, schemas should be available)
 	tools := server.registry.GetToolSchemas()
-	
+
 	// The test container has a ToolValidator with schemas, so we should have some tools
 	if len(tools) == 0 {
 		t.Skip("No tools registered in test container - this is expected for minimal test setup")
@@ -153,7 +153,7 @@ func TestProtocolIntegration(t *testing.T) {
 	// Test protocol can send responses
 	testID := json.Number("1")
 	testResult := map[string]string{"test": "value"}
-	
+
 	server.protocol.SendResult(testID, testResult)
 
 	if output.Len() == 0 {

@@ -25,13 +25,13 @@ type ContextManager struct {
 
 // DataContext represents a paginated data context
 type DataContext struct {
-	ID        string                  `json:"id"`
-	Query     interface{}             `json:"query"`
-	Total     int                     `json:"total"`
-	PageSize  int                     `json:"page_size"`
-	CreatedAt time.Time              `json:"created_at"`
-	ExpiresAt time.Time              `json:"expires_at"`
-	Data      []interface{}          `json:"data,omitempty"`
+	ID        string        `json:"id"`
+	Query     interface{}   `json:"query"`
+	Total     int           `json:"total"`
+	PageSize  int           `json:"page_size"`
+	CreatedAt time.Time     `json:"created_at"`
+	ExpiresAt time.Time     `json:"expires_at"`
+	Data      []interface{} `json:"data,omitempty"`
 }
 
 // ContextInfo provides metadata about a data context
@@ -312,7 +312,7 @@ func (cm *ContextManager) HandleCreateContext(
 
 	// Build search query based on type
 	searchQuery := movieApp.SearchMoviesQuery{}
-	
+
 	switch queryType {
 	case "title":
 		searchQuery.Title = query

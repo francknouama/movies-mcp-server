@@ -37,7 +37,7 @@ type dbActor struct {
 // Save persists an actor (insert or update)
 func (r *ActorRepository) Save(ctx context.Context, domainActor *actor.Actor) error {
 	dbActor := r.toDBModel(domainActor)
-	
+
 	if domainActor.ID().IsZero() {
 		return r.insert(ctx, dbActor, domainActor)
 	}
@@ -47,13 +47,13 @@ func (r *ActorRepository) Save(ctx context.Context, domainActor *actor.Actor) er
 func (r *ActorRepository) insert(ctx context.Context, dbActor *dbActor, domainActor *actor.Actor) error {
 	return r.txManager.WithTransaction(ctx, func(tx *sql.Tx) error {
 		helper := database.NewTransactionHelper(tx)
-		
+
 		// Insert actor
 		query := `
 			INSERT INTO actors (name, birth_year, bio, created_at, updated_at)
 			VALUES ($1, $2, $3, $4, $5)
 			RETURNING id`
-		
+
 		id, err := helper.InsertWithID(ctx, query,
 			dbActor.Name,
 			dbActor.BirthYear,
@@ -61,23 +61,23 @@ func (r *ActorRepository) insert(ctx context.Context, dbActor *dbActor, domainAc
 			dbActor.CreatedAt.Time,
 			dbActor.UpdatedAt.Time,
 		)
-		
+
 		if err != nil {
 			return fmt.Errorf("failed to insert actor: %w", err)
 		}
-		
+
 		// Update domain actor with the new ID
 		actorID, err := shared.NewActorID(id)
 		if err != nil {
 			return fmt.Errorf("failed to create actor ID: %w", err)
 		}
 		domainActor.SetID(actorID)
-		
+
 		// Insert movie relationships
 		if err := r.insertMovieRelationships(ctx, tx, domainActor); err != nil {
 			return fmt.Errorf("failed to insert movie relationships: %w", err)
 		}
-		
+
 		return nil
 	})
 }
@@ -85,13 +85,13 @@ func (r *ActorRepository) insert(ctx context.Context, dbActor *dbActor, domainAc
 func (r *ActorRepository) update(ctx context.Context, dbActor *dbActor, domainActor *actor.Actor) error {
 	return r.txManager.WithTransaction(ctx, func(tx *sql.Tx) error {
 		helper := database.NewTransactionHelper(tx)
-		
+
 		// Update actor
 		query := `
 			UPDATE actors 
 			SET name = $2, birth_year = $3, bio = $4, updated_at = $5
 			WHERE id = $1`
-		
+
 		err := helper.Update(ctx, query, "actor",
 			domainActor.ID().Value(),
 			dbActor.Name,
@@ -99,16 +99,16 @@ func (r *ActorRepository) update(ctx context.Context, dbActor *dbActor, domainAc
 			dbActor.Bio,
 			dbActor.UpdatedAt.Time,
 		)
-		
+
 		if err != nil {
 			return err
 		}
-		
+
 		// Update movie relationships
 		if err := r.updateMovieRelationships(ctx, tx, domainActor); err != nil {
 			return fmt.Errorf("failed to update movie relationships: %w", err)
 		}
-		
+
 		return nil
 	})
 }
@@ -119,7 +119,7 @@ func (r *ActorRepository) insertMovieRelationships(ctx context.Context, tx *sql.
 			INSERT INTO movie_actors (movie_id, actor_id, created_at)
 			VALUES ($1, $2, CURRENT_TIMESTAMP)
 			ON CONFLICT (movie_id, actor_id) DO NOTHING`
-		
+
 		_, err := tx.ExecContext(ctx, query, movieID.Value(), domainActor.ID().Value())
 		if err != nil {
 			return fmt.Errorf("failed to insert movie relationship: %w", err)
@@ -135,7 +135,7 @@ func (r *ActorRepository) updateMovieRelationships(ctx context.Context, tx *sql.
 	if err != nil {
 		return fmt.Errorf("failed to delete existing movie relationships: %w", err)
 	}
-	
+
 	// Insert new relationships
 	return r.insertMovieRelationships(ctx, tx, domainActor)
 }
@@ -146,7 +146,7 @@ func (r *ActorRepository) FindByID(ctx context.Context, id shared.ActorID) (*act
 		SELECT id, name, birth_year, bio, created_at, updated_at
 		FROM actors 
 		WHERE id = $1`
-	
+
 	var dbActor dbActor
 	err := r.QueryRowContext(ctx, query, id.Value()).Scan(
 		&dbActor.ID,
@@ -156,17 +156,17 @@ func (r *ActorRepository) FindByID(ctx context.Context, id shared.ActorID) (*act
 		&dbActor.CreatedAt,
 		&dbActor.UpdatedAt,
 	)
-	
+
 	if err != nil {
 		return nil, r.WrapNotFound(err, "actor")
 	}
-	
+
 	// Get movie relationships
 	movieIDs, err := r.getActorMovieIDs(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get actor movie IDs: %w", err)
 	}
-	
+
 	return r.toDomainModel(&dbActor, movieIDs)
 }
 
@@ -177,35 +177,35 @@ func (r *ActorRepository) getActorMovieIDs(ctx context.Context, actorID shared.A
 		return nil, fmt.Errorf("failed to query movie relationships: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var movieIDs []shared.MovieID
 	for rows.Next() {
 		var movieIDValue int
 		if err := rows.Scan(&movieIDValue); err != nil {
 			return nil, fmt.Errorf("failed to scan movie ID: %w", err)
 		}
-		
+
 		movieID, err := shared.NewMovieID(movieIDValue)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create movie ID: %w", err)
 		}
-		
+
 		movieIDs = append(movieIDs, movieID)
 	}
-	
+
 	return movieIDs, nil
 }
 
 // FindByCriteria retrieves actors based on search criteria
 func (r *ActorRepository) FindByCriteria(ctx context.Context, criteria actor.SearchCriteria) ([]*actor.Actor, error) {
 	query, args := r.buildSearchQuery(criteria)
-	
+
 	rows, err := r.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search actors: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var actors []*actor.Actor
 	for rows.Next() {
 		var dbActor dbActor
@@ -220,26 +220,26 @@ func (r *ActorRepository) FindByCriteria(ctx context.Context, criteria actor.Sea
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan actor: %w", err)
 		}
-		
+
 		actorID, err := shared.NewActorID(dbActor.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create actor ID: %w", err)
 		}
-		
+
 		// Get movie relationships
 		movieIDs, err := r.getActorMovieIDs(ctx, actorID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get actor movie IDs: %w", err)
 		}
-		
+
 		domainActor, err := r.toDomainModel(&dbActor, movieIDs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert to domain model: %w", err)
 		}
-		
+
 		actors = append(actors, domainActor)
 	}
-	
+
 	return actors, nil
 }
 
@@ -247,11 +247,11 @@ func (r *ActorRepository) buildSearchQuery(criteria actor.SearchCriteria) (strin
 	query := `
 		SELECT DISTINCT a.id, a.name, a.birth_year, a.bio, a.created_at, a.updated_at
 		FROM actors a`
-	
+
 	var args []interface{}
 	argIndex := 1
 	var conditions []string
-	
+
 	// Join with movie_actors if searching by movie
 	if !criteria.MovieID.IsZero() {
 		query += " INNER JOIN movie_actors ma ON a.id = ma.actor_id"
@@ -259,33 +259,33 @@ func (r *ActorRepository) buildSearchQuery(criteria actor.SearchCriteria) (strin
 		args = append(args, criteria.MovieID.Value())
 		argIndex++
 	}
-	
+
 	// Add WHERE conditions
 	if criteria.Name != "" {
 		conditions = append(conditions, fmt.Sprintf("a.name ILIKE $%d", argIndex))
 		args = append(args, "%"+criteria.Name+"%")
 		argIndex++
 	}
-	
+
 	if criteria.MinBirthYear > 0 {
 		conditions = append(conditions, fmt.Sprintf("a.birth_year >= $%d", argIndex))
 		args = append(args, criteria.MinBirthYear)
 		argIndex++
 	}
-	
+
 	if criteria.MaxBirthYear > 0 {
 		conditions = append(conditions, fmt.Sprintf("a.birth_year <= $%d", argIndex))
 		args = append(args, criteria.MaxBirthYear)
 		argIndex++
 	}
-	
+
 	if len(conditions) > 0 {
 		query += " WHERE " + fmt.Sprintf("%s", conditions[0])
 		for i := 1; i < len(conditions); i++ {
 			query += " AND " + conditions[i]
 		}
 	}
-	
+
 	// Add ORDER BY
 	orderField := "a.name"
 	switch criteria.OrderBy {
@@ -296,26 +296,26 @@ func (r *ActorRepository) buildSearchQuery(criteria actor.SearchCriteria) (strin
 	case actor.OrderByUpdatedAt:
 		orderField = "a.updated_at"
 	}
-	
+
 	orderDir := "ASC"
 	if criteria.OrderDir == actor.OrderDesc {
 		orderDir = "DESC"
 	}
-	
+
 	query += fmt.Sprintf(" ORDER BY %s %s", orderField, orderDir)
-	
+
 	// Add LIMIT and OFFSET
 	if criteria.Limit > 0 {
 		query += fmt.Sprintf(" LIMIT $%d", argIndex)
 		args = append(args, criteria.Limit)
 		argIndex++
 	}
-	
+
 	if criteria.Offset > 0 {
 		query += fmt.Sprintf(" OFFSET $%d", argIndex)
 		args = append(args, criteria.Offset)
 	}
-	
+
 	return query, args
 }
 
@@ -347,14 +347,14 @@ func (r *ActorRepository) CountAll(ctx context.Context) (int, error) {
 func (r *ActorRepository) Delete(ctx context.Context, id shared.ActorID) error {
 	return r.txManager.WithTransaction(ctx, func(tx *sql.Tx) error {
 		helper := database.NewTransactionHelper(tx)
-		
+
 		// Delete movie relationships first (foreign key constraints)
 		deleteRelQuery := "DELETE FROM movie_actors WHERE actor_id = $1"
 		_, err := tx.ExecContext(ctx, deleteRelQuery, id.Value())
 		if err != nil {
 			return fmt.Errorf("failed to delete actor movie relationships: %w", err)
 		}
-		
+
 		// Delete actor
 		deleteQuery := "DELETE FROM actors WHERE id = $1"
 		return helper.Delete(ctx, deleteQuery, "actor", id.Value())
@@ -369,13 +369,13 @@ func (r *ActorRepository) DeleteAll(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to delete all movie relationships: %w", err)
 		}
-		
+
 		// Delete all actors
 		_, err = tx.ExecContext(ctx, "DELETE FROM actors")
 		if err != nil {
 			return fmt.Errorf("failed to delete all actors: %w", err)
 		}
-		
+
 		return nil
 	})
 }
@@ -386,7 +386,7 @@ func (r *ActorRepository) toDBModel(domainActor *actor.Actor) *dbActor {
 		ID:   domainActor.ID().Value(),
 		Name: domainActor.Name(),
 	}
-	
+
 	// Handle optional birth year
 	if !domainActor.BirthYear().IsZero() {
 		dbActor.BirthYear = sql.NullInt64{
@@ -394,7 +394,7 @@ func (r *ActorRepository) toDBModel(domainActor *actor.Actor) *dbActor {
 			Valid: true,
 		}
 	}
-	
+
 	// Handle optional bio
 	if domainActor.Bio() != "" {
 		dbActor.Bio = sql.NullString{
@@ -402,7 +402,7 @@ func (r *ActorRepository) toDBModel(domainActor *actor.Actor) *dbActor {
 			Valid:  true,
 		}
 	}
-	
+
 	// Handle timestamps
 	dbActor.CreatedAt = sql.NullTime{
 		Time:  domainActor.CreatedAt(),
@@ -412,7 +412,7 @@ func (r *ActorRepository) toDBModel(domainActor *actor.Actor) *dbActor {
 		Time:  domainActor.UpdatedAt(),
 		Valid: true,
 	}
-	
+
 	return dbActor
 }
 
@@ -422,28 +422,28 @@ func (r *ActorRepository) toDomainModel(dbActor *dbActor, movieIDs []shared.Movi
 	if err != nil {
 		return nil, fmt.Errorf("invalid actor ID: %w", err)
 	}
-	
+
 	birthYear := 1900 // Default if not set
 	if dbActor.BirthYear.Valid {
 		birthYear = int(dbActor.BirthYear.Int64)
 	}
-	
+
 	domainActor, err := actor.NewActorWithID(actorID, dbActor.Name, birthYear)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create domain actor: %w", err)
 	}
-	
+
 	// Set bio if present
 	if dbActor.Bio.Valid {
 		domainActor.SetBio(dbActor.Bio.String)
 	}
-	
+
 	// Add movie relationships
 	for _, movieID := range movieIDs {
 		if err := domainActor.AddMovie(movieID); err != nil {
 			return nil, fmt.Errorf("failed to add movie to actor: %w", err)
 		}
 	}
-	
+
 	return domainActor, nil
 }

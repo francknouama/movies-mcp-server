@@ -17,16 +17,16 @@ type Config struct {
 
 // DatabaseConfig holds database-specific configuration
 type DatabaseConfig struct {
-	Host          string
-	Port          int
-	Name          string
-	User          string
-	Password      string
-	SSLMode       string
-	MaxOpenConns  int
-	MaxIdleConns  int
+	Host            string
+	Port            int
+	Name            string
+	User            string
+	Password        string
+	SSLMode         string
+	MaxOpenConns    int
+	MaxIdleConns    int
 	ConnMaxLifetime time.Duration
-	MigrationsPath string
+	MigrationsPath  string
 }
 
 // ServerConfig holds server-specific configuration
@@ -37,36 +37,36 @@ type ServerConfig struct {
 
 // ImageConfig holds image-related configuration
 type ImageConfig struct {
-	MaxSize         int64
-	AllowedTypes    []string
+	MaxSize          int64
+	AllowedTypes     []string
 	EnableThumbnails bool
-	ThumbnailSize   string
+	ThumbnailSize    string
 }
 
 // Load reads configuration from environment variables
 func Load() (*Config, error) {
 	cfg := &Config{
 		Database: DatabaseConfig{
-			Host:          getEnv("DB_HOST", "localhost"),
-			Port:          getEnvAsInt("DB_PORT", 5432),
-			Name:          getEnv("DB_NAME", "movies_mcp"),
-			User:          getEnv("DB_USER", "movies_user"),
-			Password:      getEnv("DB_PASSWORD", "movies_password"),
-			SSLMode:       getEnv("DB_SSLMODE", "disable"),
-			MaxOpenConns:  getEnvAsInt("DB_MAX_OPEN_CONNS", 25),
-			MaxIdleConns:  getEnvAsInt("DB_MAX_IDLE_CONNS", 5),
+			Host:            getEnv("DB_HOST", "localhost"),
+			Port:            getEnvAsInt("DB_PORT", 5432),
+			Name:            getEnv("DB_NAME", "movies_mcp"),
+			User:            getEnv("DB_USER", "movies_user"),
+			Password:        getEnv("DB_PASSWORD", "movies_password"),
+			SSLMode:         getEnv("DB_SSLMODE", "disable"),
+			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 25),
+			MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 5),
 			ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", "1h"),
-			MigrationsPath: getEnv("MIGRATIONS_PATH", "file://migrations"),
+			MigrationsPath:  getEnv("MIGRATIONS_PATH", "file://migrations"),
 		},
 		Server: ServerConfig{
 			LogLevel: getEnv("LOG_LEVEL", "info"),
 			Timeout:  getEnvAsDuration("SERVER_TIMEOUT", "30s"),
 		},
 		Image: ImageConfig{
-			MaxSize:         getEnvAsInt64("MAX_IMAGE_SIZE", 5*1024*1024), // 5MB default
-			AllowedTypes:    getEnvAsStringSlice("ALLOWED_IMAGE_TYPES", []string{"image/jpeg", "image/png", "image/webp"}),
+			MaxSize:          getEnvAsInt64("MAX_IMAGE_SIZE", 5*1024*1024), // 5MB default
+			AllowedTypes:     getEnvAsStringSlice("ALLOWED_IMAGE_TYPES", []string{"image/jpeg", "image/png", "image/webp"}),
 			EnableThumbnails: getEnvAsBool("ENABLE_THUMBNAILS", true),
-			ThumbnailSize:   getEnv("THUMBNAIL_SIZE", "200x200"),
+			ThumbnailSize:    getEnv("THUMBNAIL_SIZE", "200x200"),
 		},
 	}
 

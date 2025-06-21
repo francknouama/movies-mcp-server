@@ -22,22 +22,22 @@ type MCPServer struct {
 func NewMCPServer(input io.Reader, output io.Writer, logger *log.Logger, container *composition.Container) *MCPServer {
 	// Create the registry for auto-registration
 	registry := NewRegistry()
-	
+
 	// Create the resource manager
 	resourceManager := NewResourceManager(registry)
-	
+
 	// Register default resources
 	resourceManager.RegisterDefaultResources()
-	
+
 	// Create validator
 	validator := validation.NewRequestValidator()
-	
+
 	// Create protocol handler
 	protocol := NewProtocol(input, output, logger)
-	
+
 	// Create router
 	router := NewRouter(registry, validator)
-	
+
 	server := &MCPServer{
 		protocol:        protocol,
 		router:          router,
@@ -45,17 +45,17 @@ func NewMCPServer(input io.Reader, output io.Writer, logger *log.Logger, contain
 		resourceManager: resourceManager,
 		container:       container,
 	}
-	
+
 	// Auto-register tools from container
 	server.registerHandlers()
-	
+
 	// Validate all registrations
 	if err := registry.ValidateRegistrations(); err != nil {
 		if logger != nil {
 			logger.Printf("Registration validation failed: %v", err)
 		}
 	}
-	
+
 	return server
 }
 
@@ -68,7 +68,7 @@ func (s *MCPServer) Run() error {
 func (s *MCPServer) registerHandlers() {
 	// Get all tool schemas from the existing validator
 	allSchemas := s.container.ToolValidator.GetSchemas()
-	
+
 	// Organize schemas by category
 	movieSchemas := filterSchemasByPrefix(allSchemas, []string{"get_movie", "add_movie", "update_movie", "delete_movie", "list_top_movies"})
 	actorSchemas := filterSchemasByPrefix(allSchemas, []string{"add_actor", "get_actor", "update_actor", "delete_actor", "link_actor_to_movie", "unlink_actor_from_movie", "get_movie_cast", "get_actor_movies", "search_actors"})
@@ -76,32 +76,32 @@ func (s *MCPServer) registerHandlers() {
 	compoundSchemas := filterSchemasByPrefix(allSchemas, []string{"bulk_movie_import", "movie_recommendation_engine", "director_career_analysis"})
 	contextSchemas := filterSchemasByPrefix(allSchemas, []string{"create_search_context", "get_context_page", "get_context_info"})
 	validationSchemas := filterSchemasByPrefix(allSchemas, []string{"validate_tool_call"})
-	
+
 	// Register movie tools if available
 	if s.container.MovieHandlers != nil {
 		s.registerMovieHandlers(movieSchemas)
 	}
-	
+
 	// Register actor tools if available
 	if s.container.ActorHandlers != nil {
 		s.registerActorHandlers(actorSchemas)
 	}
-	
+
 	// Register search tools if available
 	if s.container.MovieHandlers != nil {
 		s.registerSearchHandlers(searchSchemas)
 	}
-	
+
 	// Register compound tools if available
 	if s.container.CompoundToolHandlers != nil {
 		s.registerCompoundHandlers(compoundSchemas)
 	}
-	
+
 	// Register context tools if available
 	if s.container.ContextManager != nil {
 		s.registerContextHandlers(contextSchemas)
 	}
-	
+
 	// Register validation tools if available
 	if s.container.ToolValidator != nil {
 		s.registerValidationHandlers(validationSchemas)
@@ -111,41 +111,41 @@ func (s *MCPServer) registerHandlers() {
 // registerMovieHandlers registers movie-related tool handlers
 func (s *MCPServer) registerMovieHandlers(schemas []dto.Tool) {
 	handlers := map[string]func(id any, arguments map[string]any, sendResult func(any, any), sendError func(any, int, string, any)){
-		"get_movie":        s.container.MovieHandlers.HandleGetMovie,
-		"add_movie":        s.container.MovieHandlers.HandleAddMovie,
-		"update_movie":     s.container.MovieHandlers.HandleUpdateMovie,
-		"delete_movie":     s.container.MovieHandlers.HandleDeleteMovie,
-		"list_top_movies":  s.container.MovieHandlers.HandleListTopMovies,
+		"get_movie":       s.container.MovieHandlers.HandleGetMovie,
+		"add_movie":       s.container.MovieHandlers.HandleAddMovie,
+		"update_movie":    s.container.MovieHandlers.HandleUpdateMovie,
+		"delete_movie":    s.container.MovieHandlers.HandleDeleteMovie,
+		"list_top_movies": s.container.MovieHandlers.HandleListTopMovies,
 	}
-	
+
 	s.registerToolsWithSchemas(handlers, schemas)
 }
 
 // registerActorHandlers registers actor-related tool handlers
 func (s *MCPServer) registerActorHandlers(schemas []dto.Tool) {
 	handlers := map[string]func(id any, arguments map[string]any, sendResult func(any, any), sendError func(any, int, string, any)){
-		"add_actor":                s.container.ActorHandlers.HandleAddActor,
-		"get_actor":                s.container.ActorHandlers.HandleGetActor,
-		"update_actor":             s.container.ActorHandlers.HandleUpdateActor,
-		"delete_actor":             s.container.ActorHandlers.HandleDeleteActor,
-		"link_actor_to_movie":      s.container.ActorHandlers.HandleLinkActorToMovie,
-		"unlink_actor_from_movie":  s.container.ActorHandlers.HandleUnlinkActorFromMovie,
-		"get_movie_cast":           s.container.ActorHandlers.HandleGetMovieCast,
-		"get_actor_movies":         s.container.ActorHandlers.HandleGetActorMovies,
-		"search_actors":            s.container.ActorHandlers.HandleSearchActors,
+		"add_actor":               s.container.ActorHandlers.HandleAddActor,
+		"get_actor":               s.container.ActorHandlers.HandleGetActor,
+		"update_actor":            s.container.ActorHandlers.HandleUpdateActor,
+		"delete_actor":            s.container.ActorHandlers.HandleDeleteActor,
+		"link_actor_to_movie":     s.container.ActorHandlers.HandleLinkActorToMovie,
+		"unlink_actor_from_movie": s.container.ActorHandlers.HandleUnlinkActorFromMovie,
+		"get_movie_cast":          s.container.ActorHandlers.HandleGetMovieCast,
+		"get_actor_movies":        s.container.ActorHandlers.HandleGetActorMovies,
+		"search_actors":           s.container.ActorHandlers.HandleSearchActors,
 	}
-	
+
 	s.registerToolsWithSchemas(handlers, schemas)
 }
 
 // registerSearchHandlers registers search-related tool handlers
 func (s *MCPServer) registerSearchHandlers(schemas []dto.Tool) {
 	handlers := map[string]func(id any, arguments map[string]any, sendResult func(any, any), sendError func(any, int, string, any)){
-		"search_movies":            s.container.MovieHandlers.HandleSearchMovies,
-		"search_by_decade":         s.container.MovieHandlers.HandleSearchByDecade,
-		"search_by_rating_range":   s.container.MovieHandlers.HandleSearchByRatingRange,
+		"search_movies":          s.container.MovieHandlers.HandleSearchMovies,
+		"search_by_decade":       s.container.MovieHandlers.HandleSearchByDecade,
+		"search_by_rating_range": s.container.MovieHandlers.HandleSearchByRatingRange,
 	}
-	
+
 	s.registerToolsWithSchemas(handlers, schemas)
 }
 
@@ -156,7 +156,7 @@ func (s *MCPServer) registerCompoundHandlers(schemas []dto.Tool) {
 		"movie_recommendation_engine": s.container.CompoundToolHandlers.HandleMovieRecommendationEngine,
 		"director_career_analysis":    s.container.CompoundToolHandlers.HandleDirectorCareerAnalysis,
 	}
-	
+
 	s.registerToolsWithSchemas(handlers, schemas)
 }
 
@@ -167,7 +167,7 @@ func (s *MCPServer) registerContextHandlers(schemas []dto.Tool) {
 		"get_context_page":      s.container.ContextManager.HandleGetPage,
 		"get_context_info":      s.container.ContextManager.HandleContextInfo,
 	}
-	
+
 	s.registerToolsWithSchemas(handlers, schemas)
 }
 
@@ -176,7 +176,7 @@ func (s *MCPServer) registerValidationHandlers(schemas []dto.Tool) {
 	handlers := map[string]func(id any, arguments map[string]any, sendResult func(any, any), sendError func(any, int, string, any)){
 		"validate_tool_call": s.container.ToolValidator.HandleValidateToolCall,
 	}
-	
+
 	s.registerToolsWithSchemas(handlers, schemas)
 }
 
@@ -185,7 +185,7 @@ func (s *MCPServer) registerToolsWithSchemas(handlers map[string]func(id any, ar
 	// Register each handler with its corresponding schema
 	for name, handler := range handlers {
 		wrappedHandler := s.wrapHandler(handler)
-		
+
 		// Find the matching schema
 		for _, schema := range schemas {
 			if schema.Name == name {
@@ -203,7 +203,7 @@ func filterSchemasByPrefix(allSchemas []dto.Tool, toolNames []string) []dto.Tool
 	for _, name := range toolNames {
 		nameMap[name] = true
 	}
-	
+
 	for _, schema := range allSchemas {
 		if nameMap[schema.Name] {
 			filtered = append(filtered, schema)

@@ -33,10 +33,10 @@ func (m *MockMovieService) DeleteMovie(ctx context.Context, id int) error {
 func (m *MockMovieService) SearchMovies(ctx context.Context, query movieApp.SearchMoviesQuery) ([]*movieApp.MovieDTO, error) {
 	// Simple filtering logic for testing
 	result := []*movieApp.MovieDTO{}
-	
+
 	for _, movie := range m.movies {
 		matches := true
-		
+
 		if query.Title != "" && movie.Title != query.Title {
 			matches = false
 		}
@@ -61,17 +61,17 @@ func (m *MockMovieService) SearchMovies(ctx context.Context, query movieApp.Sear
 		if query.MaxYear > 0 && movie.Year > query.MaxYear {
 			matches = false
 		}
-		
+
 		if matches {
 			result = append(result, movie)
 		}
 	}
-	
+
 	// Apply limit
 	if query.Limit > 0 && len(result) > query.Limit {
 		result = result[:query.Limit]
 	}
-	
+
 	return result, nil
 }
 
@@ -257,7 +257,7 @@ func TestContextManager_FilteredSearch(t *testing.T) {
 	}
 
 	// Should find 9 drama movies (count from createTestMovies function)
-	// The Godfather, The Shawshank Redemption, The Dark Knight, Pulp Fiction, 
+	// The Godfather, The Shawshank Redemption, The Dark Knight, Pulp Fiction,
 	// Schindler's List, The Lord of the Rings, 12 Angry Men, Fight Club, Forrest Gump
 	expectedDramaCount := 9
 	if contextInfo.Total != expectedDramaCount {

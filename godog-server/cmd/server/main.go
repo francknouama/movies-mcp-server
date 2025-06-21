@@ -1,9 +1,10 @@
 package main
 
 import (
+	"shared-mcp/pkg/logging"
+
 	"github.com/francknouama/movies-mcp-server/godog-server/internal/config"
 	"github.com/francknouama/movies-mcp-server/godog-server/internal/server"
-	"shared-mcp/pkg/logging"
 )
 
 func main() {
@@ -18,9 +19,9 @@ func main() {
 
 	// Create and start server
 	godogServer := server.NewServer(cfg, logger)
-	
+
 	logger.Info("Starting Godog MCP Server...")
-	
+
 	if err := godogServer.Run(); err != nil {
 		logger.Fatalf("Server failed: %v", err)
 	}

@@ -23,28 +23,28 @@ func (tm *TransactionManager) WithTransaction(ctx context.Context, fn func(*sql.
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	
+
 	// Ensure rollback is called if we don't reach the commit
 	defer func() {
 		if p := recover(); p != nil {
 			_ = tx.Rollback() // Ignore rollback error in panic recovery
-			panic(p) // Re-throw panic after rollback
+			panic(p)          // Re-throw panic after rollback
 		} else if err != nil {
 			_ = tx.Rollback() // Ignore rollback error when main operation failed
 		}
 	}()
-	
+
 	// Execute the function with the transaction
 	err = fn(tx)
 	if err != nil {
 		return err // Rollback will be called by defer
 	}
-	
+
 	// Commit the transaction
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -54,16 +54,16 @@ func (tm *TransactionManager) WithTransaction(ctx context.Context, fn func(*sql.
 func (tm *TransactionManager) WithTransactionResult(ctx context.Context, fn func(*sql.Tx) (interface{}, error)) (interface{}, error) {
 	var result interface{}
 	var err error
-	
+
 	txErr := tm.WithTransaction(ctx, func(tx *sql.Tx) error {
 		result, err = fn(tx)
 		return err
 	})
-	
+
 	if txErr != nil {
 		return nil, txErr
 	}
-	
+
 	return result, nil
 }
 
@@ -98,11 +98,11 @@ func (th *TransactionHelper) CheckRowsAffected(result sql.Result, entityType str
 	if err != nil {
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
-	
+
 	if rowsAffected == 0 {
 		return fmt.Errorf("%s not found", entityType)
 	}
-	
+
 	return nil
 }
 
@@ -122,7 +122,7 @@ func (th *TransactionHelper) Update(ctx context.Context, query string, entityTyp
 	if err != nil {
 		return fmt.Errorf("failed to update %s: %w", entityType, err)
 	}
-	
+
 	return th.CheckRowsAffected(result, entityType)
 }
 
@@ -132,6 +132,6 @@ func (th *TransactionHelper) Delete(ctx context.Context, query string, entityTyp
 	if err != nil {
 		return fmt.Errorf("failed to delete %s: %w", entityType, err)
 	}
-	
+
 	return th.CheckRowsAffected(result, entityType)
 }

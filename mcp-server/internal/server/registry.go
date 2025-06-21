@@ -10,17 +10,17 @@ import (
 type ToolHandlerFunc func(id any, arguments map[string]any, sender ResponseSender)
 
 // ResourceHandler defines the signature for resource handler functions
-type ResourceHandler func(uri string, sender ResponseSender) 
+type ResourceHandler func(uri string, sender ResponseSender)
 
 // PromptHandler defines the signature for prompt handler functions
 type PromptHandler func(id any, name string, arguments map[string]interface{}, sender ResponseSender)
 
 // Registry manages the registration and discovery of tools, resources, and prompts
 type Registry struct {
-	tools     map[string]ToolHandlerFunc
-	resources map[string]ResourceHandler
-	prompts   map[string]PromptHandler
-	schemas   []dto.Tool
+	tools        map[string]ToolHandlerFunc
+	resources    map[string]ResourceHandler
+	prompts      map[string]PromptHandler
+	schemas      []dto.Tool
 	resourceList []dto.Resource
 	promptList   []dto.Prompt
 }
@@ -28,10 +28,10 @@ type Registry struct {
 // NewRegistry creates a new registry
 func NewRegistry() *Registry {
 	return &Registry{
-		tools:     make(map[string]ToolHandlerFunc),
-		resources: make(map[string]ResourceHandler),
-		prompts:   make(map[string]PromptHandler),
-		schemas:   make([]dto.Tool, 0),
+		tools:        make(map[string]ToolHandlerFunc),
+		resources:    make(map[string]ResourceHandler),
+		prompts:      make(map[string]PromptHandler),
+		schemas:      make([]dto.Tool, 0),
 		resourceList: make([]dto.Resource, 0),
 		promptList:   make([]dto.Prompt, 0),
 	}

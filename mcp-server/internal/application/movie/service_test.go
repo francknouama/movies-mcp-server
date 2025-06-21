@@ -39,7 +39,7 @@ func (m *MockMovieRepository) Save(ctx context.Context, movie *movie.Movie) erro
 	if m.saveFunc != nil {
 		return m.saveFunc(ctx, movie)
 	}
-	
+
 	// Always assign a new ID for new movies (ID 1 is the temporary ID from NewMovie)
 	if movie.ID().Value() == 1 || movie.ID().IsZero() {
 		// Assign new ID
@@ -47,7 +47,7 @@ func (m *MockMovieRepository) Save(ctx context.Context, movie *movie.Movie) erro
 		movie.SetID(id)
 		m.nextID++
 	}
-	
+
 	m.movies[movie.ID().Value()] = movie
 	return nil
 }
@@ -56,7 +56,7 @@ func (m *MockMovieRepository) Delete(ctx context.Context, id shared.MovieID) err
 	if m.deleteFunc != nil {
 		return m.deleteFunc(ctx, id)
 	}
-	
+
 	if _, exists := m.movies[id.Value()]; !exists {
 		return errors.New("movie not found")
 	}
@@ -68,22 +68,22 @@ func (m *MockMovieRepository) FindByCriteria(ctx context.Context, criteria movie
 	var result []*movie.Movie
 	for _, movieItem := range m.movies {
 		match := true
-		
+
 		// Filter by director
 		if criteria.Director != "" && movieItem.Director() != criteria.Director {
 			match = false
 		}
-		
+
 		// Filter by title
 		if criteria.Title != "" && movieItem.Title() != criteria.Title {
 			match = false
 		}
-		
+
 		// Filter by genre
 		if criteria.Genre != "" && !movieItem.HasGenre(criteria.Genre) {
 			match = false
 		}
-		
+
 		if match {
 			result = append(result, movieItem)
 		}
@@ -388,7 +388,7 @@ func TestService_RepositoryError(t *testing.T) {
 	repo.saveFunc = func(ctx context.Context, m *movie.Movie) error {
 		return errors.New("database error")
 	}
-	
+
 	service := NewService(repo)
 
 	cmd := CreateMovieCommand{

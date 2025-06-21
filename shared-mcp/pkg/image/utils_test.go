@@ -186,7 +186,7 @@ func TestImageProcessor_ParseThumbnailSize(t *testing.T) {
 
 			if !tt.expectError {
 				if size.width != tt.width || size.height != tt.height {
-					t.Errorf("parseThumbnailSize() = %dx%d, want %dx%d", 
+					t.Errorf("parseThumbnailSize() = %dx%d, want %dx%d",
 						size.width, size.height, tt.width, tt.height)
 				}
 			}
@@ -201,7 +201,7 @@ func createTestJPEGData() []byte {
 		0x00, 0x10, // APP0 length
 		0x4A, 0x46, 0x49, 0x46, 0x00, // "JFIF\0"
 		0x01, 0x01, // Version
-		0x01, // Units
+		0x01,                   // Units
 		0x00, 0x01, 0x00, 0x01, // X/Y density
 		0x00, 0x00, // Thumbnail dimensions
 		0xFF, 0xD9, // EOI

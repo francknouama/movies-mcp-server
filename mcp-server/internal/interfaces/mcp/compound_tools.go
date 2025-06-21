@@ -34,11 +34,11 @@ func (h *CompoundToolHandlers) HandleBulkMovieImport(
 		sendError(id, -32602, "Invalid movies array", nil)
 		return
 	}
-	
+
 	ctx := context.Background()
 	var results []map[string]interface{}
 	var errors []map[string]interface{}
-	
+
 	for i, movieData := range moviesData {
 		movie, ok := movieData.(map[string]interface{})
 		if !ok {
@@ -48,7 +48,7 @@ func (h *CompoundToolHandlers) HandleBulkMovieImport(
 			})
 			continue
 		}
-		
+
 		// Extract movie fields
 		title, _ := movie["title"].(string)
 		director, _ := movie["director"].(string)
@@ -56,7 +56,7 @@ func (h *CompoundToolHandlers) HandleBulkMovieImport(
 		rating, _ := movie["rating"].(float64)
 		genres, _ := movie["genres"].([]interface{})
 		posterURL, _ := movie["poster_url"].(string)
-		
+
 		// Convert genres
 		genreStrings := make([]string, 0, len(genres))
 		for _, g := range genres {
@@ -64,7 +64,7 @@ func (h *CompoundToolHandlers) HandleBulkMovieImport(
 				genreStrings = append(genreStrings, genreStr)
 			}
 		}
-		
+
 		// Create movie
 		cmd := movieApp.CreateMovieCommand{
 			Title:     title,
@@ -74,7 +74,7 @@ func (h *CompoundToolHandlers) HandleBulkMovieImport(
 			Genres:    genreStrings,
 			PosterURL: posterURL,
 		}
-		
+
 		movieDTO, err := h.movieService.CreateMovie(ctx, cmd)
 		if err != nil {
 			errors = append(errors, map[string]interface{}{
@@ -90,7 +90,7 @@ func (h *CompoundToolHandlers) HandleBulkMovieImport(
 			})
 		}
 	}
-	
+
 	response := map[string]interface{}{
 		"imported":     len(results),
 		"failed":       len(errors),
@@ -99,7 +99,7 @@ func (h *CompoundToolHandlers) HandleBulkMovieImport(
 		"results":      results,
 		"errors":       errors,
 	}
-	
+
 	sendResult(id, response)
 }
 
@@ -111,54 +111,54 @@ func (h *CompoundToolHandlers) HandleMovieRecommendationEngine(
 	sendError func(interface{}, int, string, interface{}),
 ) {
 	ctx := context.Background()
-	
+
 	// Parse parameters
 	userPreferences, _ := arguments["preferences"].(map[string]interface{})
 	limit := 10
 	if l, ok := arguments["limit"].(float64); ok {
 		limit = int(l)
 	}
-	
+
 	// Extract preferences
 	genres := extractStringArray(userPreferences["genres"])
 	minRating, _ := userPreferences["min_rating"].(float64)
 	yearFrom, _ := userPreferences["year_from"].(float64)
 	yearTo, _ := userPreferences["year_to"].(float64)
 	excludeMovies := extractStringArray(userPreferences["exclude_movies"])
-	
+
 	// Build recommendation query
 	query := movieApp.SearchMoviesQuery{
 		Limit: limit * 3, // Get more to filter
 	}
-	
+
 	// Get all movies (in production, would use more sophisticated queries)
 	movies, err := h.movieService.SearchMovies(ctx, query)
 	if err != nil {
 		sendError(id, -32603, "Failed to search movies", err.Error())
 		return
 	}
-	
+
 	// Score and filter movies
 	type scoredMovie struct {
 		movie *movieApp.MovieDTO
 		score float64
 	}
-	
+
 	var scoredMovies []scoredMovie
 	excludeMap := make(map[string]bool)
 	for _, title := range excludeMovies {
 		excludeMap[strings.ToLower(title)] = true
 	}
-	
+
 	for _, movie := range movies {
 		// Skip excluded movies
 		if excludeMap[strings.ToLower(movie.Title)] {
 			continue
 		}
-		
+
 		// Calculate recommendation score
 		score := 0.0
-		
+
 		// Genre matching (40% weight)
 		if len(genres) > 0 {
 			genreScore := calculateGenreScore(movie.Genres, genres)
@@ -166,13 +166,13 @@ func (h *CompoundToolHandlers) HandleMovieRecommendationEngine(
 		} else {
 			score += 0.4 // No genre preference
 		}
-		
+
 		// Rating score (30% weight)
 		if movie.Rating >= minRating {
 			ratingScore := movie.Rating / 10.0
 			score += ratingScore * 0.3
 		}
-		
+
 		// Year relevance (20% weight)
 		if yearFrom > 0 || yearTo > 0 {
 			yearScore := calculateYearScore(float64(movie.Year), yearFrom, yearTo)
@@ -180,12 +180,12 @@ func (h *CompoundToolHandlers) HandleMovieRecommendationEngine(
 		} else {
 			score += 0.2 // No year preference
 		}
-		
+
 		// Popularity boost (10% weight) - using rating as proxy
 		if movie.Rating >= 8.0 {
 			score += 0.1
 		}
-		
+
 		if score > 0.3 { // Minimum threshold
 			scoredMovies = append(scoredMovies, scoredMovie{
 				movie: movie,
@@ -193,32 +193,32 @@ func (h *CompoundToolHandlers) HandleMovieRecommendationEngine(
 			})
 		}
 	}
-	
+
 	// Sort by score
 	sort.Slice(scoredMovies, func(i, j int) bool {
 		return scoredMovies[i].score > scoredMovies[j].score
 	})
-	
+
 	// Prepare recommendations
 	recommendations := []map[string]interface{}{}
 	for i, sm := range scoredMovies {
 		if i >= limit {
 			break
 		}
-		
+
 		recommendations = append(recommendations, map[string]interface{}{
-			"rank":             i + 1,
-			"movie_id":         sm.movie.ID,
-			"title":            sm.movie.Title,
-			"director":         sm.movie.Director,
-			"year":             sm.movie.Year,
-			"rating":           sm.movie.Rating,
-			"genres":           sm.movie.Genres,
-			"match_score":      fmt.Sprintf("%.1f%%", sm.score*100),
+			"rank":                  i + 1,
+			"movie_id":              sm.movie.ID,
+			"title":                 sm.movie.Title,
+			"director":              sm.movie.Director,
+			"year":                  sm.movie.Year,
+			"rating":                sm.movie.Rating,
+			"genres":                sm.movie.Genres,
+			"match_score":           fmt.Sprintf("%.1f%%", sm.score*100),
 			"recommendation_reason": generateRecommendationReason(sm.movie, userPreferences, sm.score),
 		})
 	}
-	
+
 	response := map[string]interface{}{
 		"recommendations": recommendations,
 		"total_found":     len(recommendations),
@@ -229,7 +229,7 @@ func (h *CompoundToolHandlers) HandleMovieRecommendationEngine(
 			"excluded_count": len(excludeMovies),
 		},
 	}
-	
+
 	sendResult(id, response)
 }
 
@@ -241,62 +241,62 @@ func (h *CompoundToolHandlers) HandleDirectorCareerAnalysis(
 	sendError func(interface{}, int, string, interface{}),
 ) {
 	ctx := context.Background()
-	
+
 	directorName, ok := arguments["director"].(string)
 	if !ok || directorName == "" {
 		sendError(id, -32602, "Director name is required", nil)
 		return
 	}
-	
+
 	// Search for all movies by this director
 	query := movieApp.SearchMoviesQuery{
 		Director: directorName,
 		Limit:    100,
 	}
-	
+
 	movies, err := h.movieService.SearchMovies(ctx, query)
 	if err != nil {
 		sendError(id, -32603, "Failed to search movies", err.Error())
 		return
 	}
-	
+
 	if len(movies) == 0 {
 		sendError(id, -32602, "No movies found for director", directorName)
 		return
 	}
-	
+
 	// Sort movies by year
 	sort.Slice(movies, func(i, j int) bool {
 		return movies[i].Year < movies[j].Year
 	})
-	
+
 	// Analyze career metrics
 	totalMovies := len(movies)
 	var totalRating float64
 	var ratingsCount int
 	genreCount := make(map[string]int)
-	
+
 	// Career phases
 	earlyCareer := []*movieApp.MovieDTO{}
 	midCareer := []*movieApp.MovieDTO{}
 	lateCareer := []*movieApp.MovieDTO{}
-	
+
 	firstYear := movies[0].Year
 	lastYear := movies[len(movies)-1].Year
 	careerSpan := lastYear - firstYear
-	
+
 	for _, movie := range movies {
 		// Rating analysis
 		if movie.Rating > 0 {
 			totalRating += movie.Rating
 			ratingsCount++
 		}
-		
+
 		// Genre analysis
 		for _, genre := range movie.Genres {
 			genreCount[genre]++
 		}
-		
+
 		// Career phase categorization
 		yearInCareer := movie.Year - firstYear
 		if float64(yearInCareer) < float64(careerSpan)*0.33 {
@@ -307,19 +307,19 @@ func (h *CompoundToolHandlers) HandleDirectorCareerAnalysis(
 			lateCareer = append(lateCareer, movie)
 		}
 	}
-	
+
 	// Calculate phase averages
 	earlyAvg := calculateAverageRating(earlyCareer)
 	midAvg := calculateAverageRating(midCareer)
 	lateAvg := calculateAverageRating(lateCareer)
-	
+
 	// Find best and worst movies
 	bestMovie := findBestMovie(movies)
 	worstMovie := findWorstMovie(movies)
-	
+
 	// Genre evolution
 	primaryGenres := findTopGenres(genreCount, 3)
-	
+
 	response := map[string]interface{}{
 		"director": directorName,
 		"career_overview": map[string]interface{}{
@@ -344,7 +344,7 @@ func (h *CompoundToolHandlers) HandleDirectorCareerAnalysis(
 				"average_rating": fmt.Sprintf("%.1f", lateAvg),
 			},
 		},
-		"career_trajectory": determineTrajectory(earlyAvg, midAvg, lateAvg),
+		"career_trajectory":    determineTrajectory(earlyAvg, midAvg, lateAvg),
 		"genre_specialization": primaryGenres,
 		"notable_works": map[string]interface{}{
 			"highest_rated": map[string]interface{}{
@@ -360,7 +360,7 @@ func (h *CompoundToolHandlers) HandleDirectorCareerAnalysis(
 		},
 		"filmography": formatFilmography(movies),
 	}
-	
+
 	sendResult(id, response)
 }
 
@@ -382,7 +382,7 @@ func calculateGenreScore(movieGenres, preferredGenres []string) float64 {
 	if len(movieGenres) == 0 || len(preferredGenres) == 0 {
 		return 0
 	}
-	
+
 	matches := 0
 	for _, mg := range movieGenres {
 		for _, pg := range preferredGenres {
@@ -392,7 +392,7 @@ func calculateGenreScore(movieGenres, preferredGenres []string) float64 {
 			}
 		}
 	}
-	
+
 	return float64(matches) / float64(len(preferredGenres))
 }
 
@@ -403,11 +403,11 @@ func calculateYearScore(movieYear, yearFrom, yearTo float64) float64 {
 	if yearTo == 0 {
 		yearTo = 2100
 	}
-	
+
 	if movieYear >= yearFrom && movieYear <= yearTo {
 		return 1.0
 	}
-	
+
 	// Gradual decrease for movies outside range
 	if movieYear < yearFrom {
 		diff := yearFrom - movieYear
@@ -420,17 +420,17 @@ func calculateYearScore(movieYear, yearFrom, yearTo float64) float64 {
 
 func generateRecommendationReason(movie *movieApp.MovieDTO, preferences map[string]interface{}, score float64) string {
 	reasons := []string{}
-	
+
 	if score > 0.8 {
 		reasons = append(reasons, "Excellent match")
 	} else if score > 0.6 {
 		reasons = append(reasons, "Good match")
 	}
-	
+
 	if movie.Rating >= 8.0 {
 		reasons = append(reasons, "Highly rated")
 	}
-	
+
 	if genres, ok := preferences["genres"].([]interface{}); ok && len(genres) > 0 {
 		for _, genre := range movie.Genres {
 			for _, prefGenre := range genres {
@@ -441,7 +441,7 @@ func generateRecommendationReason(movie *movieApp.MovieDTO, preferences map[stri
 			}
 		}
 	}
-	
+
 	return strings.Join(reasons, "; ")
 }
 
@@ -449,7 +449,7 @@ func calculateAverageRating(movies []*movieApp.MovieDTO) float64 {
 	if len(movies) == 0 {
 		return 0
 	}
-	
+
 	var total float64
 	var count int
 	for _, m := range movies {
@@ -458,7 +458,7 @@ func calculateAverageRating(movies []*movieApp.MovieDTO) float64 {
 			count++
 		}
 	}
-	
+
 	if count == 0 {
 		return 0
 	}
@@ -469,7 +469,7 @@ func findBestMovie(movies []*movieApp.MovieDTO) *movieApp.MovieDTO {
 	if len(movies) == 0 {
 		return nil
 	}
-	
+
 	best := movies[0]
 	for _, m := range movies {
 		if m.Rating > best.Rating {
@@ -483,7 +483,7 @@ func findWorstMovie(movies []*movieApp.MovieDTO) *movieApp.MovieDTO {
 	if len(movies) == 0 {
 		return nil
 	}
-	
+
 	worst := movies[0]
 	for _, m := range movies {
 		if m.Rating > 0 && (worst.Rating == 0 || m.Rating < worst.Rating) {
@@ -498,16 +498,16 @@ func findTopGenres(genreCount map[string]int, limit int) []map[string]interface{
 		genre string
 		count int
 	}
-	
+
 	frequencies := []genreFreq{}
 	for g, c := range genreCount {
 		frequencies = append(frequencies, genreFreq{g, c})
 	}
-	
+
 	sort.Slice(frequencies, func(i, j int) bool {
 		return frequencies[i].count > frequencies[j].count
 	})
-	
+
 	result := []map[string]interface{}{}
 	for i := 0; i < limit && i < len(frequencies); i++ {
 		result = append(result, map[string]interface{}{
@@ -515,7 +515,7 @@ func findTopGenres(genreCount map[string]int, limit int) []map[string]interface{
 			"count": frequencies[i].count,
 		})
 	}
-	
+
 	return result
 }
 

@@ -9,12 +9,13 @@ import (
 	"strings"
 	"time"
 
-	gherkin "github.com/cucumber/gherkin/go/v26"
-	"github.com/cucumber/messages/go/v21"
-	"github.com/francknouama/movies-mcp-server/godog-server/internal/config"
-	"github.com/francknouama/movies-mcp-server/godog-server/internal/models"
 	"shared-mcp/pkg/errors"
 	"shared-mcp/pkg/logging"
+
+	gherkin "github.com/cucumber/gherkin/go/v26"
+	messages "github.com/cucumber/messages/go/v21"
+	"github.com/francknouama/movies-mcp-server/godog-server/internal/config"
+	"github.com/francknouama/movies-mcp-server/godog-server/internal/models"
 )
 
 // Runner handles Godog test execution and feature management
@@ -38,7 +39,7 @@ func (r *Runner) CheckAvailability() error {
 	if err != nil {
 		return errors.NewGodogNotFound("Godog binary not found or not executable: " + err.Error())
 	}
-	
+
 	r.logger.WithField("version", strings.TrimSpace(string(output))).Info("Godog version detected")
 	return nil
 }
@@ -49,26 +50,26 @@ func (r *Runner) ValidateFeature(filePath string) (any, error) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, errors.NewFeatureParseError("Feature file not found: " + filePath)
 	}
-	
+
 	// Read the feature file
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, errors.NewFeatureParseError("Failed to read feature file: " + err.Error())
 	}
-	
+
 	// Parse with Gherkin
 	gherkinDoc, err := gherkin.ParseGherkinDocument(strings.NewReader(string(content)), (&messages.Incrementing{}).NewId)
 	if err != nil {
 		return nil, errors.NewFeatureParseError("Gherkin parsing failed: " + err.Error())
 	}
-	
+
 	if gherkinDoc.Feature == nil {
 		return nil, errors.NewFeatureParseError("No feature found in file: " + filePath)
 	}
-	
+
 	// Convert to our model
 	feature := models.ConvertGherkinFeature(gherkinDoc.Feature, filePath)
-	
+
 	return map[string]any{
 		"valid":   true,
 		"feature": feature,
@@ -82,15 +83,15 @@ func (r *Runner) ListFeatures(directory string, includeContent bool) (any, error
 	if directory != "" {
 		searchDir = directory
 	}
-	
+
 	var features []models.Feature
 	var featureList []map[string]any
-	
+
 	err := filepath.Walk(searchDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		
+
 		if !info.IsDir() && strings.HasSuffix(path, ".feature") {
 			if includeContent {
 				// Parse each feature file with full content
@@ -99,7 +100,7 @@ func (r *Runner) ListFeatures(directory string, includeContent bool) (any, error
 					r.logger.WithField("file", path).WithField("error", parseErr).Warn("Failed to parse feature file")
 					return nil // Continue walking, don't fail the entire operation
 				}
-				
+
 				if resultMap, ok := result.(map[string]any); ok {
 					if feature, ok := resultMap["feature"].(models.Feature); ok {
 						features = append(features, feature)
@@ -118,19 +119,19 @@ func (r *Runner) ListFeatures(directory string, includeContent bool) (any, error
 				featureList = append(featureList, featureInfo)
 			}
 		}
-		
+
 		return nil
 	})
-	
+
 	if err != nil {
 		return nil, errors.NewFeatureParseError("Failed to scan features directory: " + err.Error())
 	}
-	
+
 	if includeContent {
 		return map[string]any{
-			"features":   features,
-			"count":      len(features),
-			"directory":  searchDir,
+			"features":     features,
+			"count":        len(features),
+			"directory":    searchDir,
 			"with_content": true,
 		}, nil
 	} else {
@@ -149,25 +150,25 @@ func (r *Runner) GetFeatureContent(filePath string, includeParsed bool) (any, er
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, errors.NewFeatureParseError("Feature file not found: " + filePath)
 	}
-	
+
 	// Read the raw content
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, errors.NewFeatureParseError("Failed to read feature file: " + err.Error())
 	}
-	
+
 	result := map[string]any{
-		"file_path":    filePath,
-		"raw_content":  string(content),
-		"size":         len(content),
+		"file_path":   filePath,
+		"raw_content": string(content),
+		"size":        len(content),
 	}
-	
+
 	// Add file metadata
 	if info, err := os.Stat(filePath); err == nil {
 		result["modified_at"] = info.ModTime()
 		result["name"] = strings.TrimSuffix(filepath.Base(filePath), ".feature")
 	}
-	
+
 	if includeParsed {
 		// Parse the Gherkin content
 		validateResult, parseErr := r.ValidateFeature(filePath)
@@ -182,7 +183,7 @@ func (r *Runner) GetFeatureContent(filePath string, includeParsed bool) (any, er
 			}
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -195,7 +196,7 @@ func (r *Runner) RunFeature(filePath string, options *models.GodogRunOptions) (*
 			Strict:       true,
 		}
 	}
-	
+
 	return r.runGodog(options)
 }
 
@@ -208,7 +209,7 @@ func (r *Runner) RunSuite(options *models.GodogRunOptions) (*models.TestResult, 
 			Strict:       true,
 		}
 	}
-	
+
 	return r.runGodog(options)
 }
 
@@ -217,57 +218,57 @@ func (r *Runner) GetLatestReport() (any, error) {
 	// Check if reports directory exists
 	if _, err := os.Stat(r.config.ReportsDir); os.IsNotExist(err) {
 		return map[string]any{
-			"message": "No reports found",
+			"message":     "No reports found",
 			"reports_dir": r.config.ReportsDir,
 		}, nil
 	}
-	
+
 	// Find the most recent report file
 	files, err := filepath.Glob(filepath.Join(r.config.ReportsDir, "*.json"))
 	if err != nil {
 		return nil, errors.NewReportGenerationError("Failed to scan reports directory: " + err.Error())
 	}
-	
+
 	if len(files) == 0 {
 		return map[string]any{
-			"message": "No JSON reports found",
+			"message":     "No JSON reports found",
 			"reports_dir": r.config.ReportsDir,
 		}, nil
 	}
-	
+
 	// Find the most recent file
 	var latestFile string
 	var latestTime time.Time
-	
+
 	for _, file := range files {
 		info, err := os.Stat(file)
 		if err != nil {
 			continue
 		}
-		
+
 		if info.ModTime().After(latestTime) {
 			latestTime = info.ModTime()
 			latestFile = file
 		}
 	}
-	
+
 	if latestFile == "" {
 		return map[string]any{
 			"message": "No accessible reports found",
 		}, nil
 	}
-	
+
 	// Read and return the latest report
 	content, err := os.ReadFile(latestFile)
 	if err != nil {
 		return nil, errors.NewReportGenerationError("Failed to read report file: " + err.Error())
 	}
-	
+
 	var report any
 	if err := json.Unmarshal(content, &report); err != nil {
 		return nil, errors.NewReportGenerationError("Failed to parse report JSON: " + err.Error())
 	}
-	
+
 	return map[string]any{
 		"report":      report,
 		"file":        latestFile,
@@ -278,18 +279,18 @@ func (r *Runner) GetLatestReport() (any, error) {
 // runGodog executes Godog with the specified options
 func (r *Runner) runGodog(options *models.GodogRunOptions) (*models.TestResult, error) {
 	startTime := time.Now()
-	
+
 	// Prepare command arguments
 	args := []string{}
-	
+
 	// Add feature paths
 	args = append(args, options.FeaturePaths...)
-	
+
 	// Add format
 	if options.Format != "" {
 		args = append(args, "--format", options.Format)
 	}
-	
+
 	// Add output file for JSON reports
 	reportFile := filepath.Join(r.config.ReportsDir, fmt.Sprintf("report_%s.json", startTime.Format("20060102_150405")))
 	if options.Format == "cucumber" || options.Format == "" {
@@ -297,32 +298,32 @@ func (r *Runner) runGodog(options *models.GodogRunOptions) (*models.TestResult, 
 		os.MkdirAll(r.config.ReportsDir, 0755)
 		args = append(args, "--output", reportFile)
 	}
-	
+
 	// Add tags
 	if options.Tags != "" {
 		args = append(args, "--tags", options.Tags)
 	}
-	
+
 	// Add other options
 	if options.Strict {
 		args = append(args, "--strict")
 	}
-	
+
 	if options.NoColors {
 		args = append(args, "--no-colors")
 	}
-	
+
 	if options.StopOnFailure {
 		args = append(args, "--stop-on-failure")
 	}
-	
+
 	if options.Concurrency > 0 {
 		args = append(args, "--concurrency", fmt.Sprintf("%d", options.Concurrency))
 	}
-	
+
 	// Execute Godog
 	cmd := exec.Command(r.config.GodogBinary, args...)
-	
+
 	// Set environment variables
 	if options.Environment != nil {
 		env := os.Environ()
@@ -331,10 +332,10 @@ func (r *Runner) runGodog(options *models.GodogRunOptions) (*models.TestResult, 
 		}
 		cmd.Env = env
 	}
-	
+
 	output, err := cmd.CombinedOutput()
 	endTime := time.Now()
-	
+
 	// Create test result
 	testResult := &models.TestResult{
 		ID:        generateTestID(),
@@ -348,13 +349,13 @@ func (r *Runner) runGodog(options *models.GodogRunOptions) (*models.TestResult, 
 			Environment: options.Environment,
 		},
 	}
-	
+
 	// Determine status based on exit code
 	if err != nil {
 		testResult.Status = models.StatusFailed
 		r.logger.WithField("error", err).WithField("output", string(output)).Error("Godog execution failed")
 	}
-	
+
 	// Try to parse JSON report if it exists
 	if options.Format == "cucumber" || options.Format == "" {
 		if _, readErr := os.ReadFile(reportFile); readErr == nil {
@@ -362,7 +363,7 @@ func (r *Runner) runGodog(options *models.GodogRunOptions) (*models.TestResult, 
 			r.logger.WithField("report_file", reportFile).Info("Generated JSON report")
 		}
 	}
-	
+
 	return testResult, nil
 }
 

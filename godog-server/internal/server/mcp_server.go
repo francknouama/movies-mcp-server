@@ -5,9 +5,10 @@ import (
 	"io"
 	"strings"
 
-	"github.com/francknouama/movies-mcp-server/godog-server/internal/godog"
 	"shared-mcp/pkg/errors"
 	"shared-mcp/pkg/logging"
+
+	"github.com/francknouama/movies-mcp-server/godog-server/internal/godog"
 )
 
 // MCPServer handles the Model Context Protocol communication
@@ -23,7 +24,7 @@ type MCPServer struct {
 // ToolHandler represents a function that handles tool calls
 type ToolHandler func(arguments map[string]any) (any, error)
 
-// ResourceHandler represents a function that handles resource requests  
+// ResourceHandler represents a function that handles resource requests
 type ResourceHandler func(uri string) (any, error)
 
 // MCPRequest represents an incoming MCP request
@@ -59,11 +60,11 @@ func NewMCPServer(input io.Reader, output io.Writer, logger *logging.Logger, god
 		tools:       make(map[string]ToolHandler),
 		resources:   make(map[string]ResourceHandler),
 	}
-	
+
 	// Register basic MCP tools
 	server.registerTools()
 	server.registerResources()
-	
+
 	return server
 }
 
@@ -71,7 +72,7 @@ func NewMCPServer(input io.Reader, output io.Writer, logger *logging.Logger, god
 func (s *MCPServer) Run() error {
 	decoder := json.NewDecoder(s.input)
 	encoder := json.NewEncoder(s.output)
-	
+
 	for {
 		var request MCPRequest
 		if err := decoder.Decode(&request); err != nil {
@@ -82,11 +83,11 @@ func (s *MCPServer) Run() error {
 			s.logger.WithField("error", err).Error("Failed to decode request")
 			continue
 		}
-		
+
 		s.logger.WithField("method", request.Method).Debug("Received MCP request")
-		
+
 		response := s.handleRequest(request)
-		
+
 		if err := encoder.Encode(response); err != nil {
 			s.logger.WithField("error", err).Error("Failed to encode response")
 			continue
@@ -122,7 +123,7 @@ func (s *MCPServer) handleRequest(request MCPRequest) MCPResponse {
 // handleInitialize handles the MCP initialize request
 func (s *MCPServer) handleInitialize(request MCPRequest) MCPResponse {
 	s.logger.Info("Initializing MCP server")
-	
+
 	return MCPResponse{
 		JSONRPC: "2.0",
 		ID:      request.ID,
@@ -143,7 +144,7 @@ func (s *MCPServer) handleInitialize(request MCPRequest) MCPResponse {
 // handleListTools handles the tools/list request
 func (s *MCPServer) handleListTools(request MCPRequest) MCPResponse {
 	tools := make([]map[string]any, 0, len(s.tools))
-	
+
 	// Add basic tools
 	tools = append(tools, map[string]any{
 		"name":        "validate_feature",
@@ -159,7 +160,7 @@ func (s *MCPServer) handleListTools(request MCPRequest) MCPResponse {
 			"required": []string{"file_path"},
 		},
 	})
-	
+
 	tools = append(tools, map[string]any{
 		"name":        "list_features",
 		"description": "List all available feature files",
@@ -177,7 +178,7 @@ func (s *MCPServer) handleListTools(request MCPRequest) MCPResponse {
 			},
 		},
 	})
-	
+
 	tools = append(tools, map[string]any{
 		"name":        "get_feature_content",
 		"description": "Get the content of a specific feature file",
@@ -196,7 +197,7 @@ func (s *MCPServer) handleListTools(request MCPRequest) MCPResponse {
 			"required": []string{"file_path"},
 		},
 	})
-	
+
 	return MCPResponse{
 		JSONRPC: "2.0",
 		ID:      request.ID,
@@ -219,7 +220,7 @@ func (s *MCPServer) handleToolCall(request MCPRequest) MCPResponse {
 			},
 		}
 	}
-	
+
 	toolName, ok := params["name"].(string)
 	if !ok {
 		return MCPResponse{
@@ -231,12 +232,12 @@ func (s *MCPServer) handleToolCall(request MCPRequest) MCPResponse {
 			},
 		}
 	}
-	
+
 	arguments, ok := params["arguments"].(map[string]any)
 	if !ok {
 		arguments = make(map[string]any)
 	}
-	
+
 	handler, exists := s.tools[toolName]
 	if !exists {
 		return MCPResponse{
@@ -248,7 +249,7 @@ func (s *MCPServer) handleToolCall(request MCPRequest) MCPResponse {
 			},
 		}
 	}
-	
+
 	result, err := handler(arguments)
 	if err != nil {
 		return MCPResponse{
@@ -260,7 +261,7 @@ func (s *MCPServer) handleToolCall(request MCPRequest) MCPResponse {
 			},
 		}
 	}
-	
+
 	return MCPResponse{
 		JSONRPC: "2.0",
 		ID:      request.ID,
@@ -303,7 +304,7 @@ func (s *MCPServer) handleListResources(request MCPRequest) MCPResponse {
 			"mimeType":    "application/json",
 		},
 	}
-	
+
 	return MCPResponse{
 		JSONRPC: "2.0",
 		ID:      request.ID,
@@ -326,7 +327,7 @@ func (s *MCPServer) handleResourceRead(request MCPRequest) MCPResponse {
 			},
 		}
 	}
-	
+
 	uri, ok := params["uri"].(string)
 	if !ok {
 		return MCPResponse{
@@ -338,7 +339,7 @@ func (s *MCPServer) handleResourceRead(request MCPRequest) MCPResponse {
 			},
 		}
 	}
-	
+
 	// Handle individual feature file URIs (pattern: godog://features/{filename})
 	if strings.HasPrefix(uri, "godog://features/") && !strings.HasSuffix(uri, "/all") && !strings.HasSuffix(uri, "/list") {
 		filename := strings.TrimPrefix(uri, "godog://features/")
@@ -353,7 +354,7 @@ func (s *MCPServer) handleResourceRead(request MCPRequest) MCPResponse {
 				},
 			}
 		}
-		
+
 		return MCPResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
@@ -368,7 +369,7 @@ func (s *MCPServer) handleResourceRead(request MCPRequest) MCPResponse {
 			},
 		}
 	}
-	
+
 	handler, exists := s.resources[uri]
 	if !exists {
 		return MCPResponse{
@@ -380,7 +381,7 @@ func (s *MCPServer) handleResourceRead(request MCPRequest) MCPResponse {
 			},
 		}
 	}
-	
+
 	content, err := handler(uri)
 	if err != nil {
 		return MCPResponse{
@@ -392,7 +393,7 @@ func (s *MCPServer) handleResourceRead(request MCPRequest) MCPResponse {
 			},
 		}
 	}
-	
+
 	return MCPResponse{
 		JSONRPC: "2.0",
 		ID:      request.ID,
@@ -428,7 +429,7 @@ func (s *MCPServer) handleValidateFeature(arguments map[string]any) (any, error)
 	if !ok {
 		return nil, errors.NewInvalidParams("file_path is required")
 	}
-	
+
 	return s.godogRunner.ValidateFeature(filePath)
 }
 
@@ -443,12 +444,12 @@ func (s *MCPServer) handleGetFeatureContent(arguments map[string]any) (any, erro
 	if !ok {
 		return nil, errors.NewInvalidParams("file_path is required")
 	}
-	
+
 	includeParsed, _ := arguments["include_parsed"].(bool)
 	if !includeParsed {
 		includeParsed = true // default to true
 	}
-	
+
 	return s.godogRunner.GetFeatureContent(filePath, includeParsed)
 }
 
@@ -467,17 +468,17 @@ func (s *MCPServer) handleIndividualFeatureResource(filename string) (any, error
 	if err != nil {
 		return nil, err
 	}
-	
+
 	featureListMap, ok := featureListResult.(map[string]any)
 	if !ok {
 		return nil, errors.NewInternalError("Invalid feature list format")
 	}
-	
+
 	featureFiles, ok := featureListMap["feature_files"].([]map[string]any)
 	if !ok {
 		return nil, errors.NewInternalError("Invalid feature files format")
 	}
-	
+
 	// Find the feature file by name
 	var targetPath string
 	for _, featureFile := range featureFiles {
@@ -488,23 +489,23 @@ func (s *MCPServer) handleIndividualFeatureResource(filename string) (any, error
 			}
 		}
 	}
-	
+
 	if targetPath == "" {
 		return nil, errors.NewFeatureParseError("Feature file not found: " + filename)
 	}
-	
+
 	// Get the content
 	contentResult, err := s.godogRunner.GetFeatureContent(targetPath, false)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if contentMap, ok := contentResult.(map[string]any); ok {
 		if rawContent, ok := contentMap["raw_content"].(string); ok {
 			return rawContent, nil
 		}
 	}
-	
+
 	return nil, errors.NewInternalError("Failed to retrieve feature content")
 }
 

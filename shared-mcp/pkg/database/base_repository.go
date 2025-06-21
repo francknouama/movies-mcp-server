@@ -42,11 +42,11 @@ func (r *BaseRepository) CheckRowsAffected(result sql.Result, entityType string)
 	if err != nil {
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
-	
+
 	if rowsAffected == 0 {
 		return fmt.Errorf("%s not found", entityType)
 	}
-	
+
 	return nil
 }
 
@@ -66,7 +66,7 @@ func (r *BaseRepository) Delete(ctx context.Context, query string, entityType st
 	if err != nil {
 		return fmt.Errorf("failed to delete %s: %w", entityType, err)
 	}
-	
+
 	return r.CheckRowsAffected(result, entityType)
 }
 
@@ -86,7 +86,7 @@ func (r *BaseRepository) Update(ctx context.Context, query string, entityType st
 	if err != nil {
 		return fmt.Errorf("failed to update %s: %w", entityType, err)
 	}
-	
+
 	return r.CheckRowsAffected(result, entityType)
 }
 

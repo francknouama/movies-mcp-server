@@ -33,7 +33,7 @@ func NewToolValidator(toolSchemas []dto.Tool) *ToolValidator {
 	for _, tool := range toolSchemas {
 		schemaMap[tool.Name] = tool
 	}
-	
+
 	return &ToolValidator{
 		toolSchemas: schemaMap,
 	}
@@ -478,23 +478,23 @@ func isValidDateFormat(dateStr string) bool {
 	if len(dateStr) != 10 {
 		return false
 	}
-	
+
 	parts := strings.Split(dateStr, "-")
 	if len(parts) != 3 {
 		return false
 	}
-	
+
 	year, err1 := strconv.Atoi(parts[0])
 	month, err2 := strconv.Atoi(parts[1])
 	day, err3 := strconv.Atoi(parts[2])
-	
+
 	if err1 != nil || err2 != nil || err3 != nil {
 		return false
 	}
-	
-	return year >= 1000 && year <= 9999 && 
-		   month >= 1 && month <= 12 && 
-		   day >= 1 && day <= 31
+
+	return year >= 1000 && year <= 9999 &&
+		month >= 1 && month <= 12 &&
+		day >= 1 && day <= 31
 }
 
 func isValidURI(uri string) bool {
@@ -502,7 +502,7 @@ func isValidURI(uri string) bool {
 	if len(uri) == 0 {
 		return false
 	}
-	
+
 	// Check for common URI patterns
 	return strings.Contains(uri, "://") || strings.HasPrefix(uri, "/") || strings.HasPrefix(uri, "mailto:")
 }

@@ -181,7 +181,7 @@ func TestToolValidator_TypeMismatch(t *testing.T) {
 		{
 			name: "string_as_boolean",
 			arguments: map[string]interface{}{
-				"query":        "test",
+				"query":         "test",
 				"include_adult": "true", // Should be boolean
 			},
 			expectedField: "include_adult",
@@ -213,7 +213,7 @@ func TestToolValidator_TypeMismatch(t *testing.T) {
 			}
 
 			if !foundError {
-				t.Errorf("Expected error with field %s and code %s, got errors: %v", 
+				t.Errorf("Expected error with field %s and code %s, got errors: %v",
 					tc.expectedField, tc.expectedCode, result.Errors)
 			}
 		})
@@ -482,9 +482,9 @@ func TestToolValidator_UnknownField(t *testing.T) {
 	validator := NewToolValidator(createTestToolSchemas())
 
 	result := validator.ValidateToolCall("add_movie", map[string]interface{}{
-		"title":       "Test Movie",
-		"director":    "Test Director",
-		"year":        2000.0,
+		"title":         "Test Movie",
+		"director":      "Test Director",
+		"year":          2000.0,
 		"unknown_field": "some value", // Not in schema
 	})
 

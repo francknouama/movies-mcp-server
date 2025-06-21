@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 	// Config will need to be passed as parameters or made configurable
 )
 
@@ -32,7 +31,7 @@ func NewImageProcessor(cfg *ImageConfig) *ImageProcessor {
 func (p *ImageProcessor) ValidateImage(data []byte, mimeType string) error {
 	// Check size
 	if int64(len(data)) > p.config.MaxSize {
-		return fmt.Errorf("image size %d bytes exceeds maximum allowed size %d bytes", 
+		return fmt.Errorf("image size %d bytes exceeds maximum allowed size %d bytes",
 			len(data), p.config.MaxSize)
 	}
 
@@ -42,7 +41,7 @@ func (p *ImageProcessor) ValidateImage(data []byte, mimeType string) error {
 
 	// Check MIME type
 	if !p.isValidMimeType(mimeType) {
-		return fmt.Errorf("unsupported image type: %s. Allowed types: %v", 
+		return fmt.Errorf("unsupported image type: %s. Allowed types: %v",
 			mimeType, p.config.AllowedTypes)
 	}
 
@@ -79,9 +78,9 @@ func (p *ImageProcessor) validateImageFormat(data []byte, mimeType string) bool 
 		return bytes.Equal(data[:len(pngHeader)], pngHeader)
 	case "image/webp":
 		// WebP files start with "RIFF" and contain "WEBP"
-		return len(data) >= 12 && 
-			   string(data[0:4]) == "RIFF" && 
-			   string(data[8:12]) == "WEBP"
+		return len(data) >= 12 &&
+			string(data[0:4]) == "RIFF" &&
+			string(data[8:12]) == "WEBP"
 	default:
 		return false
 	}
@@ -156,16 +155,16 @@ func (p *ImageProcessor) detectMimeType(data []byte) string {
 	if len(data) >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF {
 		return "image/jpeg"
 	}
-	
+
 	pngHeader := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
 	if len(data) >= len(pngHeader) && bytes.Equal(data[:len(pngHeader)], pngHeader) {
 		return "image/png"
 	}
-	
+
 	if len(data) >= 12 && string(data[0:4]) == "RIFF" && string(data[8:12]) == "WEBP" {
 		return "image/webp"
 	}
-	
+
 	return "application/octet-stream"
 }
 
@@ -249,14 +248,14 @@ func (p *ImageProcessor) resizeImage(img image.Image, width, height int) image.I
 	// This is a simplified implementation
 	// In a production system, you would use a proper image resizing library
 	// like "github.com/nfnt/resize" or "golang.org/x/image/draw"
-	
+
 	bounds := img.Bounds()
 	newImg := image.NewRGBA(image.Rect(0, 0, width, height))
-	
+
 	// Simple nearest-neighbor scaling
 	xRatio := float64(bounds.Dx()) / float64(width)
 	yRatio := float64(bounds.Dy()) / float64(height)
-	
+
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			srcX := int(float64(x) * xRatio)
@@ -264,7 +263,7 @@ func (p *ImageProcessor) resizeImage(img image.Image, width, height int) image.I
 			newImg.Set(x, y, img.At(bounds.Min.X+srcX, bounds.Min.Y+srcY))
 		}
 	}
-	
+
 	return newImg
 }
 

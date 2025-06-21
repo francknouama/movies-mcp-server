@@ -14,28 +14,28 @@ type Logger struct {
 // NewLogger creates a new logger instance
 func NewLogger() *Logger {
 	logger := logrus.New()
-	
+
 	// Set output to stderr (following MCP pattern)
 	logger.SetOutput(os.Stderr)
-	
+
 	// Set log level from environment or default to info
 	level := os.Getenv("LOG_LEVEL")
 	if level == "" {
 		level = "info"
 	}
-	
+
 	logLevel, err := logrus.ParseLevel(level)
 	if err != nil {
 		logLevel = logrus.InfoLevel
 	}
 	logger.SetLevel(logLevel)
-	
+
 	// Set formatter
 	logger.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,
 		DisableColors: false,
 	})
-	
+
 	return &Logger{Logger: logger}
 }
 

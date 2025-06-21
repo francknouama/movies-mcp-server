@@ -294,12 +294,12 @@ func (h *ActorHandlersTestable) HandleSearchActors(id interface{}, arguments map
 
 func TestActorHandlers_HandleAddActor(t *testing.T) {
 	tests := []struct {
-		name         string
-		arguments    map[string]interface{}
-		mockService  func() *MockActorService
-		expectError  bool
-		errorCode    int
-		checkResult  func(t *testing.T, result interface{})
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockActorService
+		expectError bool
+		errorCode   int
+		checkResult func(t *testing.T, result interface{})
 	}{
 		{
 			name: "successful actor creation",
@@ -425,12 +425,12 @@ func TestActorHandlers_HandleAddActor(t *testing.T) {
 
 func TestActorHandlers_HandleGetActor(t *testing.T) {
 	tests := []struct {
-		name         string
-		arguments    map[string]interface{}
-		mockService  func() *MockActorService
-		expectError  bool
-		errorCode    int
-		checkResult  func(t *testing.T, result interface{})
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockActorService
+		expectError bool
+		errorCode   int
+		checkResult func(t *testing.T, result interface{})
 	}{
 		{
 			name:      "successful get actor",
@@ -523,11 +523,11 @@ func TestActorHandlers_HandleGetActor(t *testing.T) {
 
 func TestActorHandlers_HandleDeleteActor(t *testing.T) {
 	tests := []struct {
-		name         string
-		arguments    map[string]interface{}
-		mockService  func() *MockActorService
-		expectError  bool
-		errorCode    int
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockActorService
+		expectError bool
+		errorCode   int
 	}{
 		{
 			name:      "successful delete",
@@ -602,12 +602,12 @@ func TestActorHandlers_HandleDeleteActor(t *testing.T) {
 
 func TestActorHandlers_HandleSearchActors(t *testing.T) {
 	tests := []struct {
-		name         string
-		arguments    map[string]interface{}
-		mockService  func() *MockActorService
-		expectError  bool
-		errorCode    int
-		checkResult  func(t *testing.T, result interface{})
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockActorService
+		expectError bool
+		errorCode   int
+		checkResult func(t *testing.T, result interface{})
 	}{
 		{
 			name: "successful search",

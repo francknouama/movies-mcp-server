@@ -123,13 +123,13 @@ func (m *Movie) SetRating(rating float64) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Emit domain event if rating actually changed
 	if m.rating.Value() != newRating.Value() {
 		event := NewMovieRatingChangedEvent(m.id, m.rating, newRating, m.Version()+1)
 		m.AddEvent(event)
 	}
-	
+
 	m.rating = newRating
 	m.touch()
 	return nil
@@ -150,11 +150,11 @@ func (m *Movie) AddGenre(genre string) error {
 	}
 
 	m.genres = append(m.genres, genre)
-	
+
 	// Emit domain event for genre addition
 	event := NewMovieGenreAddedEvent(m.id, genre, m.Version()+1)
 	m.AddEvent(event)
-	
+
 	m.touch()
 	return nil
 }
@@ -172,7 +172,7 @@ func (m *Movie) HasGenre(genre string) bool {
 // SetPosterURL sets the movie's poster URL with validation
 func (m *Movie) SetPosterURL(posterURL string) error {
 	oldPosterURL := m.posterURL
-	
+
 	if posterURL == "" {
 		if oldPosterURL != "" {
 			// Emit domain event for poster URL change

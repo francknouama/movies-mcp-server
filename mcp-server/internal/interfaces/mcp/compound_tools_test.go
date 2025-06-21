@@ -169,20 +169,20 @@ func (h *CompoundToolHandlersTestable) HandleMovieRecommendationEngine(
 			break
 		}
 		recommendations = append(recommendations, map[string]interface{}{
-			"rank":       i + 1,
-			"movie_id":   movie.ID,
-			"title":      movie.Title,
-			"director":   movie.Director,
-			"year":       movie.Year,
-			"rating":     movie.Rating,
-			"genres":     movie.Genres,
+			"rank":        i + 1,
+			"movie_id":    movie.ID,
+			"title":       movie.Title,
+			"director":    movie.Director,
+			"year":        movie.Year,
+			"rating":      movie.Rating,
+			"genres":      movie.Genres,
 			"match_score": "85.0%",
 		})
 	}
 
 	response := map[string]interface{}{
-		"recommendations": recommendations,
-		"total_found":     len(recommendations),
+		"recommendations":  recommendations,
+		"total_found":      len(recommendations),
 		"preferences_used": userPreferences,
 	}
 
@@ -287,12 +287,12 @@ func (h *CompoundToolHandlersTestable) HandleDirectorCareerAnalysis(
 
 func TestCompoundToolHandlers_HandleBulkMovieImport(t *testing.T) {
 	tests := []struct {
-		name         string
-		arguments    map[string]interface{}
-		mockService  func() *MockMovieServiceForCompound
-		expectError  bool
-		errorCode    int
-		checkResult  func(t *testing.T, result interface{})
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockMovieServiceForCompound
+		expectError bool
+		errorCode   int
+		checkResult func(t *testing.T, result interface{})
 	}{
 		{
 			name: "successful bulk import",
@@ -406,12 +406,12 @@ func TestCompoundToolHandlers_HandleBulkMovieImport(t *testing.T) {
 
 func TestCompoundToolHandlers_HandleMovieRecommendationEngine(t *testing.T) {
 	tests := []struct {
-		name         string
-		arguments    map[string]interface{}
-		mockService  func() *MockMovieServiceForCompound
-		expectError  bool
-		errorCode    int
-		checkResult  func(t *testing.T, result interface{})
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockMovieServiceForCompound
+		expectError bool
+		errorCode   int
+		checkResult func(t *testing.T, result interface{})
 	}{
 		{
 			name: "successful recommendation",
@@ -514,12 +514,12 @@ func TestCompoundToolHandlers_HandleMovieRecommendationEngine(t *testing.T) {
 
 func TestCompoundToolHandlers_HandleDirectorCareerAnalysis(t *testing.T) {
 	tests := []struct {
-		name         string
-		arguments    map[string]interface{}
-		mockService  func() *MockMovieServiceForCompound
-		expectError  bool
-		errorCode    int
-		checkResult  func(t *testing.T, result interface{})
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockMovieServiceForCompound
+		expectError bool
+		errorCode   int
+		checkResult func(t *testing.T, result interface{})
 	}{
 		{
 			name: "successful career analysis",
@@ -554,7 +554,7 @@ func TestCompoundToolHandlers_HandleDirectorCareerAnalysis(t *testing.T) {
 			},
 		},
 		{
-			name: "missing director parameter",
+			name:      "missing director parameter",
 			arguments: map[string]interface{}{},
 			mockService: func() *MockMovieServiceForCompound {
 				return &MockMovieServiceForCompound{}

@@ -38,7 +38,7 @@ func (v *Validator) Validate(values map[string]interface{}) error {
 
 	for field, rules := range v.rules {
 		value, exists := values[field]
-		
+
 		// Check if required field is missing
 		if !exists {
 			for _, rule := range rules {
@@ -68,7 +68,7 @@ func (v *Validator) Validate(values map[string]interface{}) error {
 			"multiple_fields",
 			map[string]interface{}{
 				"validation_errors": validationErrors,
-				"error_count":      len(validationErrors),
+				"error_count":       len(validationErrors),
 			},
 		)
 	}
@@ -82,7 +82,7 @@ func (v *Validator) ValidateStruct(s interface{}) error {
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()
 	}
-	
+
 	if val.Kind() != reflect.Struct {
 		return errors.NewValidationError("Value must be a struct", "type", map[string]interface{}{
 			"actual_type": val.Kind().String(),
@@ -95,7 +95,7 @@ func (v *Validator) ValidateStruct(s interface{}) error {
 	for i := 0; i < val.NumField(); i++ {
 		field := typ.Field(i)
 		fieldValue := val.Field(i)
-		
+
 		// Check validation tags
 		validateTag := field.Tag.Get("validate")
 		if validateTag == "" {
@@ -583,7 +583,7 @@ func MovieRating() ValidationRule {
 		if err := rule(value); err != nil {
 			return err
 		}
-		
+
 		rule = Max(10.0)
 		if err := rule(value); err != nil {
 			return err
@@ -667,7 +667,7 @@ func (rv *RequestValidator) ValidateMovieUpdateData(args map[string]interface{})
 // validateMovieData validates movie data with optional title requirement
 func (rv *RequestValidator) validateMovieData(args map[string]interface{}, requireTitle bool) error {
 	validator := NewValidator()
-	
+
 	// Title validation (required for add, optional for update)
 	if requireTitle {
 		validator.AddRule("title", Required())
@@ -676,22 +676,22 @@ func (rv *RequestValidator) validateMovieData(args map[string]interface{}, requi
 		validator.AddRule("title", MinLength(1))
 		validator.AddRule("title", MaxLength(255))
 	}
-	
+
 	// Optional but validated fields
 	if _, exists := args["director"]; exists {
 		validator.AddRule("director", MinLength(1))
 		validator.AddRule("director", MaxLength(255))
 	}
-	
+
 	if _, exists := args["year"]; exists {
 		validator.AddRule("year", Min(1800))
 		validator.AddRule("year", Max(float64(time.Now().Year()+10)))
 	}
-	
+
 	if _, exists := args["rating"]; exists {
 		validator.AddRule("rating", MovieRating())
 	}
-	
+
 	if _, exists := args["genre"]; exists {
 		validator.AddRule("genre", MinLength(1))
 		validator.AddRule("genre", MaxLength(100))
@@ -709,7 +709,7 @@ func (rv *RequestValidator) validateMovieData(args map[string]interface{}, requi
 // ValidateSearchQuery validates search query parameters
 func (rv *RequestValidator) ValidateSearchQuery(args map[string]interface{}) error {
 	validator := NewValidator()
-	
+
 	// At least one search parameter is required
 	hasQuery := false
 	if query, exists := args["query"]; exists && query != nil {
@@ -719,7 +719,7 @@ func (rv *RequestValidator) ValidateSearchQuery(args map[string]interface{}) err
 			validator.AddRule("query", MaxLength(500))
 		}
 	}
-	
+
 	if title, exists := args["title"]; exists && title != nil {
 		if str, ok := title.(string); ok && strings.TrimSpace(str) != "" {
 			hasQuery = true
@@ -727,7 +727,7 @@ func (rv *RequestValidator) ValidateSearchQuery(args map[string]interface{}) err
 			validator.AddRule("title", MaxLength(255))
 		}
 	}
-	
+
 	if director, exists := args["director"]; exists && director != nil {
 		if str, ok := director.(string); ok && strings.TrimSpace(str) != "" {
 			hasQuery = true
@@ -735,7 +735,7 @@ func (rv *RequestValidator) ValidateSearchQuery(args map[string]interface{}) err
 			validator.AddRule("director", MaxLength(255))
 		}
 	}
-	
+
 	if genre, exists := args["genre"]; exists && genre != nil {
 		if str, ok := genre.(string); ok && strings.TrimSpace(str) != "" {
 			hasQuery = true
@@ -743,7 +743,7 @@ func (rv *RequestValidator) ValidateSearchQuery(args map[string]interface{}) err
 			validator.AddRule("genre", MaxLength(100))
 		}
 	}
-	
+
 	if !hasQuery {
 		return errors.NewValidationError(
 			"At least one search parameter must be provided",
@@ -753,7 +753,7 @@ func (rv *RequestValidator) ValidateSearchQuery(args map[string]interface{}) err
 			},
 		)
 	}
-	
+
 	// Validate limit if provided
 	if _, exists := args["limit"]; exists {
 		validator.AddRule("limit", Min(1))

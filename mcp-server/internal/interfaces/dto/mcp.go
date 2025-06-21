@@ -16,10 +16,10 @@ type JSONRPCRequest struct {
 
 // JSONRPCResponse represents a JSON-RPC 2.0 response
 type JSONRPCResponse struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      interface{}     `json:"id,omitempty"`
-	Result  interface{}     `json:"result,omitempty"`
-	Error   *JSONRPCError   `json:"error,omitempty"`
+	JSONRPC string        `json:"jsonrpc"`
+	ID      interface{}   `json:"id,omitempty"`
+	Result  interface{}   `json:"result,omitempty"`
+	Error   *JSONRPCError `json:"error,omitempty"`
 }
 
 // JSONRPCError represents a JSON-RPC 2.0 error
@@ -158,10 +158,10 @@ type ResourceContent struct {
 
 // ResourceTemplate represents an MCP resource template
 type ResourceTemplate struct {
-	URITemplate string                 `json:"uriTemplate"`
-	Name        string                 `json:"name"`
-	Description string                 `json:"description,omitempty"`
-	MimeType    string                 `json:"mimeType,omitempty"`
+	URITemplate string `json:"uriTemplate"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	MimeType    string `json:"mimeType,omitempty"`
 }
 
 // ResourceTemplatesListResponse represents the response for resources/templates/list
@@ -171,8 +171,8 @@ type ResourceTemplatesListResponse struct {
 
 // Prompt represents an MCP prompt template
 type Prompt struct {
-	Name        string          `json:"name"`
-	Description string          `json:"description,omitempty"`
+	Name        string           `json:"name"`
+	Description string           `json:"description,omitempty"`
 	Arguments   []PromptArgument `json:"arguments,omitempty"`
 }
 
@@ -196,14 +196,14 @@ type PromptGetRequest struct {
 
 // PromptGetResponse represents a prompt get response
 type PromptGetResponse struct {
-	Description string                   `json:"description,omitempty"`
-	Messages    []PromptMessage          `json:"messages"`
+	Description string          `json:"description,omitempty"`
+	Messages    []PromptMessage `json:"messages"`
 }
 
 // PromptMessage represents a message in a prompt
 type PromptMessage struct {
-	Role    string                 `json:"role"`
-	Content PromptMessageContent   `json:"content"`
+	Role    string               `json:"role"`
+	Content PromptMessageContent `json:"content"`
 }
 
 // PromptMessageContent can be either a string or structured content

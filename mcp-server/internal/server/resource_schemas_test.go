@@ -24,11 +24,11 @@ func TestResourceSchemasIntegration(t *testing.T) {
 							"type": "object",
 							"properties": map[string]interface{}{
 								"id": map[string]interface{}{
-									"type": "integer",
+									"type":        "integer",
 									"description": "Unique movie identifier",
 								},
 								"title": map[string]interface{}{
-									"type": "string",
+									"type":        "string",
 									"description": "Movie title",
 								},
 							},

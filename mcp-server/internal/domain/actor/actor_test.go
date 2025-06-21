@@ -240,13 +240,13 @@ func TestActor_UpdateTimestamp(t *testing.T) {
 	}
 
 	originalUpdatedAt := actor.UpdatedAt()
-	
+
 	// Sleep to ensure timestamp changes
 	time.Sleep(1 * time.Millisecond)
-	
+
 	// Modify actor to trigger timestamp update
 	actor.SetBio("New bio")
-	
+
 	if !actor.UpdatedAt().After(originalUpdatedAt) {
 		t.Error("Expected UpdatedAt to be updated after modification")
 	}
@@ -267,7 +267,7 @@ func TestActor_Validation(t *testing.T) {
 	movieID, _ := shared.NewMovieID(123)
 	actor.AddMovie(movieID)
 	actor.SetBio("Test biography")
-	
+
 	if err := actor.Validate(); err != nil {
 		t.Errorf("Actor with movies and bio should pass validation, got: %v", err)
 	}
@@ -302,7 +302,7 @@ func TestActor_MovieCount(t *testing.T) {
 	// Add movies
 	movieID1, _ := shared.NewMovieID(123)
 	movieID2, _ := shared.NewMovieID(456)
-	
+
 	actor.AddMovie(movieID1)
 	if actor.MovieCount() != 1 {
 		t.Errorf("Expected 1 movie, got %d", actor.MovieCount())

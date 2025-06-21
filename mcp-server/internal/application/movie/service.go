@@ -43,17 +43,17 @@ type UpdateMovieCommand struct {
 
 // SearchMoviesQuery represents the query to search for movies
 type SearchMoviesQuery struct {
-	Title       string
-	Director    string
-	Genre       string
-	MinYear     int
-	MaxYear     int
-	MinRating   float64
-	MaxRating   float64
-	Limit       int
-	Offset      int
-	OrderBy     string
-	OrderDir    string
+	Title     string
+	Director  string
+	Genre     string
+	MinYear   int
+	MaxYear   int
+	MinRating float64
+	MaxRating float64
+	Limit     int
+	Offset    int
+	OrderBy   string
+	OrderDir  string
 }
 
 // MovieDTO represents a movie data transfer object

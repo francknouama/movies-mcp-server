@@ -51,13 +51,13 @@ func InitializeIntegrationScenario(sc *godog.ScenarioContext) {
 	sc.After(func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
 		// This runs after each scenario
 		testCtx := step_definitions.NewTestContext()
-		
+
 		if err != nil {
 			fmt.Printf("Scenario failed: %s - %v\n", sc.Name, err)
 		} else {
 			fmt.Printf("Scenario passed: %s\n", sc.Name)
 		}
-		
+
 		// Clean up test data
 		if cleanupErr := testCtx.CleanDatabase(); cleanupErr != nil {
 			fmt.Printf("Warning: failed to clean database after scenario: %v\n", cleanupErr)

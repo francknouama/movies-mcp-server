@@ -4,9 +4,10 @@ import (
 	"io"
 	"os"
 
+	"shared-mcp/pkg/logging"
+
 	"github.com/francknouama/movies-mcp-server/godog-server/internal/config"
 	"github.com/francknouama/movies-mcp-server/godog-server/internal/godog"
-	"shared-mcp/pkg/logging"
 )
 
 // GodogServer is the main MCP server for Godog testing
@@ -21,10 +22,10 @@ type GodogServer struct {
 func NewServer(cfg *config.Config, logger *logging.Logger) *GodogServer {
 	// Create Godog runner
 	godogRunner := godog.NewRunner(cfg, logger)
-	
+
 	// Create MCP server components
 	mcpServer := NewMCPServer(os.Stdin, os.Stdout, logger, godogRunner)
-	
+
 	return &GodogServer{
 		mcpServer:   mcpServer,
 		godogRunner: godogRunner,
@@ -37,10 +38,10 @@ func NewServer(cfg *config.Config, logger *logging.Logger) *GodogServer {
 func NewServerWithIO(cfg *config.Config, logger *logging.Logger, input io.Reader, output io.Writer) *GodogServer {
 	// Create Godog runner
 	godogRunner := godog.NewRunner(cfg, logger)
-	
+
 	// Create MCP server components
 	mcpServer := NewMCPServer(input, output, logger, godogRunner)
-	
+
 	return &GodogServer{
 		mcpServer:   mcpServer,
 		godogRunner: godogRunner,
@@ -52,15 +53,15 @@ func NewServerWithIO(cfg *config.Config, logger *logging.Logger, input io.Reader
 // Run starts the server and handles incoming requests
 func (s *GodogServer) Run() error {
 	s.logger.Info("Starting Godog MCP Server")
-	
+
 	// Check Godog availability
 	if err := s.godogRunner.CheckAvailability(); err != nil {
 		s.logger.WithField("error", err).Error("Godog not available")
 		return err
 	}
-	
+
 	s.logger.WithField("godog_binary", s.config.GodogBinary).Info("Godog binary detected")
-	
+
 	// Start the MCP server
 	return s.mcpServer.Run()
 }

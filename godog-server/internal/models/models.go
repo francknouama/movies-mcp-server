@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	"github.com/cucumber/messages/go/v21"
+	messages "github.com/cucumber/messages/go/v21"
 )
 
 // Feature represents a Gherkin feature file with additional metadata
@@ -34,7 +34,7 @@ type Scenario struct {
 // Step represents a Gherkin step
 type Step struct {
 	ID       string   `json:"id"`
-	Keyword  string   `json:"keyword"`  // Given, When, Then, And, But
+	Keyword  string   `json:"keyword"` // Given, When, Then, And, But
 	Text     string   `json:"text"`
 	Argument string   `json:"argument,omitempty"` // DocString or DataTable
 	Location Location `json:"location"`
@@ -42,12 +42,12 @@ type Step struct {
 
 // Example represents scenario examples (for scenario outlines)
 type Example struct {
-	ID       string            `json:"id"`
-	Name     string            `json:"name"`
-	Tags     []string          `json:"tags"`
-	Headers  []string          `json:"headers"`
-	Rows     [][]string        `json:"rows"`
-	Location Location          `json:"location"`
+	ID       string     `json:"id"`
+	Name     string     `json:"name"`
+	Tags     []string   `json:"tags"`
+	Headers  []string   `json:"headers"`
+	Rows     [][]string `json:"rows"`
+	Location Location   `json:"location"`
 }
 
 // Location represents the file location of a Gherkin element
@@ -58,15 +58,15 @@ type Location struct {
 
 // TestResult represents the result of running Godog tests
 type TestResult struct {
-	ID           string           `json:"id"`
-	SuiteName    string           `json:"suite_name"`
-	StartTime    time.Time        `json:"start_time"`
-	EndTime      time.Time        `json:"end_time"`
-	Duration     time.Duration    `json:"duration"`
-	Status       TestStatus       `json:"status"`
-	Features     []FeatureResult  `json:"features"`
-	Summary      TestSummary      `json:"summary"`
-	Metadata     TestMetadata     `json:"metadata"`
+	ID        string          `json:"id"`
+	SuiteName string          `json:"suite_name"`
+	StartTime time.Time       `json:"start_time"`
+	EndTime   time.Time       `json:"end_time"`
+	Duration  time.Duration   `json:"duration"`
+	Status    TestStatus      `json:"status"`
+	Features  []FeatureResult `json:"features"`
+	Summary   TestSummary     `json:"summary"`
+	Metadata  TestMetadata    `json:"metadata"`
 }
 
 // FeatureResult represents the result of running a single feature
@@ -82,12 +82,12 @@ type FeatureResult struct {
 
 // ScenarioResult represents the result of running a single scenario
 type ScenarioResult struct {
-	ID       string       `json:"id"`
-	Name     string       `json:"name"`
-	Status   TestStatus   `json:"status"`
+	ID       string        `json:"id"`
+	Name     string        `json:"name"`
+	Status   TestStatus    `json:"status"`
 	Duration time.Duration `json:"duration"`
-	Steps    []StepResult `json:"steps"`
-	Error    string       `json:"error,omitempty"`
+	Steps    []StepResult  `json:"steps"`
+	Error    string        `json:"error,omitempty"`
 }
 
 // StepResult represents the result of running a single step
@@ -103,22 +103,22 @@ type StepResult struct {
 
 // TestSummary provides summary statistics for test results
 type TestSummary struct {
-	TotalFeatures  int `json:"total_features"`
-	PassedFeatures int `json:"passed_features"`
-	FailedFeatures int `json:"failed_features"`
+	TotalFeatures   int `json:"total_features"`
+	PassedFeatures  int `json:"passed_features"`
+	FailedFeatures  int `json:"failed_features"`
 	SkippedFeatures int `json:"skipped_features"`
-	
-	TotalScenarios  int `json:"total_scenarios"`
-	PassedScenarios int `json:"passed_scenarios"`
-	FailedScenarios int `json:"failed_scenarios"`
+
+	TotalScenarios   int `json:"total_scenarios"`
+	PassedScenarios  int `json:"passed_scenarios"`
+	FailedScenarios  int `json:"failed_scenarios"`
 	SkippedScenarios int `json:"skipped_scenarios"`
-	
-	TotalSteps  int `json:"total_steps"`
-	PassedSteps int `json:"passed_steps"`
-	FailedSteps int `json:"failed_steps"`
-	SkippedSteps int `json:"skipped_steps"`
+
+	TotalSteps     int `json:"total_steps"`
+	PassedSteps    int `json:"passed_steps"`
+	FailedSteps    int `json:"failed_steps"`
+	SkippedSteps   int `json:"skipped_steps"`
 	UndefinedSteps int `json:"undefined_steps"`
-	PendingSteps int `json:"pending_steps"`
+	PendingSteps   int `json:"pending_steps"`
 }
 
 // TestMetadata contains additional information about test execution
@@ -154,16 +154,16 @@ type StepDefinition struct {
 
 // GodogRunOptions represents options for running Godog tests
 type GodogRunOptions struct {
-	FeaturePaths []string          `json:"feature_paths"`
-	Tags         string            `json:"tags,omitempty"`
-	Format       string            `json:"format,omitempty"`
-	Output       string            `json:"output,omitempty"`
-	Strict       bool              `json:"strict"`
-	NoColors     bool              `json:"no_colors"`
-	StopOnFailure bool             `json:"stop_on_failure"`
-	Randomize    int64             `json:"randomize,omitempty"`
-	Concurrency  int               `json:"concurrency,omitempty"`
-	Environment  map[string]string `json:"environment,omitempty"`
+	FeaturePaths  []string          `json:"feature_paths"`
+	Tags          string            `json:"tags,omitempty"`
+	Format        string            `json:"format,omitempty"`
+	Output        string            `json:"output,omitempty"`
+	Strict        bool              `json:"strict"`
+	NoColors      bool              `json:"no_colors"`
+	StopOnFailure bool              `json:"stop_on_failure"`
+	Randomize     int64             `json:"randomize,omitempty"`
+	Concurrency   int               `json:"concurrency,omitempty"`
+	Environment   map[string]string `json:"environment,omitempty"`
 }
 
 // ConvertGherkinFeature converts a gherkin feature to our Feature model
@@ -178,14 +178,14 @@ func ConvertGherkinFeature(gf *messages.Feature, filePath string) *Feature {
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	
+
 	// Convert scenarios
 	for _, scenario := range gf.Children {
 		if scenario.Scenario != nil {
 			feature.Scenarios = append(feature.Scenarios, convertGherkinScenario(scenario.Scenario))
 		}
 	}
-	
+
 	return feature
 }
 
@@ -218,12 +218,12 @@ func convertGherkinScenario(gs *messages.Scenario) Scenario {
 			Column: uint32(gs.Location.Column),
 		},
 	}
-	
+
 	// Convert steps
 	for _, step := range gs.Steps {
 		scenario.Steps = append(scenario.Steps, convertGherkinStep(step))
 	}
-	
+
 	return scenario
 }
 

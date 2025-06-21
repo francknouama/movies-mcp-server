@@ -42,12 +42,12 @@ func cleanupTestDB(t *testing.T, db *sql.DB) {
 	if err != nil {
 		t.Logf("Warning: failed to clean up movie_actors: %v", err)
 	}
-	
+
 	_, err = db.Exec("DELETE FROM movies")
 	if err != nil {
 		t.Logf("Warning: failed to clean up movies: %v", err)
 	}
-	
+
 	_, err = db.Exec("DELETE FROM actors")
 	if err != nil {
 		t.Logf("Warning: failed to clean up actors: %v", err)
@@ -61,12 +61,12 @@ func createTestMovie(t *testing.T) *movie.Movie {
 	if err != nil {
 		t.Fatalf("Failed to create test movie: %v", err)
 	}
-	
+
 	movie.SetRating(8.5)
 	movie.AddGenre("Action")
 	movie.AddGenre("Thriller")
 	movie.SetPosterURL("https://example.com/poster.jpg")
-	
+
 	return movie
 }
 
@@ -132,7 +132,7 @@ func TestMovieRepository_Integration_Save_Update(t *testing.T) {
 	testMovie := createTestMovie(t)
 
 	ctx := context.Background()
-	
+
 	// Save initially
 	err := repo.Save(ctx, testMovie)
 	if err != nil {
@@ -319,7 +319,7 @@ func TestMovieRepository_Integration_Delete(t *testing.T) {
 	testMovie := createTestMovie(t)
 
 	ctx := context.Background()
-	
+
 	// Save movie
 	err := repo.Save(ctx, testMovie)
 	if err != nil {
