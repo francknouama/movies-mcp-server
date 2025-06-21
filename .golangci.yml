@@ -1,0 +1,152 @@
+run:
+  timeout: 5m
+  go: "1.24.4"
+  modules-download-mode: readonly
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    exclude-functions:
+      - fmt.Print
+      - fmt.Printf
+      - fmt.Println
+      - fmt.Fprint
+      - fmt.Fprintf
+      - fmt.Fprintln
+      - (*database/sql.Rows).Close
+      - (*database/sql.Stmt).Close
+      - (*os.File).Close
+
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+      - shadow
+
+  gocyclo:
+    min-complexity: 15
+
+  dupl:
+    threshold: 100
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  misspell:
+    locale: US
+
+  lll:
+    line-length: 120
+
+  goimports:
+    local-prefixes: github.com/francknouama/movies-mcp-server
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+      - unnamedResult
+
+  funlen:
+    lines: 100
+    statements: 50
+
+  gosec:
+    severity: medium
+    confidence: medium
+    excludes:
+      - G204 # Subprocess launched with variable
+      - G301 # Poor file permissions used when creating a directory
+      - G302 # Poor file permissions used with chmod
+      - G304 # File path provided as taint input
+      - G401 # Detect the usage of DES, RC4, MD5 or SHA1
+      - G501 # Import blocklist: crypto/md5
+      - G502 # Import blocklist: crypto/des
+      - G503 # Import blocklist: crypto/rc4
+      - G504 # Import blocklist: net/http/cgi
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - gocyclo
+    - dupl
+    - goconst
+    - gofmt
+    - goimports
+    - misspell
+    - lll
+    - gocritic
+    - funlen
+    - gosec
+    - gci
+    - godot
+    - nolintlint
+    - revive
+    - unconvert
+    - unparam
+    - wastedassign
+    - whitespace
+
+  disable:
+    - deadcode
+    - varcheck
+    - structcheck
+    - maligned
+    - golint
+    - interfacer
+    - scopelint
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+        - funlen
+        - goconst
+        
+    # Exclude errcheck for defer statements in cleanup functions
+    - path: transaction_manager\.go
+      text: "Error return value of.*Rollback.*is not checked"
+      linters:
+        - errcheck
+        
+    # Exclude performance test validation errors
+    - path: validator_test\.go
+      text: "Error return value of.*Validate.*is not checked"
+      linters:
+        - errcheck
+        
+    # Exclude lll issues where long lines are ok
+    - linters:
+        - lll
+      source: "^//go:generate "
+
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0

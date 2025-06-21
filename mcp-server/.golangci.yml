@@ -1,0 +1,22 @@
+run:
+  timeout: 3m
+  go: "1.24.4"
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    
+  goimports:
+    local-prefixes: github.com/francknouama/movies-mcp-server/mcp-server
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+        - funlen

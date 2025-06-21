@@ -793,7 +793,7 @@ func TestValidationPerformance(t *testing.T) {
 
 	start := time.Now()
 	for i := 0; i < 1000; i++ {
-		validator.Validate(data)
+		_ = validator.Validate(data) // Ignore error for performance test
 	}
 	duration := time.Since(start)
 

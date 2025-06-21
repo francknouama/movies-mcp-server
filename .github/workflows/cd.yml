@@ -172,7 +172,9 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    environment: staging
+    environment:
+      name: staging
+      url: ${{ vars.STAGING_URL }}
     
     steps:
       - uses: actions/checkout@v4
@@ -197,7 +199,7 @@ jobs:
           
       - name: Run smoke tests
         env:
-          STAGING_URL: ${{ vars.STAGING_URL }}
+          STAGING_URL: ${{ vars.STAGING_URL || 'http://staging.example.com' }}
         run: |
           echo "Running smoke tests against staging environment: $STAGING_URL"
           
@@ -222,7 +224,9 @@ jobs:
     needs: [build-and-test, deploy-staging]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
-    environment: production
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
     
     steps:
       - uses: actions/checkout@v4
@@ -244,7 +248,7 @@ jobs:
           
       - name: Run production tests
         env:
-          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL || 'https://production.example.com' }}
         run: |
           echo "Running production verification tests"
           

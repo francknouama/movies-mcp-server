@@ -27,10 +27,10 @@ func (tm *TransactionManager) WithTransaction(ctx context.Context, fn func(*sql.
 	// Ensure rollback is called if we don't reach the commit
 	defer func() {
 		if p := recover(); p != nil {
-			tx.Rollback()
+			_ = tx.Rollback() // Ignore rollback error in panic recovery
 			panic(p) // Re-throw panic after rollback
 		} else if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback() // Ignore rollback error when main operation failed
 		}
 	}()
 	

@@ -1,0 +1,22 @@
+run:
+  timeout: 2m
+  go: "1.24.4"
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    
+issues:
+  exclude-rules:
+    # Exclude errcheck for defer statements in cleanup functions
+    - path: transaction_manager\.go
+      text: "Error return value of.*Rollback.*is not checked"
+      linters:
+        - errcheck
+        
+    # Exclude performance test validation errors  
+    - path: validator_test\.go
+      text: "Error return value of.*Validate.*is not checked"
+      linters:
+        - errcheck
