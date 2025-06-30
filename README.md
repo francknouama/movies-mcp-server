@@ -1,41 +1,57 @@
-# MCP Servers Workspace
+# 🎬 Movies MCP Server
+> A comprehensive movie database for AI assistants via Model Context Protocol
 
-This repository contains multiple Model Context Protocol (MCP) servers organized as a Go workspace.
+Transform your AI assistant into a powerful movie database manager with full CRUD operations, advanced search, and image support.
 
-## Structure
+## ⚡ Quick Start
+
+**New to MCP?** → [5-minute setup](docs/getting-started/README.md)  
+**Claude Desktop user?** → [Integration guide](docs/getting-started/claude-desktop.md)  
+**Developer?** → [Development setup](docs/development/README.md)  
+**Production deployment?** → [Deployment guide](docs/deployment/README.md)
+
+## 🎯 What You Can Do
+
+- 🔍 **Search & Browse**: Find movies by title, genre, director, or plot keywords
+- 📝 **Manage Collection**: Add, update, and organize your personal movie database  
+- 🖼️ **Handle Images**: Store and retrieve movie posters with automatic processing
+- 📊 **Get Insights**: Database statistics, top-rated films, and smart recommendations
+- 🎭 **Track People**: Manage actors, directors, and their filmographies
+
+## 🏗️ Architecture Options
+
+| Version | Status | Best For | Migration Tool |
+|---------|--------|----------|----------------|
+| [**Clean Architecture**](docs/development/architecture.md) | ✅ **Recommended** | Production, new projects | 🔄 Built-in (automatic) |
+| [Legacy](docs/appendices/migration-guide.md) | 🔄 Maintenance | Existing integrations | ⚠️ External (manual) |
+
+## 🚀 Repository Structure
+
+This workspace contains multiple Model Context Protocol (MCP) servers:
 
 ```
-.
-├── go.work                 # Go workspace configuration
-├── mcp-server/            # Movies database MCP server
-│   ├── go.mod
-│   ├── cmd/               # Application entrypoints
-│   ├── internal/          # Private application code
-│   └── migrations/        # Database migrations
-├── godog-server/          # Cucumber/Godog testing MCP server
-│   ├── go.mod
-│   ├── cmd/               # Application entrypoints
-│   ├── internal/          # Private application code
-│   └── step_definitions/  # Godog step definitions
-└── shared-mcp/            # Shared MCP utilities and libraries
-    ├── go.mod
-    └── pkg/               # Shared packages
+📁 movies-mcp-server/
+├── 📁 mcp-server/           # 🎬 Movies database server (main)
+├── 📁 godog-server/         # 🧪 Cucumber/BDD testing server  
+├── 📁 shared-mcp/           # 📚 Shared MCP utilities
+└── 📁 docs/                 # 📖 User-centered documentation
+    ├── 🚀 getting-started/  # Quick setup guides
+    ├── 📖 guides/           # User manuals & examples
+    ├── 🔧 development/      # Developer resources
+    ├── 🚢 deployment/       # Production deployment
+    ├── 🔍 reference/        # API & configuration
+    └── 📊 appendices/       # FAQ, migration, performance
 ```
 
-## Servers
+### 🎬 Movies MCP Server (Primary)
+Full-featured movie database with clean architecture, PostgreSQL, and comprehensive MCP tool suite.
 
-### Movies MCP Server
-A comprehensive movie database server with advanced search, CRUD operations, and image support. Built with Go and PostgreSQL.
+**→ [Complete Guide](docs/getting-started/README.md)**
 
-[Full documentation →](./mcp-server/README.md)
+### 🧪 Godog MCP Server  
+Cucumber BDD testing integration for AI-driven test management and execution.
 
-### Godog MCP Server
-A Cucumber BDD testing server that enables AI assistants to run and manage Godog tests through the MCP protocol.
-
-[Full documentation →](./godog-server/README.md)
-
-### Shared MCP
-A shared library containing common utilities, database abstractions, and shared functionality used across multiple MCP servers.
+**→ [Godog Documentation](./godog-server/README.md)**
 
 ## Development
 
