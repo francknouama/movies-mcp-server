@@ -5,15 +5,46 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/francknouama/movies-mcp-server/mcp-server/internal/composition"
 	"github.com/francknouama/movies-mcp-server/mcp-server/internal/interfaces/dto"
 )
 
+// syncBuffer is a thread-safe wrapper around bytes.Buffer
+type syncBuffer struct {
+	mu     sync.Mutex
+	Buffer *bytes.Buffer
+}
+
+func (sb *syncBuffer) Write(p []byte) (n int, err error) {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.Buffer.Write(p)
+}
+
+func (sb *syncBuffer) String() string {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.Buffer.String()
+}
+
+func (sb *syncBuffer) Len() int {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.Buffer.Len()
+}
+
+func (sb *syncBuffer) Bytes() []byte {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.Buffer.Bytes()
+}
+
 func TestNewMCPServer(t *testing.T) {
 	input := strings.NewReader("")
-	output := &bytes.Buffer{}
+	output := &syncBuffer{Buffer: &bytes.Buffer{}}
 	logger := log.New(&bytes.Buffer{}, "", 0)
 	container := composition.NewTestContainer()
 
@@ -70,7 +101,7 @@ func TestMCPServer_Initialize(t *testing.T) {
 func TestMCPServer_ToolsListIntegration(t *testing.T) {
 	// Test that tools are properly registered
 	input := strings.NewReader("")
-	output := &bytes.Buffer{}
+	output := &syncBuffer{Buffer: &bytes.Buffer{}}
 	logger := log.New(&bytes.Buffer{}, "", 0)
 	container := composition.NewTestContainer()
 
@@ -100,7 +131,7 @@ func TestMCPServer_ToolsListIntegration(t *testing.T) {
 func TestMCPServer_ResourcesListIntegration(t *testing.T) {
 	// Test that resources are properly registered
 	input := strings.NewReader("")
-	output := &bytes.Buffer{}
+	output := &syncBuffer{Buffer: &bytes.Buffer{}}
 	logger := log.New(&bytes.Buffer{}, "", 0)
 	container := composition.NewTestContainer()
 
@@ -128,7 +159,7 @@ func TestMCPServer_ResourcesListIntegration(t *testing.T) {
 
 func TestRegistryValidation(t *testing.T) {
 	input := strings.NewReader("")
-	output := &bytes.Buffer{}
+	output := &syncBuffer{Buffer: &bytes.Buffer{}}
 	logger := log.New(&bytes.Buffer{}, "", 0)
 	container := composition.NewTestContainer()
 
@@ -144,7 +175,7 @@ func TestRegistryValidation(t *testing.T) {
 func TestProtocolIntegration(t *testing.T) {
 	// Test basic protocol functionality
 	input := strings.NewReader("")
-	output := &bytes.Buffer{}
+	output := &syncBuffer{Buffer: &bytes.Buffer{}}
 	logger := log.New(&bytes.Buffer{}, "", 0)
 	container := composition.NewTestContainer()
 
