@@ -309,7 +309,7 @@ func (tdb *TestContainerDatabase) CountRows(table string, whereClause string, ar
 	if !validTables[table] {
 		return 0, fmt.Errorf("invalid table name: %s", table)
 	}
-	
+
 	// #nosec G201 - table name is validated against whitelist above
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", table)
 	if whereClause != "" {
