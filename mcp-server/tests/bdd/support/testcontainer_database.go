@@ -300,6 +300,17 @@ func (tdb *TestContainerDatabase) ExecuteQuery(query string, args ...interface{}
 
 // CountRows counts rows in a table with optional WHERE condition
 func (tdb *TestContainerDatabase) CountRows(table string, whereClause string, args ...interface{}) (int, error) {
+	// Validate table name to prevent SQL injection (test context only)
+	validTables := map[string]bool{
+		"movies":       true,
+		"actors":       true,
+		"movie_actors": true,
+	}
+	if !validTables[table] {
+		return 0, fmt.Errorf("invalid table name: %s", table)
+	}
+	
+	// #nosec G201 - table name is validated against whitelist above
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", table)
 	if whereClause != "" {
 		query += " WHERE " + whereClause

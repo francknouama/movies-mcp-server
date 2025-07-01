@@ -252,12 +252,14 @@ func (tu *TestUtilities) RetryOperation(operation func() error, maxRetries int, 
 		}
 
 		if i < maxRetries-1 {
-			// Limit the shift to prevent overflow
+			// Exponential backoff with overflow protection
 			shift := i
 			if shift > 10 { // Cap at 2^10 = 1024x
 				shift = 10
 			}
-			delay := baseDelay * time.Duration(1<<uint(shift)) // Exponential backoff
+			// Use explicit type conversion to avoid overflow warning
+			multiplier := int64(1) << uint(shift)
+			delay := baseDelay * time.Duration(multiplier)
 			time.Sleep(delay)
 		}
 	}
