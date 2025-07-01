@@ -153,7 +153,7 @@ func connectToDatabase(cfg *config.DatabaseConfig) (*sql.DB, error) {
 			break
 		}
 
-		db.Close()
+		_ = db.Close()
 
 		if i == maxRetries-1 {
 			return nil, fmt.Errorf("failed to connect after %d attempts: %w", maxRetries, err)
@@ -178,6 +178,8 @@ func runMigrations(migrationsPath string) error {
 	// First, build the migration tool
 	fmt.Fprintf(os.Stderr, "Building migration tool...\n")
 	buildCmd := exec.Command("go", "build", "-o", "./migrate", "./tools/migrate")
+	buildCmd.Stderr = os.Stderr
+	buildCmd.Stdout = os.Stderr
 	if err := buildCmd.Run(); err != nil {
 		return fmt.Errorf("failed to build migration tool: %w", err)
 	}
@@ -228,7 +230,7 @@ func runMigrations(migrationsPath string) error {
 	}
 
 	// Clean up the built binary
-	os.Remove("./migrate")
+	_ = os.Remove("./migrate")
 
 	return nil
 }

@@ -62,7 +62,7 @@ func NewTestContainerDatabase(ctx context.Context) (*TestContainerDatabase, erro
 
 	// Test connection
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		_ = postgresContainer.Terminate(ctx)
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}

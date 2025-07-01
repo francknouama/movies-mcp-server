@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "github.com/lib/pq" // PostgreSQL driver
 	"gopkg.in/yaml.v2"
@@ -61,13 +62,13 @@ func NewTestDatabase() (*TestDatabase, error) {
 
 	// Test the connection with retry logic
 	if err := testDatabaseConnection(db); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("failed to connect to test database: %w", err)
 	}
 
 	// Verify that required tables exist
 	if err := verifyDatabaseSchema(db); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("database schema verification failed: %w", err)
 	}
 
@@ -129,10 +130,15 @@ func verifyDatabaseSchema(db *sql.DB) error {
 
 // LoadFixtures loads test data from a YAML fixture file
 func (tdb *TestDatabase) LoadFixtures(fixtureName string) error {
+	// Validate fixture name to prevent path traversal
+	if !isValidFixtureName(fixtureName) {
+		return fmt.Errorf("invalid fixture name: %s", fixtureName)
+	}
+	
 	fixturesDir := "fixtures"
 	fixturePath := filepath.Join(fixturesDir, fixtureName+".yaml")
 
-	data, err := os.ReadFile(fixturePath)
+	data, err := os.ReadFile(filepath.Clean(fixturePath))
 	if err != nil {
 		return fmt.Errorf("failed to read fixture file %s: %w", fixturePath, err)
 	}
@@ -270,6 +276,18 @@ func (tdb *TestDatabase) CountRows(table string, whereClause string, args ...int
 	var count int
 	err := tdb.db.QueryRow(query, args...).Scan(&count)
 	return count, err
+}
+
+// isValidFixtureName validates fixture names to prevent path traversal attacks
+func isValidFixtureName(name string) bool {
+	// Only allow alphanumeric characters, hyphens, and underscores
+	// No path separators or relative path indicators
+	if strings.Contains(name, "/") || strings.Contains(name, "\\") ||
+		strings.Contains(name, "..") || strings.Contains(name, ".") {
+		return false
+	}
+	// Additional check for empty names
+	return len(strings.TrimSpace(name)) > 0
 }
 
 // VerifyMovieExists checks if a movie with given attributes exists
