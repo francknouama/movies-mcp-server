@@ -30,7 +30,7 @@ godog-server/*.test
 # Legacy binaries (can be removed after cleanup)
 main_new
 server-new
-migrate
+/migrate
 
 # Test binaries and coverage
 *.test
