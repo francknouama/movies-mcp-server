@@ -217,20 +217,33 @@ func (ctx *BDDContext) StartMCPServer() error {
 		return fmt.Errorf("failed to start MCP server: %w", err)
 	}
 
-	// Initialize MCP connection with correct API
-	err = ctx.mcpClient.Initialize(
-		protocol.ClientInfo{
-			Name:    "bdd-test-client",
-			Version: "1.0.0",
-		},
-		protocol.ClientCapabilities{
-			Tools:     &protocol.ToolsCapability{},
-			Resources: &protocol.ResourcesCapability{},
-			Prompts:   &protocol.PromptsCapability{},
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to initialize MCP connection: %w", err)
+	// Wait for server to be ready with retry logic
+	time.Sleep(2 * time.Second) // Initial delay for server startup
+	
+	// Initialize MCP connection with retry logic
+	var initErr error
+	for attempts := 0; attempts < 5; attempts++ {
+		initErr = ctx.mcpClient.Initialize(
+			protocol.ClientInfo{
+				Name:    "bdd-test-client",
+				Version: "1.0.0",
+			},
+			protocol.ClientCapabilities{
+				Tools:     &protocol.ToolsCapability{},
+				Resources: &protocol.ResourcesCapability{},
+				Prompts:   &protocol.PromptsCapability{},
+			},
+		)
+		if initErr == nil {
+			break // Success!
+		}
+		
+		// Wait before retry
+		time.Sleep(1 * time.Second)
+	}
+	
+	if initErr != nil {
+		return fmt.Errorf("failed to initialize MCP connection after retries: %w", initErr)
 	}
 
 	return nil
