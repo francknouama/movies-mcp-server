@@ -130,7 +130,7 @@ func (tdb *TestContainerDatabase) runMigrations() error {
 	for _, filename := range migrationFiles {
 		migrationPath := filepath.Join(migrationsDir, filename)
 
-		content, err := os.ReadFile(migrationPath)
+		content, err := os.ReadFile(filepath.Clean(migrationPath))
 		if err != nil {
 			return fmt.Errorf("failed to read migration file %s: %w", filename, err)
 		}
@@ -145,10 +145,15 @@ func (tdb *TestContainerDatabase) runMigrations() error {
 
 // LoadFixtures loads test data from a YAML fixture file (same as original implementation)
 func (tdb *TestContainerDatabase) LoadFixtures(fixtureName string) error {
+	// Validate fixture name to prevent path traversal
+	if !isValidFixtureName(fixtureName) {
+		return fmt.Errorf("invalid fixture name: %s", fixtureName)
+	}
+	
 	fixturesDir := "fixtures"
 	fixturePath := filepath.Join(fixturesDir, fixtureName+".yaml")
 
-	data, err := os.ReadFile(fixturePath)
+	data, err := os.ReadFile(filepath.Clean(fixturePath))
 	if err != nil {
 		return fmt.Errorf("failed to read fixture file %s: %w", fixturePath, err)
 	}

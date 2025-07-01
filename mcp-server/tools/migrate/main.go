@@ -146,8 +146,8 @@ func (m *MigrationTool) loadMigrations() ([]Migration, error) {
 			return nil // Skip files that don't match our pattern
 		}
 
-		// Read file content
-		content, err := os.ReadFile(path)
+		// Read file content (validate path for security)
+		content, err := os.ReadFile(filepath.Clean(path))
 		if err != nil {
 			return fmt.Errorf("failed to read migration file %s: %v", path, err)
 		}
@@ -224,13 +224,13 @@ func (m *MigrationTool) up() error {
 
 		// Execute the migration SQL
 		if _, err := tx.Exec(migration.UpSQL); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("failed to execute migration %d: %v", migration.Version, err)
 		}
 
 		// Record the migration
 		if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES ($1)", migration.Version); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("failed to record migration %d: %v", migration.Version, err)
 		}
 
@@ -294,13 +294,13 @@ func (m *MigrationTool) down() error {
 
 	// Execute the down migration SQL
 	if _, err := tx.Exec(targetMigration.DownSQL); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return fmt.Errorf("failed to execute rollback %d: %v", targetMigration.Version, err)
 	}
 
 	// Remove the migration record
 	if _, err := tx.Exec("DELETE FROM schema_migrations WHERE version = $1", targetMigration.Version); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return fmt.Errorf("failed to remove migration record %d: %v", targetMigration.Version, err)
 	}
 
