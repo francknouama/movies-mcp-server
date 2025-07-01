@@ -19,6 +19,7 @@ type TestUtilities struct {
 // NewTestUtilities creates a new test utilities instance
 func NewTestUtilities() *TestUtilities {
 	return &TestUtilities{
+		// #nosec G404 - weak random is acceptable for test data generation
 		random: mathrand.New(mathrand.NewSource(time.Now().UnixNano())),
 	}
 }
@@ -257,7 +258,7 @@ func (tu *TestUtilities) RetryOperation(operation func() error, maxRetries int, 
 			if shift > 10 { // Cap at 2^10 = 1024x
 				shift = 10
 			}
-			// Use explicit type conversion to avoid overflow warning
+			// #nosec G115 - shift is bounded by 10, no overflow possible
 			multiplier := int64(1) << uint(shift)
 			delay := baseDelay * time.Duration(multiplier)
 			time.Sleep(delay)

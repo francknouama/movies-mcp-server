@@ -119,7 +119,7 @@ jobs:
           FROM generate_series(1, 5000);
           
           -- Create random actor-movie relationships
-          INSERT INTO actor_movies (actor_id, movie_id, created_at)
+          INSERT INTO movie_actors (movie_id, actor_id, created_at)
           SELECT 
             (random() * 4999 + 1)::int,
             (random() * 9999 + 1)::int,
