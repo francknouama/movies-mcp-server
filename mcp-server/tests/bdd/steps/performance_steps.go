@@ -272,6 +272,9 @@ func (sps *SimplePerformanceSteps) allMoviesShouldBeCreated() error {
 }
 
 func (sps *SimplePerformanceSteps) memoryIncreaseShouldNotExceed(mb int) error {
+	if mb < 0 {
+		return fmt.Errorf("negative memory limit not allowed: %d MB", mb)
+	}
 	maxIncrease := uint64(mb) * 1024 * 1024 // Convert MB to bytes
 	memoryIncrease := sps.memoryAfter.Alloc - sps.memoryBefore.Alloc
 

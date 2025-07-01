@@ -310,6 +310,7 @@ func (atu *AdvancedTestUtilities) ShouldInjectError(operation string) (bool, err
 
 	// Generate a new error
 	if len(atu.injector.errorTypes) > 0 {
+		// #nosec G404 - math/rand is acceptable for test utilities, not security-critical
 		errorType := atu.injector.errorTypes[mathrand.Intn(len(atu.injector.errorTypes))]
 		err := atu.generateError(errorType, operation)
 		atu.injector.activeErrors[operation] = err
