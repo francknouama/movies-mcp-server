@@ -34,6 +34,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: movies_mcp_perf
+          POSTGRES_USER: postgres
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -42,16 +43,6 @@ jobs:
         ports:
           - 5432:5432
           
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
-          
     env:
       DB_HOST: localhost
       DB_PORT: 5432
@@ -59,7 +50,6 @@ jobs:
       DB_PASSWORD: postgres
       DB_NAME: movies_mcp_perf
       DB_SSLMODE: disable
-      REDIS_URL: redis://localhost:6379
       
     steps:
       - uses: actions/checkout@v4
@@ -131,8 +121,19 @@ jobs:
       - name: Start simple health check server for testing
         working-directory: mcp-server
         run: |
-          # Start the MCP server to verify it builds and runs
-          timeout 10s ./build/movies-server || echo "MCP server started and stopped as expected"
+          # Verify the MCP server binary exists and is executable
+          if [ ! -f "./build/movies-server" ]; then
+            echo "Error: MCP server binary not found"
+            exit 1
+          fi
+          
+          # Test database connection
+          echo "Testing database connection..."
+          PGPASSWORD=$DB_PASSWORD psql -h localhost -U postgres -d movies_mcp_perf -c "SELECT 1;" || {
+            echo "Error: Cannot connect to database"
+            exit 1
+          }
+          echo "Database connection successful"
           
           # Create a simple HTTP health server for k6 testing
           cat > health-server.go << 'EOF'
