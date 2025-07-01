@@ -56,7 +56,7 @@ func (r *MCPRequest) ToJSONRPC() (*JSONRPCRequest, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &JSONRPCRequest{
 		JSONRPC: r.JSONRPC,
 		ID:      r.ID,
@@ -73,7 +73,7 @@ func (r *JSONRPCRequest) ToMCP() (*MCPRequest, error) {
 			return nil, err
 		}
 	}
-	
+
 	return &MCPRequest{
 		JSONRPC: r.JSONRPC,
 		ID:      r.ID,
@@ -92,7 +92,7 @@ func (r *MCPResponse) ToJSONRPC() *JSONRPCResponse {
 			Data:    r.Error.Data,
 		}
 	}
-	
+
 	return &JSONRPCResponse{
 		JSONRPC: r.JSONRPC,
 		ID:      r.ID,
@@ -111,7 +111,7 @@ func (r *JSONRPCResponse) ToMCP() *MCPResponse {
 			Data:    r.Error.Data,
 		}
 	}
-	
+
 	return &MCPResponse{
 		JSONRPC: r.JSONRPC,
 		ID:      r.ID,

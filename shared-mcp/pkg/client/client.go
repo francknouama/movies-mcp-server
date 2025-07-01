@@ -13,8 +13,8 @@ import (
 
 // MCPClient represents an MCP protocol client
 type MCPClient struct {
-	transport   communication.Transport
-	initialized bool
+	transport    communication.Transport
+	initialized  bool
 	capabilities *protocol.ServerCapabilities
 	serverInfo   *protocol.ServerInfo
 	requestID    int64
@@ -24,9 +24,9 @@ type MCPClient struct {
 
 // ClientOptions represents options for creating an MCP client
 type ClientOptions struct {
-	Transport   communication.Transport
-	Timeout     time.Duration
-	ClientInfo  protocol.ClientInfo
+	Transport    communication.Transport
+	Timeout      time.Duration
+	ClientInfo   protocol.ClientInfo
 	Capabilities protocol.ClientCapabilities
 }
 
@@ -74,7 +74,7 @@ func (c *MCPClient) Initialize(clientInfo protocol.ClientInfo, capabilities prot
 		JSONRPC: protocol.JSONRPC2Version,
 		ID:      c.nextRequestID(),
 		Method:  protocol.MethodInitialize,
-		Params:  c.marshalParams(protocol.InitializeRequest{
+		Params: c.marshalParams(protocol.InitializeRequest{
 			ProtocolVersion: protocol.MCPVersion,
 			Capabilities:    capabilities,
 			ClientInfo:      clientInfo,
@@ -112,7 +112,7 @@ func (c *MCPClient) CallTool(name string, arguments map[string]interface{}) (*pr
 		JSONRPC: protocol.JSONRPC2Version,
 		ID:      c.nextRequestID(),
 		Method:  protocol.MethodToolsCall,
-		Params:  c.marshalParams(protocol.ToolCallRequest{
+		Params: c.marshalParams(protocol.ToolCallRequest{
 			Name:      name,
 			Arguments: arguments,
 		}),
@@ -205,7 +205,7 @@ func (c *MCPClient) ReadResource(uri string) (*protocol.ResourceReadResponse, er
 		JSONRPC: protocol.JSONRPC2Version,
 		ID:      c.nextRequestID(),
 		Method:  protocol.MethodResourcesRead,
-		Params:  c.marshalParams(protocol.ResourceReadRequest{
+		Params: c.marshalParams(protocol.ResourceReadRequest{
 			URI: uri,
 		}),
 	}
