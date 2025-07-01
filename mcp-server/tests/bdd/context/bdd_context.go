@@ -141,7 +141,7 @@ func parseConnectionString(connStr string) (*dbConfig, error) {
 // StartMCPServer starts the real MCP server for testing
 func (ctx *BDDContext) StartMCPServer() error {
 	// Start the real MCP server (no mocks - Phase 1 remediation)
-	ctx.serverProcess = exec.Command("./main")
+	ctx.serverProcess = exec.Command("../../main")
 
 	// Set database environment if database configuration was provided
 	env := os.Environ()
@@ -303,7 +303,7 @@ func (ctx *BDDContext) Cleanup() error {
 	}
 
 	// Stop server process
-	if ctx.serverProcess != nil {
+	if ctx.serverProcess != nil && ctx.serverProcess.Process != nil {
 		if err := ctx.serverProcess.Process.Kill(); err != nil {
 			errors = append(errors, err)
 		}

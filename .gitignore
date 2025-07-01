@@ -22,6 +22,7 @@ movies-mcp-server/*.test
 movies-mcp-server/migrate
 movies-mcp-server/integration.test
 movies-mcp-server/mcp.test
+mcp-server/main
 
 # Godog server binaries  
 godog-server/godog-server
