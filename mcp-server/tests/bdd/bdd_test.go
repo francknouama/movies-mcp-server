@@ -27,11 +27,11 @@ func TestBDDFeatures(t *testing.T) {
 
 func InitializeScenario(ctx *godog.ScenarioContext) {
 	// Initialize all step definitions for Phase 3 BDD infrastructure
-	steps.InitializeMCPSteps(ctx)              // Common MCP protocol steps
-	steps.InitializeMovieSteps(ctx)            // Movie operation steps
-	steps.InitializeActorSteps(ctx)            // Actor operation steps
-	steps.InitializeMCPProtocolSteps(ctx)      // MCP protocol specific steps
-	steps.InitializeAdvancedSearchSteps(ctx)   // Advanced search and integration steps
+	steps.InitializeMCPSteps(ctx)            // Common MCP protocol steps
+	steps.InitializeMovieSteps(ctx)          // Movie operation steps
+	steps.InitializeActorSteps(ctx)          // Actor operation steps
+	steps.InitializeMCPProtocolSteps(ctx)    // MCP protocol specific steps
+	steps.InitializeAdvancedSearchSteps(ctx) // Advanced search and integration steps
 }
 
 // Optional: Run BDD tests from command line

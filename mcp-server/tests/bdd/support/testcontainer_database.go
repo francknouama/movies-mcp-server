@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"time"
 
+	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gopkg.in/yaml.v2"
-	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
 // TestContainerDatabase provides database operations using Testcontainers for isolation
@@ -31,8 +31,8 @@ func NewTestContainerDatabase(ctx context.Context) (*TestContainerDatabase, erro
 	}
 
 	// Create PostgreSQL container
-	postgresContainer, err := postgres.RunContainer(ctx,
-		testcontainers.WithImage("postgres:16-alpine"),
+	postgresContainer, err := postgres.Run(ctx,
+		"postgres:16-alpine",
 		postgres.WithDatabase("movies_mcp_test"),
 		postgres.WithUsername("test_user"),
 		postgres.WithPassword("test_password"),
@@ -49,21 +49,21 @@ func NewTestContainerDatabase(ctx context.Context) (*TestContainerDatabase, erro
 	// Get connection string
 	connStr, err := postgresContainer.ConnectionString(ctx, "sslmode=disable")
 	if err != nil {
-		postgresContainer.Terminate(ctx)
+		_ = postgresContainer.Terminate(ctx)
 		return nil, fmt.Errorf("failed to get connection string: %w", err)
 	}
 
 	// Connect to database
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		postgresContainer.Terminate(ctx)
+		_ = postgresContainer.Terminate(ctx)
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
 
 	// Test connection
 	if err := db.Ping(); err != nil {
 		db.Close()
-		postgresContainer.Terminate(ctx)
+		_ = postgresContainer.Terminate(ctx)
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
@@ -76,7 +76,7 @@ func NewTestContainerDatabase(ctx context.Context) (*TestContainerDatabase, erro
 
 	// Run database migrations
 	if err := testDB.runMigrations(); err != nil {
-		testDB.Cleanup()
+		_ = testDB.Cleanup()
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
@@ -91,20 +91,20 @@ func isDockerAvailable() bool {
 		Image: "hello-world",
 		Cmd:   []string{"echo", "test"},
 	}
-	
+
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Started:          false,
 	})
-	
+
 	if err != nil {
 		return false
 	}
-	
+
 	if container != nil {
-		container.Terminate(ctx)
+		_ = container.Terminate(ctx)
 	}
-	
+
 	return true
 }
 
@@ -112,7 +112,7 @@ func isDockerAvailable() bool {
 func (tdb *TestContainerDatabase) runMigrations() error {
 	// Look for migration files relative to the BDD test directory
 	migrationsDir := "../../migrations"
-	
+
 	// Check if migrations directory exists
 	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
 		return fmt.Errorf("migrations directory not found at %s", migrationsDir)
@@ -121,7 +121,7 @@ func (tdb *TestContainerDatabase) runMigrations() error {
 	// Read and execute migration files in order
 	migrationFiles := []string{
 		"001_create_movies_table.up.sql",
-		"002_add_indexes.up.sql", 
+		"002_add_indexes.up.sql",
 		"003_add_search_indexes.up.sql",
 		"004_create_actors_tables.up.sql",
 		"005_align_schema_with_domain.up.sql",
@@ -129,7 +129,7 @@ func (tdb *TestContainerDatabase) runMigrations() error {
 
 	for _, filename := range migrationFiles {
 		migrationPath := filepath.Join(migrationsDir, filename)
-		
+
 		content, err := os.ReadFile(migrationPath)
 		if err != nil {
 			return fmt.Errorf("failed to read migration file %s: %w", filename, err)
@@ -243,7 +243,7 @@ func (tdb *TestContainerDatabase) CleanupAfterScenario() error {
 	// Truncate all test tables to ensure clean state
 	tables := []string{
 		"movie_actors",
-		"actors", 
+		"actors",
 		"movies",
 	}
 

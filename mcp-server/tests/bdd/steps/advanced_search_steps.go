@@ -596,31 +596,31 @@ func (c *CommonStepContext) iDeleteActor(actorKey string) error {
 func (c *CommonStepContext) allTestDataShouldBeRemoved() error {
 	// Verify that the test entities no longer exist
 	workflowKeys := []string{"workflow_movie_id", "workflow_actor1_id", "workflow_actor2_id"}
-	
+
 	for _, key := range workflowKeys {
 		if id, exists := c.dataManager.GetID(key); exists {
 			// Try to retrieve the entity - should fail
 			entityType := "movie"
 			toolName := "get_movie"
 			paramName := "movie_id"
-			
+
 			if strings.Contains(key, "actor") {
 				entityType = "actor"
 				toolName = "get_actor"
 				paramName = "actor_id"
 			}
-			
+
 			arguments := map[string]interface{}{
 				paramName: id,
 			}
-			
+
 			_, err := c.bddContext.CallTool(toolName, arguments)
 			if err == nil && !c.bddContext.HasError() {
 				return fmt.Errorf("%s with key '%s' still exists", entityType, key)
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -637,26 +637,26 @@ func (c *CommonStepContext) multipleClientsAreConnected() error {
 func (c *CommonStepContext) clientAndClientSimultaneouslyTryTo(client1, client2 int, table *godog.Table) error {
 	// Simulate concurrent operations
 	c.bddContext.SetTestData("concurrent_operations", true)
-	
+
 	operations := make([]map[string]string, 0)
 	for i, row := range table.Rows {
 		if i == 0 {
 			continue // Skip header row
 		}
-		
+
 		operation := map[string]string{
 			"operation":  row.Cells[0].Value,
 			"parameters": row.Cells[1].Value,
 		}
 		operations = append(operations, operation)
 	}
-	
+
 	c.bddContext.SetTestData("operations", operations)
-	
+
 	// Simulate one success and one conflict
 	c.bddContext.SetTestData("operation1_success", true)
 	c.bddContext.SetTestData("operation2_conflict", true)
-	
+
 	return nil
 }
 

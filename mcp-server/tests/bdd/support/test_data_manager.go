@@ -9,7 +9,7 @@ import (
 
 // TestDataManager handles ID interpolation and test data management
 type TestDataManager struct {
-	storedIDs map[string]int
+	storedIDs   map[string]int
 	lastMovieID int
 	lastActorID int
 }
@@ -24,7 +24,7 @@ func NewTestDataManager() *TestDataManager {
 // StoreID stores an ID with a given key for later reference
 func (tdm *TestDataManager) StoreID(key string, id int) {
 	tdm.storedIDs[key] = id
-	
+
 	// Track last IDs for automatic reference
 	if strings.Contains(key, "movie") {
 		tdm.lastMovieID = id
@@ -54,11 +54,11 @@ func (tdm *TestDataManager) GetLastActorID() int {
 func (tdm *TestDataManager) InterpolateString(input string) string {
 	// Pattern to match {key} placeholders
 	re := regexp.MustCompile(`\{([^}]+)\}`)
-	
+
 	return re.ReplaceAllStringFunc(input, func(match string) string {
 		// Extract key from {key}
 		key := match[1 : len(match)-1]
-		
+
 		// Handle special cases
 		switch key {
 		case "movie_id":
@@ -75,7 +75,7 @@ func (tdm *TestDataManager) InterpolateString(input string) string {
 				return strconv.Itoa(id)
 			}
 		}
-		
+
 		// Return original if no replacement found
 		return match
 	})
@@ -84,7 +84,7 @@ func (tdm *TestDataManager) InterpolateString(input string) string {
 // InterpolateMap replaces placeholders in map values
 func (tdm *TestDataManager) InterpolateMap(input map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
-	
+
 	for key, value := range input {
 		switch v := value.(type) {
 		case string:
@@ -115,7 +115,7 @@ func (tdm *TestDataManager) InterpolateMap(input map[string]interface{}) map[str
 			result[key] = value
 		}
 	}
-	
+
 	return result
 }
 
@@ -132,12 +132,12 @@ func (tdm *TestDataManager) ParseIDFromResponse(response interface{}, idField st
 	if !ok {
 		return 0, fmt.Errorf("response is not a map")
 	}
-	
+
 	idValue, exists := responseMap[idField]
 	if !exists {
 		return 0, fmt.Errorf("field %s not found in response", idField)
 	}
-	
+
 	// Handle different number types
 	switch v := idValue.(type) {
 	case int:
@@ -157,7 +157,7 @@ func (tdm *TestDataManager) StoreIDFromResponse(response interface{}, idField, k
 	if err != nil {
 		return err
 	}
-	
+
 	tdm.StoreID(key, id)
 	return nil
 }

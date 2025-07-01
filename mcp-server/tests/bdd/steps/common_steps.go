@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/cucumber/godog"
-	
+
 	bddContext "github.com/francknouama/movies-mcp-server/mcp-server/tests/bdd/context"
 	"github.com/francknouama/movies-mcp-server/mcp-server/tests/bdd/support"
 )
@@ -63,12 +63,12 @@ func InitializeMCPSteps(ctx *godog.ScenarioContext) {
 // setupScenario initializes the scenario context
 func (c *CommonStepContext) setupScenario() error {
 	var err error
-	
+
 	// Try to initialize Testcontainer database first, fallback to regular database
 	c.testContainerDB, err = support.NewTestContainerDatabase(c.ctx)
 	if err != nil {
 		fmt.Printf("Warning: Could not initialize Testcontainer database (%v), falling back to regular database\n", err)
-		
+
 		// Fallback to regular test database
 		regularDB, fallbackErr := support.NewTestDatabase()
 		if fallbackErr != nil {
@@ -92,7 +92,7 @@ func (c *CommonStepContext) setupScenario() error {
 		if err != nil {
 			return fmt.Errorf("failed to get container connection string: %w", err)
 		}
-		
+
 		// Set database environment for the MCP server
 		err = c.bddContext.SetDatabaseEnvironment(connStr)
 		if err != nil {

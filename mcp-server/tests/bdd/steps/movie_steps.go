@@ -38,7 +38,7 @@ func InitializeMovieSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^a movie exists with:$`, stepContext.aMovieExistsWith)
 	ctx.Step(`^the movie title should contain "([^"]*)"$`, stepContext.theMovieTitleShouldContain)
 	ctx.Step(`^all movies should have director "([^"]*)"$`, stepContext.allMoviesShouldHaveDirector)
-	
+
 	// Additional missing movie step definitions
 	ctx.Step(`^I call the "([^"]*)" tool with the movie ID$`, stepContext.iCallToolWithMovieID)
 	ctx.Step(`^I call the "([^"]*)" tool with movie ID (\d+)$`, stepContext.iCallToolWithSpecificMovieID)
@@ -51,7 +51,7 @@ func InitializeMovieSteps(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the movies should be ordered by rating descending$`, stepContext.theMoviesShouldBeOrderedByRatingDescending)
 	ctx.Step(`^the first movie should have rating ([0-9.]+)$`, stepContext.theFirstMovieShouldHaveRating)
 	ctx.Step(`^the error message should indicate movie not found$`, stepContext.theErrorMessageShouldIndicateMovieNotFound)
-	
+
 	// Missing step definitions for scenario outline
 	ctx.Step(`^movies exist from various decades$`, stepContext.moviesExistFromVariousDecades)
 	ctx.Step(`^I call the "([^"]*)" tool with decade "([^"]*)"$`, stepContext.iCallToolWithDecade)
@@ -62,7 +62,7 @@ func InitializeMovieSteps(ctx *godog.ScenarioContext) {
 // iCallTheToolWith calls an MCP tool with JSON arguments
 func (c *CommonStepContext) iCallTheToolWith(toolName string, docString *godog.DocString) error {
 	var arguments map[string]interface{}
-	
+
 	if err := json.Unmarshal([]byte(docString.Content), &arguments); err != nil {
 		return fmt.Errorf("failed to parse JSON arguments: %w", err)
 	}
@@ -225,11 +225,11 @@ func (c *CommonStepContext) theFollowingMoviesExist(table *godog.Table) error {
 // aMovieExistsWith creates a single movie from a data table
 func (c *CommonStepContext) aMovieExistsWith(table *godog.Table) error {
 	movieData := make(map[string]interface{})
-	
+
 	for _, row := range table.Rows {
 		field := row.Cells[0].Value
 		value := row.Cells[1].Value
-		
+
 		switch field {
 		case "year":
 			year, err := strconv.Atoi(value)
@@ -363,7 +363,7 @@ func (c *CommonStepContext) aMovieExistsWithTitle(title string) error {
 	if !c.bddContext.HasError() {
 		var responseData map[string]interface{}
 		if parseErr := c.bddContext.ParseJSONResponse(&responseData); parseErr == nil {
-			c.dataManager.StoreIDFromResponse(responseData, "id", "movie_id")
+			_ = c.dataManager.StoreIDFromResponse(responseData, "id", "movie_id")
 		}
 	}
 
@@ -436,7 +436,7 @@ func (c *CommonStepContext) theMoviesShouldBeOrderedByRatingDescending() error {
 
 	for i := 1; i < len(response.Movies); i++ {
 		if response.Movies[i-1].Rating < response.Movies[i].Rating {
-			return fmt.Errorf("movies not ordered by rating descending: %.1f < %.1f", 
+			return fmt.Errorf("movies not ordered by rating descending: %.1f < %.1f",
 				response.Movies[i-1].Rating, response.Movies[i].Rating)
 		}
 	}
@@ -461,7 +461,7 @@ func (c *CommonStepContext) theFirstMovieShouldHaveRating(expectedRating float64
 	}
 
 	if response.Movies[0].Rating != expectedRating {
-		return fmt.Errorf("expected first movie rating %.1f, got %.1f", 
+		return fmt.Errorf("expected first movie rating %.1f, got %.1f",
 			expectedRating, response.Movies[0].Rating)
 	}
 
@@ -475,8 +475,8 @@ func (c *CommonStepContext) theErrorMessageShouldIndicateMovieNotFound() error {
 	}
 
 	errorMessage := c.bddContext.GetErrorMessage()
-	if !strings.Contains(strings.ToLower(errorMessage), "not found") && 
-	   !strings.Contains(strings.ToLower(errorMessage), "movie") {
+	if !strings.Contains(strings.ToLower(errorMessage), "not found") &&
+		!strings.Contains(strings.ToLower(errorMessage), "movie") {
 		return fmt.Errorf("error message should indicate movie not found, got: %s", errorMessage)
 	}
 

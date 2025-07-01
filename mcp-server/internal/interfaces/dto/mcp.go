@@ -37,7 +37,7 @@ type ResourceReadRequest = protocol.ResourceReadRequest
 type ResourceReadResponse = protocol.ResourceReadResponse
 type ResourceContent = protocol.ResourceContent
 
-// Prompt and related types - using shared library  
+// Prompt and related types - using shared library
 type Prompt = protocol.Prompt
 type PromptArgument = protocol.PromptArgument
 type PromptsListResponse = protocol.PromptsListResponse

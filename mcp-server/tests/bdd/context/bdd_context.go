@@ -40,7 +40,7 @@ func (ctx *BDDContext) SetDatabaseEnvironment(connectionString string) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse connection string: %w", err)
 	}
-	
+
 	// Store the parsed components to be used when starting the server
 	ctx.SetTestData("db_host", parsed.host)
 	ctx.SetTestData("db_port", parsed.port)
@@ -48,7 +48,7 @@ func (ctx *BDDContext) SetDatabaseEnvironment(connectionString string) error {
 	ctx.SetTestData("db_user", parsed.user)
 	ctx.SetTestData("db_password", parsed.password)
 	ctx.SetTestData("db_sslmode", parsed.sslmode)
-	
+
 	return nil
 }
 
@@ -66,24 +66,24 @@ type dbConfig struct {
 func parseConnectionString(connStr string) (*dbConfig, error) {
 	// Simple parsing for PostgreSQL connection strings
 	// Format: postgresql://user:password@host:port/dbname?sslmode=disable
-	
+
 	if !strings.HasPrefix(connStr, "postgresql://") && !strings.HasPrefix(connStr, "postgres://") {
 		return nil, fmt.Errorf("invalid PostgreSQL connection string format")
 	}
-	
+
 	// Remove protocol prefix
 	connStr = strings.TrimPrefix(connStr, "postgresql://")
 	connStr = strings.TrimPrefix(connStr, "postgres://")
-	
+
 	// Split on '@' to separate user:pass from host:port/db
 	parts := strings.Split(connStr, "@")
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid connection string format")
 	}
-	
+
 	userPass := parts[0]
 	hostDbQuery := parts[1]
-	
+
 	// Parse user:password
 	userParts := strings.Split(userPass, ":")
 	if len(userParts) != 2 {
@@ -91,12 +91,12 @@ func parseConnectionString(connStr string) (*dbConfig, error) {
 	}
 	user := userParts[0]
 	password := userParts[1]
-	
+
 	// Split query parameters
 	hostDbParts := strings.Split(hostDbQuery, "?")
 	hostDb := hostDbParts[0]
 	sslmode := "disable" // default
-	
+
 	if len(hostDbParts) == 2 {
 		// Parse query parameters for sslmode
 		queryParams := hostDbParts[1]
@@ -109,25 +109,25 @@ func parseConnectionString(connStr string) (*dbConfig, error) {
 			}
 		}
 	}
-	
+
 	// Parse host:port/dbname
 	hostPortDb := strings.Split(hostDb, "/")
 	if len(hostPortDb) != 2 {
 		return nil, fmt.Errorf("invalid host:port/dbname format")
 	}
-	
+
 	hostPort := hostPortDb[0]
 	dbname := hostPortDb[1]
-	
+
 	// Parse host:port
 	hostPortParts := strings.Split(hostPort, ":")
 	if len(hostPortParts) != 2 {
 		return nil, fmt.Errorf("invalid host:port format")
 	}
-	
+
 	host := hostPortParts[0]
 	port := hostPortParts[1]
-	
+
 	return &dbConfig{
 		host:     host,
 		port:     port,
@@ -142,7 +142,7 @@ func parseConnectionString(connStr string) (*dbConfig, error) {
 func (ctx *BDDContext) StartMCPServer() error {
 	// Start the real MCP server (no mocks - Phase 1 remediation)
 	ctx.serverProcess = exec.Command("./main")
-	
+
 	// Set database environment if database configuration was provided
 	env := os.Environ()
 	if host, exists := ctx.GetTestData("db_host"); exists {
@@ -175,27 +175,27 @@ func (ctx *BDDContext) StartMCPServer() error {
 			env = append(env, "DB_SSLMODE="+sslmodeStr)
 		}
 	}
-	
+
 	// Apply the environment to the server process
 	if len(env) > len(os.Environ()) {
 		ctx.serverProcess.Env = env
 	}
-	
+
 	// Get pipes for communication
 	stdout, err := ctx.serverProcess.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("failed to get stdout pipe: %w", err)
 	}
-	
+
 	stdin, err := ctx.serverProcess.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("failed to get stdin pipe: %w", err)
 	}
-	
-	// Create stdio transport for MCP communication  
+
+	// Create stdio transport for MCP communication
 	// reader = server's stdout (we read from), writer = server's stdin (we write to)
 	transport := communication.NewStdioTransport(stdout, stdin)
-	
+
 	// Create MCP client with proper options
 	ctx.mcpClient = client.NewMCPClient(client.ClientOptions{
 		Transport: transport,
@@ -219,7 +219,7 @@ func (ctx *BDDContext) StartMCPServer() error {
 
 	// Wait for server to be ready with retry logic
 	time.Sleep(2 * time.Second) // Initial delay for server startup
-	
+
 	// Initialize MCP connection with retry logic
 	var initErr error
 	for attempts := 0; attempts < 5; attempts++ {
@@ -237,11 +237,11 @@ func (ctx *BDDContext) StartMCPServer() error {
 		if initErr == nil {
 			break // Success!
 		}
-		
+
 		// Wait before retry
 		time.Sleep(1 * time.Second)
 	}
-	
+
 	if initErr != nil {
 		return fmt.Errorf("failed to initialize MCP connection after retries: %w", initErr)
 	}
@@ -254,7 +254,7 @@ func (ctx *BDDContext) CallTool(toolName string, arguments map[string]interface{
 	response, err := ctx.mcpClient.CallTool(toolName, arguments)
 	ctx.lastResponse = response
 	ctx.lastError = err
-	
+
 	return response, err
 }
 
@@ -287,7 +287,7 @@ func (ctx *BDDContext) AddCleanup(fn func() error) {
 // Cleanup executes all registered cleanup functions
 func (ctx *BDDContext) Cleanup() error {
 	var errors []error
-	
+
 	// Execute cleanup functions in reverse order
 	for i := len(ctx.cleanup) - 1; i >= 0; i-- {
 		if err := ctx.cleanup[i](); err != nil {
@@ -307,7 +307,7 @@ func (ctx *BDDContext) Cleanup() error {
 		if err := ctx.serverProcess.Process.Kill(); err != nil {
 			errors = append(errors, err)
 		}
-		ctx.serverProcess.Wait()
+		_ = ctx.serverProcess.Wait()
 	}
 
 	// Clear test data
@@ -344,7 +344,7 @@ func (ctx *BDDContext) ParseJSONResponse(target interface{}) error {
 		return fmt.Errorf("no response available to parse")
 	}
 
-	if ctx.lastResponse.Content == nil || len(ctx.lastResponse.Content) == 0 {
+	if len(ctx.lastResponse.Content) == 0 {
 		return fmt.Errorf("response content is empty")
 	}
 

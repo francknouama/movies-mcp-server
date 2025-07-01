@@ -11,7 +11,7 @@ import (
 
 // MovieCastResponse represents the cast of a movie
 type MovieCastResponse struct {
-	MovieID int                    `json:"movie_id"`
+	MovieID int                  `json:"movie_id"`
 	Cast    []*dto.ActorResponse `json:"cast"`
 }
 
@@ -178,11 +178,11 @@ func (c *CommonStepContext) theFollowingActorsExist(table *godog.Table) error {
 // anActorExistsWith creates a single actor from a data table
 func (c *CommonStepContext) anActorExistsWith(table *godog.Table) error {
 	actorData := make(map[string]interface{})
-	
+
 	for _, row := range table.Rows {
 		field := row.Cells[0].Value
 		value := row.Cells[1].Value
-		
+
 		switch field {
 		case "birth_year":
 			year, err := strconv.Atoi(value)
@@ -204,7 +204,7 @@ func (c *CommonStepContext) anActorExistsWith(table *godog.Table) error {
 	if !c.bddContext.HasError() {
 		var responseData map[string]interface{}
 		if parseErr := c.bddContext.ParseJSONResponse(&responseData); parseErr == nil {
-			c.dataManager.StoreIDFromResponse(responseData, "id", "actor_id")
+			_ = c.dataManager.StoreIDFromResponse(responseData, "id", "actor_id")
 		}
 	}
 
@@ -228,7 +228,7 @@ func (c *CommonStepContext) anActorExistsWithName(name string) error {
 	if !c.bddContext.HasError() {
 		var responseData map[string]interface{}
 		if parseErr := c.bddContext.ParseJSONResponse(&responseData); parseErr == nil {
-			c.dataManager.StoreIDFromResponse(responseData, "id", "actor_id")
+			_ = c.dataManager.StoreIDFromResponse(responseData, "id", "actor_id")
 		}
 	}
 
@@ -334,7 +334,7 @@ func (c *CommonStepContext) theMessageShouldIndicateSuccessfulLinking() error {
 	if c.bddContext.HasError() {
 		return fmt.Errorf("expected success message but got error: %s", c.bddContext.GetErrorMessage())
 	}
-	
+
 	// The response should indicate success
 	response := c.bddContext.GetLastResponse()
 	if response == nil {
@@ -563,7 +563,7 @@ func (c *CommonStepContext) allActorsShouldHaveBirthYearBetween(minYear, maxYear
 
 	for _, actor := range response.Actors {
 		if actor.BirthYear < minYear || actor.BirthYear > maxYear {
-			return fmt.Errorf("actor '%s' has birth year %d, expected between %d and %d", 
+			return fmt.Errorf("actor '%s' has birth year %d, expected between %d and %d",
 				actor.Name, actor.BirthYear, minYear, maxYear)
 		}
 	}
@@ -661,7 +661,7 @@ func (c *CommonStepContext) theErrorShouldContainValidationErrorsFor(table *godo
 	}
 
 	errorMessage := c.bddContext.GetErrorMessage()
-	
+
 	for _, row := range table.Rows {
 		field := row.Cells[0].Value
 		expectedIssue := row.Cells[1].Value
@@ -672,7 +672,7 @@ func (c *CommonStepContext) theErrorShouldContainValidationErrorsFor(table *godo
 		}
 
 		if !strings.Contains(strings.ToLower(errorMessage), strings.ToLower(expectedIssue)) {
-			return fmt.Errorf("validation error should mention issue '%s' for field '%s', got: %s", 
+			return fmt.Errorf("validation error should mention issue '%s' for field '%s', got: %s",
 				expectedIssue, field, errorMessage)
 		}
 	}
@@ -688,8 +688,8 @@ func (c *CommonStepContext) theErrorMessageShouldIndicateRelationshipAlreadyExis
 
 	errorMessage := c.bddContext.GetErrorMessage()
 	if !strings.Contains(strings.ToLower(errorMessage), "already") &&
-	   !strings.Contains(strings.ToLower(errorMessage), "exists") &&
-	   !strings.Contains(strings.ToLower(errorMessage), "duplicate") {
+		!strings.Contains(strings.ToLower(errorMessage), "exists") &&
+		!strings.Contains(strings.ToLower(errorMessage), "duplicate") {
 		return fmt.Errorf("error message should indicate relationship already exists, got: %s", errorMessage)
 	}
 

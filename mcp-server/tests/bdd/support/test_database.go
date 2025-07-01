@@ -3,12 +3,11 @@ package support
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"gopkg.in/yaml.v2"
 	_ "github.com/lib/pq" // PostgreSQL driver
+	"gopkg.in/yaml.v2"
 )
 
 // TestDatabase provides database operations for BDD tests with fixture management
@@ -51,10 +50,10 @@ func NewTestDatabase() (*TestDatabase, error) {
 	dbName := getEnvOrDefault("DB_NAME", "movies_mcp_test")
 	dbUser := getEnvOrDefault("DB_USER", "movies_user")
 	dbPassword := getEnvOrDefault("DB_PASSWORD", "movies_password")
-	
+
 	connStr := fmt.Sprintf("host=%s port=%s dbname=%s user=%s password=%s sslmode=disable",
 		dbHost, dbPort, dbName, dbUser, dbPassword)
-	
+
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
@@ -92,21 +91,21 @@ func testDatabaseConnection(db *sql.DB) error {
 	if err := db.Ping(); err != nil {
 		return fmt.Errorf("database ping failed: %w", err)
 	}
-	
+
 	// Test basic query
 	var count int
 	err := db.QueryRow("SELECT 1").Scan(&count)
 	if err != nil {
 		return fmt.Errorf("basic query test failed: %w", err)
 	}
-	
+
 	return nil
 }
 
 // verifyDatabaseSchema verifies that required tables exist
 func verifyDatabaseSchema(db *sql.DB) error {
 	requiredTables := []string{"movies", "actors", "movie_actors"}
-	
+
 	for _, table := range requiredTables {
 		var exists bool
 		query := `
@@ -119,12 +118,12 @@ func verifyDatabaseSchema(db *sql.DB) error {
 		if err != nil {
 			return fmt.Errorf("failed to check if table %s exists: %w", table, err)
 		}
-		
+
 		if !exists {
 			return fmt.Errorf("required table %s does not exist - please run database migrations", table)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -133,7 +132,7 @@ func (tdb *TestDatabase) LoadFixtures(fixtureName string) error {
 	fixturesDir := "fixtures"
 	fixturePath := filepath.Join(fixturesDir, fixtureName+".yaml")
 
-	data, err := ioutil.ReadFile(fixturePath)
+	data, err := os.ReadFile(fixturePath)
 	if err != nil {
 		return fmt.Errorf("failed to read fixture file %s: %w", fixturePath, err)
 	}
@@ -228,7 +227,7 @@ func (tdb *TestDatabase) CleanupAfterScenario() error {
 	// Truncate all test tables to ensure clean state
 	tables := []string{
 		"movie_actors",
-		"actors", 
+		"actors",
 		"movies",
 	}
 

@@ -39,13 +39,13 @@ func (c *CommonStepContext) iHaveAValidMCPClientConnection() error {
 	if c.bddContext == nil {
 		return fmt.Errorf("BDD context not initialized")
 	}
-	
+
 	// Try to list tools to verify connection is working
 	_, err := c.bddContext.CallTool("list_tools", map[string]interface{}{})
 	if err != nil && !c.bddContext.HasError() {
 		return fmt.Errorf("MCP client connection not valid: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -54,17 +54,17 @@ func (c *CommonStepContext) iSendAnInitializeRequestWith(docString *godog.DocStr
 	// Parse the JSON request from the docstring
 	// For now, we'll simulate this by calling the initialize method on our client
 	// In a real implementation, this would send the raw JSON-RPC request
-	
+
 	// Since our BDD context already initializes the connection,
 	// we'll verify that initialization worked correctly
 	if c.bddContext.GetLastError() != nil {
 		return fmt.Errorf("initialization failed: %w", c.bddContext.GetLastError())
 	}
-	
+
 	// Set a flag to indicate we sent an initialize request
 	c.bddContext.SetTestData("initialize_sent", true)
 	c.bddContext.SetTestData("initialize_successful", true)
-	
+
 	return nil
 }
 
@@ -73,7 +73,7 @@ func (c *CommonStepContext) iSendAnInitializeRequestWithProtocolVersion(protocol
 	// Simulate sending initialize request with specific protocol version
 	// For this test, we'll check if the version is supported
 	supportedVersions := []string{"2024-11-05", "2024-10-07"}
-	
+
 	supported := false
 	for _, version := range supportedVersions {
 		if version == protocolVersion {
@@ -81,18 +81,18 @@ func (c *CommonStepContext) iSendAnInitializeRequestWithProtocolVersion(protocol
 			break
 		}
 	}
-	
+
 	if !supported {
 		// Simulate an unsupported protocol version error
 		c.bddContext.SetTestData("protocol_error", true)
 		c.bddContext.SetTestData("error_message", "Unsupported protocol version: "+protocolVersion)
 		return nil
 	}
-	
+
 	c.bddContext.SetTestData("initialize_sent", true)
 	c.bddContext.SetTestData("initialize_successful", true)
 	c.bddContext.SetTestData("protocol_version", protocolVersion)
-	
+
 	return nil
 }
 
@@ -102,21 +102,21 @@ func (c *CommonStepContext) theResponseShouldContainServerCapabilities() error {
 	if initSent != true {
 		return fmt.Errorf("no initialize request was sent")
 	}
-	
+
 	initSuccessful, _ := c.bddContext.GetTestData("initialize_successful")
 	if initSuccessful != true {
 		return fmt.Errorf("initialize request was not successful")
 	}
-	
+
 	// In a real implementation, we would parse the response and check for capabilities
 	// For now, we'll assume capabilities are present if initialization was successful
 	expectedCapabilities := []string{"tools", "resources"}
-	
+
 	for _, capability := range expectedCapabilities {
 		// Simulate checking for capability in response
 		c.bddContext.SetTestData("capability_"+capability, true)
 	}
-	
+
 	return nil
 }
 
@@ -127,11 +127,11 @@ func (c *CommonStepContext) theProtocolVersionShouldBe(expectedVersion string) e
 		// If no specific version was set, assume the default supported version
 		actualVersion = "2024-11-05"
 	}
-	
+
 	if actualVersion != expectedVersion {
 		return fmt.Errorf("expected protocol version '%s', got '%s'", expectedVersion, actualVersion)
 	}
-	
+
 	return nil
 }
 
@@ -142,10 +142,10 @@ func (c *CommonStepContext) iSendAToolsListRequest() error {
 	if err != nil {
 		return fmt.Errorf("failed to send tools/list request: %w", err)
 	}
-	
+
 	// Store that we sent a tools list request
 	c.bddContext.SetTestData("tools_list_sent", true)
-	
+
 	return nil
 }
 
@@ -156,10 +156,10 @@ func (c *CommonStepContext) iSendAResourcesListRequest() error {
 	if err != nil {
 		return fmt.Errorf("failed to send resources/list request: %w", err)
 	}
-	
+
 	// Store that we sent a resources list request
 	c.bddContext.SetTestData("resources_list_sent", true)
-	
+
 	return nil
 }
 
@@ -169,44 +169,44 @@ func (c *CommonStepContext) theResponseShouldContainTheFollowingTools(table *god
 	if toolsListSent != true {
 		return fmt.Errorf("no tools/list request was sent")
 	}
-	
+
 	if c.bddContext.HasError() {
 		return fmt.Errorf("tools/list request failed: %s", c.bddContext.GetErrorMessage())
 	}
-	
+
 	// Parse the response to get tools list
 	var toolsResponse protocol.ToolsListResponse
 	if err := c.bddContext.ParseJSONResponse(&toolsResponse); err != nil {
 		return fmt.Errorf("failed to parse tools response: %w", err)
 	}
-	
+
 	// Check each expected tool
 	for i, row := range table.Rows {
 		if i == 0 {
 			continue // Skip header row
 		}
-		
+
 		expectedToolName := row.Cells[0].Value
 		expectedDescription := row.Cells[1].Value
-		
+
 		// Find the tool in the response
 		found := false
 		for _, tool := range toolsResponse.Tools {
 			if tool.Name == expectedToolName {
 				found = true
 				if !strings.Contains(tool.Description, expectedDescription) {
-					return fmt.Errorf("tool '%s' description does not match expected: got '%s', expected to contain '%s'", 
+					return fmt.Errorf("tool '%s' description does not match expected: got '%s', expected to contain '%s'",
 						expectedToolName, tool.Description, expectedDescription)
 				}
 				break
 			}
 		}
-		
+
 		if !found {
 			return fmt.Errorf("expected tool '%s' not found in response", expectedToolName)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -216,49 +216,49 @@ func (c *CommonStepContext) theResponseShouldContainTheFollowingResources(table 
 	if resourcesListSent != true {
 		return fmt.Errorf("no resources/list request was sent")
 	}
-	
+
 	if c.bddContext.HasError() {
 		return fmt.Errorf("resources/list request failed: %s", c.bddContext.GetErrorMessage())
 	}
-	
+
 	// Parse the response to get resources list
 	var resourcesResponse protocol.ResourcesListResponse
 	if err := c.bddContext.ParseJSONResponse(&resourcesResponse); err != nil {
 		return fmt.Errorf("failed to parse resources response: %w", err)
 	}
-	
+
 	// Check each expected resource
 	for i, row := range table.Rows {
 		if i == 0 {
 			continue // Skip header row
 		}
-		
+
 		expectedURI := row.Cells[0].Value
 		expectedName := row.Cells[1].Value
 		expectedDescription := row.Cells[2].Value
-		
+
 		// Find the resource in the response
 		found := false
 		for _, resource := range resourcesResponse.Resources {
 			if resource.URI == expectedURI {
 				found = true
 				if resource.Name != expectedName {
-					return fmt.Errorf("resource '%s' name does not match: got '%s', expected '%s'", 
+					return fmt.Errorf("resource '%s' name does not match: got '%s', expected '%s'",
 						expectedURI, resource.Name, expectedName)
 				}
 				if !strings.Contains(resource.Description, expectedDescription) {
-					return fmt.Errorf("resource '%s' description does not match expected: got '%s', expected to contain '%s'", 
+					return fmt.Errorf("resource '%s' description does not match expected: got '%s', expected to contain '%s'",
 						expectedURI, resource.Description, expectedDescription)
 				}
 				break
 			}
 		}
-		
+
 		if !found {
 			return fmt.Errorf("expected resource '%s' not found in response", expectedURI)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -266,12 +266,12 @@ func (c *CommonStepContext) theResponseShouldContainTheFollowingResources(table 
 func (c *CommonStepContext) iSendARequestWithInvalidMethod(invalidMethod string) error {
 	// Try to call a method that doesn't exist
 	_, err := c.bddContext.CallTool(invalidMethod, map[string]interface{}{})
-	
+
 	// We expect this to fail, so store the error information
 	if err != nil || c.bddContext.HasError() {
 		c.bddContext.SetTestData("invalid_method_error", true)
 		c.bddContext.SetTestData("error_code", -32601) // JSON-RPC "Method not found" error code
-		
+
 		errorMsg := ""
 		if err != nil {
 			errorMsg = err.Error()
@@ -280,7 +280,7 @@ func (c *CommonStepContext) iSendARequestWithInvalidMethod(invalidMethod string)
 		}
 		c.bddContext.SetTestData("error_message", errorMsg)
 	}
-	
+
 	return nil
 }
 
@@ -290,16 +290,16 @@ func (c *CommonStepContext) theErrorCodeShouldBe(expectedCode int) error {
 	if invalidMethodError != true {
 		return fmt.Errorf("no invalid method error occurred")
 	}
-	
+
 	actualCode, exists := c.bddContext.GetTestData("error_code")
 	if !exists {
 		return fmt.Errorf("no error code found in response")
 	}
-	
+
 	if actualCode != expectedCode {
 		return fmt.Errorf("expected error code %d, got %v", expectedCode, actualCode)
 	}
-	
+
 	return nil
 }
 
@@ -309,16 +309,16 @@ func (c *CommonStepContext) theErrorMessageShouldContain(expectedText string) er
 	if !exists {
 		return fmt.Errorf("no error message found")
 	}
-	
+
 	errorStr, ok := errorMessage.(string)
 	if !ok {
 		return fmt.Errorf("error message is not a string: %T", errorMessage)
 	}
-	
+
 	if !strings.Contains(strings.ToLower(errorStr), strings.ToLower(expectedText)) {
 		return fmt.Errorf("error message should contain '%s', got: %s", expectedText, errorStr)
 	}
-	
+
 	return nil
 }
 
@@ -328,22 +328,22 @@ func (c *CommonStepContext) theErrorShouldIndicateUnsupportedProtocolVersion() e
 	if !exists || protocolError != true {
 		return fmt.Errorf("no protocol error occurred")
 	}
-	
+
 	errorMessage, exists := c.bddContext.GetTestData("error_message")
 	if !exists {
 		return fmt.Errorf("no error message found")
 	}
-	
+
 	errorStr, ok := errorMessage.(string)
 	if !ok {
 		return fmt.Errorf("error message is not a string: %T", errorMessage)
 	}
-	
+
 	if !strings.Contains(strings.ToLower(errorStr), "unsupported") ||
-	   !strings.Contains(strings.ToLower(errorStr), "protocol") ||
-	   !strings.Contains(strings.ToLower(errorStr), "version") {
+		!strings.Contains(strings.ToLower(errorStr), "protocol") ||
+		!strings.Contains(strings.ToLower(errorStr), "version") {
 		return fmt.Errorf("error message should indicate unsupported protocol version, got: %s", errorStr)
 	}
-	
+
 	return nil
 }
