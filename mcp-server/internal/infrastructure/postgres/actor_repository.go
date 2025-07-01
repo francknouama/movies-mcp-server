@@ -280,7 +280,7 @@ func (r *ActorRepository) buildSearchQuery(criteria actor.SearchCriteria) (strin
 	}
 
 	if len(conditions) > 0 {
-		query += " WHERE " + fmt.Sprintf("%s", conditions[0])
+		query += " WHERE " + conditions[0]
 		for i := 1; i < len(conditions); i++ {
 			query += " AND " + conditions[i]
 		}

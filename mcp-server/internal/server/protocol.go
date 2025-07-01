@@ -99,8 +99,12 @@ func (p *Protocol) sendResponse(response dto.JSONRPCResponse) {
 		p.logger.Printf("Sending: %s", string(data))
 	}
 
-	p.output.Write(data)
-	p.output.Write([]byte("\n"))
+	if _, err := p.output.Write(data); err != nil && p.logger != nil {
+		p.logger.Printf("Failed to write data: %v", err)
+	}
+	if _, err := p.output.Write([]byte("\n")); err != nil && p.logger != nil {
+		p.logger.Printf("Failed to write newline: %v", err)
+	}
 }
 
 // UnmarshalParams unmarshals request parameters
