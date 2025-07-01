@@ -80,7 +80,6 @@ func (t *StdioTransport) Close() error {
 type BufferedTransport struct {
 	transport Transport
 	buffer    []byte
-	mutex     sync.RWMutex
 }
 
 // NewBufferedTransport creates a new buffered transport

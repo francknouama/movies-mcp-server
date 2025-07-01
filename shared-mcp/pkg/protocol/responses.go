@@ -35,27 +35,27 @@ type Tool struct {
 
 // InputSchema represents the JSON schema for tool input
 type InputSchema struct {
-	Type       string                            `json:"type"`
-	Properties map[string]SchemaProperty        `json:"properties,omitempty"`
-	Required   []string                         `json:"required,omitempty"`
-	Additional map[string]interface{}           `json:"additionalProperties,omitempty"`
+	Type       string                    `json:"type"`
+	Properties map[string]SchemaProperty `json:"properties,omitempty"`
+	Required   []string                  `json:"required,omitempty"`
+	Additional map[string]interface{}    `json:"additionalProperties,omitempty"`
 }
 
 // SchemaProperty represents a property in a JSON schema
 type SchemaProperty struct {
-	Type        string                 `json:"type,omitempty"`
-	Description string                 `json:"description,omitempty"`
-	Enum        []interface{}          `json:"enum,omitempty"`
-	Default     interface{}            `json:"default,omitempty"`
-	Format      string                 `json:"format,omitempty"`
-	Pattern     string                 `json:"pattern,omitempty"`
-	MinLength   *int                   `json:"minLength,omitempty"`
-	MaxLength   *int                   `json:"maxLength,omitempty"`
-	Minimum     *float64               `json:"minimum,omitempty"`
-	Maximum     *float64               `json:"maximum,omitempty"`
-	Items       *SchemaProperty        `json:"items,omitempty"`
+	Type        string                    `json:"type,omitempty"`
+	Description string                    `json:"description,omitempty"`
+	Enum        []interface{}             `json:"enum,omitempty"`
+	Default     interface{}               `json:"default,omitempty"`
+	Format      string                    `json:"format,omitempty"`
+	Pattern     string                    `json:"pattern,omitempty"`
+	MinLength   *int                      `json:"minLength,omitempty"`
+	MaxLength   *int                      `json:"maxLength,omitempty"`
+	Minimum     *float64                  `json:"minimum,omitempty"`
+	Maximum     *float64                  `json:"maximum,omitempty"`
+	Items       *SchemaProperty           `json:"items,omitempty"`
 	Properties  map[string]SchemaProperty `json:"properties,omitempty"`
-	Required    []string               `json:"required,omitempty"`
+	Required    []string                  `json:"required,omitempty"`
 }
 
 // ToolCallResponse represents a tool call response
@@ -115,9 +115,9 @@ type PromptsListResponse struct {
 
 // Prompt represents an MCP prompt definition
 type Prompt struct {
-	Name        string               `json:"name"`
-	Description string               `json:"description,omitempty"`
-	Arguments   []PromptArgument     `json:"arguments,omitempty"`
+	Name        string           `json:"name"`
+	Description string           `json:"description,omitempty"`
+	Arguments   []PromptArgument `json:"arguments,omitempty"`
 }
 
 // PromptArgument represents an argument for a prompt
@@ -135,8 +135,8 @@ type PromptGetResponse struct {
 
 // PromptMessage represents a message in a prompt
 type PromptMessage struct {
-	Role    string               `json:"role"`
-	Content []ContentBlock       `json:"content"`
+	Role    string         `json:"role"`
+	Content []ContentBlock `json:"content"`
 }
 
 // PromptMessageContent represents content in a prompt message (backward compatibility)

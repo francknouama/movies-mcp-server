@@ -116,7 +116,9 @@ func (p *ImageProcessor) DownloadImageFromURL(url string) ([]byte, string, error
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to download image from %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close() // Ignore close errors in defer
+	}()
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {
