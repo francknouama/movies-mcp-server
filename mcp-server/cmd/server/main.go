@@ -221,6 +221,7 @@ func runMigrations(migrationsPath string) error {
 
 	// Run the migration tool
 	fmt.Fprintf(os.Stderr, "Running migrations...\n")
+	// #nosec G204 - dbURL and migrationsPath are validated configuration parameters
 	migrateCmd := exec.Command("./migrate", dbURL, migrationsPath, "up")
 	migrateCmd.Stdout = os.Stderr
 	migrateCmd.Stderr = os.Stderr

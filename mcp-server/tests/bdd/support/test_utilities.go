@@ -1,9 +1,11 @@
 package support
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	"math/big"
+	mathrand "math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -11,13 +13,13 @@ import (
 
 // TestUtilities provides helper functions for BDD tests
 type TestUtilities struct {
-	random *rand.Rand
+	random *mathrand.Rand
 }
 
 // NewTestUtilities creates a new test utilities instance
 func NewTestUtilities() *TestUtilities {
 	return &TestUtilities{
-		random: rand.New(rand.NewSource(time.Now().UnixNano())),
+		random: mathrand.New(mathrand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -27,6 +29,17 @@ func (tu *TestUtilities) GenerateRandomString(length int) string {
 	b := make([]byte, length)
 	for i := range b {
 		b[i] = charset[tu.random.Intn(len(charset))]
+	}
+	return string(b)
+}
+
+// GenerateSecureRandomString generates a cryptographically secure random string
+func (tu *TestUtilities) GenerateSecureRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		b[i] = charset[n.Int64()]
 	}
 	return string(b)
 }
@@ -239,7 +252,12 @@ func (tu *TestUtilities) RetryOperation(operation func() error, maxRetries int, 
 		}
 
 		if i < maxRetries-1 {
-			delay := baseDelay * time.Duration(1<<uint(i)) // Exponential backoff
+			// Limit the shift to prevent overflow
+			shift := i
+			if shift > 10 { // Cap at 2^10 = 1024x
+				shift = 10
+			}
+			delay := baseDelay * time.Duration(1<<uint(shift)) // Exponential backoff
 			time.Sleep(delay)
 		}
 	}

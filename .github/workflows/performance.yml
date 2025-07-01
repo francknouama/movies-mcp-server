@@ -96,7 +96,7 @@ jobs:
           ./build/movies-server -migrate-only
           
           # Seed performance test data
-          psql -h localhost -U postgres -d movies_mcp_perf -c "
+          PGPASSWORD=$DB_PASSWORD psql -h localhost -U postgres -d movies_mcp_perf -c "
           INSERT INTO movies (title, director, year, rating, description, poster_url, created_at, updated_at)
           SELECT 
             'Movie ' || generate_series,

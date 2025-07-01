@@ -40,14 +40,14 @@ func (m *MockActorRepository) Save(ctx context.Context, actor *actor.Actor) erro
 		return m.saveFunc(ctx, actor)
 	}
 
-	// Only assign a new ID for new actors (ID 1 is the temporary ID from NewActor)
-	if actor.ID().Value() == 1 {
+	// Only assign a new ID for new actors (ID 0 is the temporary ID from NewActor)
+	if actor.ID().Value() == 0 {
 		// Assign new ID
 		id, _ := shared.NewActorID(m.nextID)
 		actor.SetID(id)
 		m.nextID++
 	}
-	// For existing actors (ID > 1), don't change the ID
+	// For existing actors (ID > 0), don't change the ID
 
 	m.actors[actor.ID().Value()] = actor
 	return nil

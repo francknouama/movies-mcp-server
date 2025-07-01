@@ -149,7 +149,7 @@ func (tdb *TestContainerDatabase) LoadFixtures(fixtureName string) error {
 	if !isValidFixtureName(fixtureName) {
 		return fmt.Errorf("invalid fixture name: %s", fixtureName)
 	}
-	
+
 	fixturesDir := "fixtures"
 	fixturePath := filepath.Join(fixturesDir, fixtureName+".yaml")
 
