@@ -19,10 +19,14 @@ import (
 	"github.com/francknouama/movies-mcp-server/mcp-server/internal/server"
 )
 
-const (
-	version = "0.2.0" // Updated for clean architecture
-	name    = "movies-mcp-server"
+var (
+	// Build-time variables (set by goreleaser)
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
 )
+
+const name = "movies-mcp-server"
 
 func main() {
 	var (
@@ -36,7 +40,9 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("%s version %s (Clean Architecture)\n", name, version)
+		fmt.Printf("%s version %s\n", name, version)
+		fmt.Printf("commit: %s\n", commit)
+		fmt.Printf("built: %s\n", date)
 		os.Exit(0)
 	}
 

@@ -1,0 +1,25 @@
+# Movies MCP Server Configuration
+
+# Database configuration
+[database]
+host = "localhost"
+port = 5432
+user = "postgres"
+password = "postgres"
+dbname = "movies_mcp"
+sslmode = "disable"
+
+# Server configuration
+[server]
+# Port for the HTTP server (if enabled)
+port = 8080
+
+# MCP configuration
+[mcp]
+# Protocol version
+protocol_version = "0.1.0"
+
+# Logging configuration
+[logging]
+level = "info"  # debug, info, warn, error
+format = "json" # json, text

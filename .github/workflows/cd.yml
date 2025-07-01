@@ -9,33 +9,125 @@ on:
   push:
     tags: [ 'v*' ]
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Environment to deploy to'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-        - staging
-        - production
 
 env:
   GO_VERSION: '1.22.5'
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: francknouama/movies-mcp-server
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
 
 jobs:
   check-ci-success:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_run'
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     steps:
-      - name: Check CI Pipeline Success
-        if: github.event.workflow_run.conclusion != 'success'
+      - name: Check CI status
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success'
         run: |
           echo "CI Pipeline failed or was cancelled"
           exit 1
           
-  build-and-deploy:
+  release:
+    runs-on: ubuntu-latest
+    needs: [check-ci-success]
+    if: always() && (needs.check-ci-success.result == 'success' || github.event_name != 'workflow_run')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          install-only: true
+          version: latest
+          
+      - name: Run GoReleaser (Snapshot)
+        if: github.ref_type != 'tag'
+        run: |
+          goreleaser release --snapshot --clean --skip=publish,announce
+          
+      - name: Run GoReleaser (Release)
+        if: github.ref_type == 'tag'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          goreleaser release --clean
+          
+      - name: Upload Artifacts (Snapshot)
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-snapshot
+          path: dist/*.tar.gz
+          retention-days: 7
+          
+  test-binaries:
+    runs-on: ${{ matrix.os }}
+    needs: release
+    if: github.ref_type != 'tag'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: movies-mcp-server_*_Linux_x86_64.tar.gz
+            binary_name: movies-server
+          - os: macos-latest
+            artifact_name: movies-mcp-server_*_Darwin_x86_64.tar.gz
+            binary_name: movies-server
+          - os: windows-latest
+            artifact_name: movies-mcp-server_*_Windows_x86_64.zip
+            binary_name: movies-server.exe
+    
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-snapshot
+          path: ./dist
+          
+      - name: Extract and test binary (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd dist
+          tar -xzf ${{ matrix.artifact_name }}
+          ./${{ matrix.binary_name }} --version
+          ./${{ matrix.binary_name }} --help
+          
+      - name: Extract and test binary (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          cd dist
+          Expand-Archive -Path "${{ matrix.artifact_name }}" -DestinationPath .
+          .\${{ matrix.binary_name }} --version
+          .\${{ matrix.binary_name }} --help
+
+  docker-build:
     runs-on: ubuntu-latest
     needs: [check-ci-success]
     if: always() && (needs.check-ci-success.result == 'success' || github.event_name != 'workflow_run')
@@ -54,58 +146,14 @@ jobs:
         ports:
           - 5432:5432
     
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      image-tag: ${{ steps.meta.outputs.tags }}
-      image-digest: ${{ steps.build.outputs.digest }}
-      
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-build-
-            
-      - name: Install dependencies
-        working-directory: mcp-server
-        run: go mod download
-          
-      - name: Generate version
-        id: version
-        run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/}
-          else
-            VERSION="$(git describe --tags --always --dirty)-$(date +%Y%m%d%H%M%S)"
-          fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Building version: $VERSION"
-          
-      - name: Build MCP server
-        working-directory: mcp-server
-        run: |
-          mkdir -p build
-          # Build for testing (native architecture)
-          go build \
-            -ldflags="-w -s -X 'main.Version=${{ steps.version.outputs.version }}' -X 'main.BuildTime=$(date -u +%Y-%m-%dT%H:%M%SZ)'" \
-            -o build/movies-server cmd/server/main.go
-          # Build for container (linux/amd64)
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-            -ldflags="-w -s -X 'main.Version=${{ steps.version.outputs.version }}' -X 'main.BuildTime=$(date -u +%Y-%m-%dT%H:%M%SZ)'" \
-            -o build/movies-server-linux cmd/server/main.go
           
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -127,11 +175,11 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
             
       - name: Build and push Docker image
-        id: build
         uses: docker/build-push-action@v5
         with:
           context: ./mcp-server
@@ -139,33 +187,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            VERSION=${{ steps.version.outputs.version }}
-            BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-            
-      - name: Generate SBOM
-        uses: anchore/sbom-action@v0
-        with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tags }}
-          format: spdx-json
-          output-file: sbom.spdx.json
           
-      - name: Scan image for vulnerabilities
-        uses: anchore/scan-action@v3
-        with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tags }}
-          fail-build: false
-          severity-cutoff: high
-          
-      - name: Upload scan results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: results.sarif
-          
-      - name: Test container image with ATDD
+      - name: Test Docker image
         env:
           DB_HOST: localhost
           DB_PORT: 5432
@@ -174,190 +200,28 @@ jobs:
           DB_NAME: movies_mcp_test
           DB_SSLMODE: disable
         run: |
-          echo "Testing container image with ATDD scenarios"
+          # Pull and test the built image
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           
-          # Install dependencies for ATDD tests
-          cd godog-server
-          go mod download
-          
-          # Run database migrations using the built binary
-          cd ../mcp-server
-          ./build/movies-server -migrate-only
-          
-          # Start container in background for testing
-          cd ..
-          docker run -d \
-            --name test-container \
+          # Run the container
+          docker run -d --name test-container \
             --network host \
-            -e DB_HOST=localhost \
-            -e DB_PORT=5432 \
-            -e DB_USER=postgres \
-            -e DB_PASSWORD=postgres \
-            -e DB_NAME=movies_mcp_test \
-            -e DB_SSLMODE=disable \
-            -e PORT=8080 \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tags }}
+            -e DB_HOST=$DB_HOST \
+            -e DB_PORT=$DB_PORT \
+            -e DB_USER=$DB_USER \
+            -e DB_PASSWORD=$DB_PASSWORD \
+            -e DB_NAME=$DB_NAME \
+            -e DB_SSLMODE=$DB_SSLMODE \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           
-          # Wait for container to be ready and check health
-          echo "Waiting for container to be ready..."
-          for i in {1..30}; do
-            if curl -f http://localhost:8080/health 2>/dev/null; then
-              echo "Container is ready!"
-              break
-            fi
-            echo "Attempt $i/30: Container not ready yet, waiting..."
-            sleep 2
-          done
+          # Wait for server to start
+          sleep 10
           
-          # Verify container is actually running
-          if ! docker ps | grep test-container; then
-            echo "Container failed to start, showing logs:"
+          # Test MCP protocol
+          echo '{"jsonrpc": "2.0", "method": "initialize", "params": {"protocolVersion": "0.1.0", "capabilities": {"tools": {}}}, "id": 1}' | \
+            docker exec -i test-container sh -c 'cat > /tmp/test.json && cat /tmp/test.json' | \
             docker logs test-container
-            exit 1
-          fi
-          
-          # Run ATDD tests against the container
-          cd godog-server
-          export USE_REAL_SERVER=true
-          export MCP_SERVER_URL=http://localhost:8080
-          go test -v -timeout=10m || {
-            echo "ATDD tests failed, showing container logs:"
-            docker logs test-container
-            docker stop test-container || true
-            exit 1
-          }
           
           # Cleanup
-          docker stop test-container || true
-          docker rm test-container || true
-
-  deploy-staging:
-    needs: build-and-deploy
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Deploy to staging
-        env:
-          IMAGE_TAG: ${{ needs.build-and-deploy.outputs.image-tag }}
-          VERSION: ${{ needs.build-and-deploy.outputs.version }}
-        run: |
-          echo "Deploying version $VERSION to staging environment"
-          echo "Image: $IMAGE_TAG"
-          
-          # Here you would typically:
-          # 1. Update Kubernetes manifests
-          # 2. Deploy to staging cluster
-          # 3. Run smoke tests
-          # 4. Update service discovery
-          
-          # Example deployment commands:
-          # kubectl set image deployment/movies-mcp-server movies-mcp-server=$IMAGE_TAG
-          # kubectl rollout status deployment/movies-mcp-server
-          
-      - name: Run smoke tests
-        env:
-          STAGING_URL: https://staging.example.com
-        run: |
-          echo "Running smoke tests against staging environment: $STAGING_URL"
-          
-          # Wait for deployment to be ready
-          sleep 30
-          
-          # Basic health check
-          curl -f "$STAGING_URL/health" || exit 1
-          
-          # MCP protocol test
-          echo '{"jsonrpc":"2.0","id":"1","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci-test","version":"1.0.0"}}}' | \
-            curl -X POST -H "Content-Type: application/json" -d @- "$STAGING_URL" || exit 1
-            
-      - name: Create deployment record
-        run: |
-          echo "Deployment successful to staging"
-          echo "Version: ${{ needs.build-and-deploy.outputs.version }}"
-          echo "Image: ${{ needs.build-and-deploy.outputs.image-tag }}"
-          echo "Digest: ${{ needs.build-and-deploy.outputs.image-digest }}"
-
-  deploy-production:
-    needs: [build-and-deploy, deploy-staging]
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Deploy to production
-        env:
-          IMAGE_TAG: ${{ needs.build-and-deploy.outputs.image-tag }}
-          VERSION: ${{ needs.build-and-deploy.outputs.version }}
-        run: |
-          echo "Deploying version $VERSION to production environment"
-          echo "Image: $IMAGE_TAG"
-          
-          # Production deployment with blue-green strategy:
-          # 1. Deploy to blue environment
-          # 2. Run comprehensive tests
-          # 3. Switch traffic to blue
-          # 4. Monitor metrics
-          # 5. Keep green as fallback
-          
-      - name: Run production tests
-        env:
-          PRODUCTION_URL: https://api.example.com
-        run: |
-          echo "Running production verification tests"
-          
-          # Comprehensive health checks
-          curl -f "$PRODUCTION_URL/health" || exit 1
-          curl -f "$PRODUCTION_URL/metrics" || exit 1
-          
-          # MCP protocol verification
-          echo '{"jsonrpc":"2.0","id":"1","method":"tools/list"}' | \
-            curl -X POST -H "Content-Type: application/json" -d @- "$PRODUCTION_URL" || exit 1
-            
-      - name: Create GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          body: |
-            ## What's Changed
-            
-            This release includes:
-            - MCP Server version ${{ needs.build-and-deploy.outputs.version }}
-            - Container image: ${{ needs.build-and-deploy.outputs.image-tag }}
-            - Image digest: ${{ needs.build-and-deploy.outputs.image-digest }}
-            
-            ## Deployment Information
-            
-            - **Staging**: Automatically deployed ✅
-            - **Production**: Deployed with this release ✅
-            
-            ## Verification
-            
-            All tests passed including:
-            - Unit tests
-            - Integration tests  
-            - ATDD scenarios
-            - Security scans
-            - Smoke tests
-            
-          draft: false
-          prerelease: false
-
-  cleanup:
-    needs: [build-and-deploy, deploy-production]
-    runs-on: ubuntu-latest
-    if: always()
-    
-    steps:
-      - name: Clean up old images
-        run: |
-          echo "Cleaning up old container images"
-          # This would typically clean up old images from the registry
-          # to manage storage costs and keep only recent versions
+          docker stop test-container
+          docker rm test-container

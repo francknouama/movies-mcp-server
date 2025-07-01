@@ -1,0 +1,171 @@
+# GoReleaser configuration for movies-mcp-server
+# Documentation: https://goreleaser.com
+
+version: 2
+
+# Clean dist folder before build
+before:
+  hooks:
+    - go work sync
+
+# Build configuration
+builds:
+  - id: movies-server
+    main: ./mcp-server/cmd/server/main.go
+    binary: movies-server
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # Skip darwin/386 builds
+    ignore:
+      - goos: darwin
+        goarch: "386"
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+  - id: migrate-tool
+    main: ./mcp-server/tools/migrate/main.go
+    binary: movies-migrate
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: "386"
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+# Archives configuration
+archives:
+  - id: movies-server
+    name_template: >-
+      {{- .ProjectName }}_
+      {{- .Version }}_
+      {{- if eq .Os "darwin" }}Darwin
+      {{- else }}{{ title .Os }}{{ end }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - README.md
+      - LICENSE
+      - mcp-server/config.example.toml
+      - mcp-server/migrations/*
+
+# Checksum configuration
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+# Snapshot configuration
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+# Release configuration
+release:
+  github:
+    owner: francknouama
+    name: movies-mcp-server
+  draft: false
+  prerelease: auto
+  mode: append
+  header: |
+    ## Movies MCP Server {{ .Tag }}
+
+    This release includes cross-platform binaries for the Movies MCP Server.
+
+  footer: |
+    ## Installation
+
+    ### Download and Extract
+    
+    1. Download the appropriate archive for your platform
+    2. Extract the archive:
+       - macOS/Linux: `tar -xzf movies-mcp-server_*.tar.gz`
+       - Windows: Extract the zip file
+    3. Move the binary to your PATH
+    4. Run `movies-server --help` to verify installation
+
+    ### Database Setup
+    
+    1. Set up PostgreSQL database
+    2. Copy `config.example.toml` to `config.toml` and configure
+    3. Run migrations: `movies-migrate -config config.toml`
+    4. Start server: `movies-server -config config.toml`
+
+    **Full Changelog**: https://github.com/{{ .Env.GITHUB_REPOSITORY }}/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+  name_template: "{{.ProjectName}}-v{{.Version}}"
+
+# Changelog configuration
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+  groups:
+    - title: 'New Features'
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Bug Fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: 'Performance Improvements'
+      regexp: "^.*perf[(\\w)]*:+.*$"
+      order: 2
+    - title: 'Code Refactoring'
+      regexp: "^.*refactor[(\\w)]*:+.*$"
+      order: 3
+    - title: Other
+      order: 999
+
+# Docker configuration (keeping for users who prefer containers)
+dockers:
+  - image_templates:
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Tag }}"
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}:v{{ .Major }}"
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}:v{{ .Major }}.{{ .Minor }}"
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}:latest"
+    dockerfile: mcp-server/Dockerfile.production
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+      - "--platform=linux/amd64,linux/arm64"
+
+# SBOM generation
+sboms:
+  - artifacts: archive
+    documents:
+      - "movies-mcp-server-{{ .Version }}.sbom.json"
+
+# Announce releases
+announce:
+  skip: false
