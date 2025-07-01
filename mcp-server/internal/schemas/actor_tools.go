@@ -23,18 +23,18 @@ func addActorTool() dto.Tool {
 		Description: "Add a new actor to the database",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"name": map[string]interface{}{
-					"type":        "string",
-					"description": "Actor name",
+			Properties: map[string]dto.SchemaProperty{
+				"name": {
+					Type:        "string",
+					Description: "Actor name",
 				},
-				"birth_year": map[string]interface{}{
-					"type":        "integer",
-					"description": "Birth year",
+				"birth_year": {
+					Type:        "integer",
+					Description: "Birth year",
 				},
-				"bio": map[string]interface{}{
-					"type":        "string",
-					"description": "Actor biography",
+				"bio": {
+					Type:        "string",
+					Description: "Actor biography",
 				},
 			},
 			Required: []string{"name", "birth_year"},
@@ -48,10 +48,10 @@ func getActorTool() dto.Tool {
 		Description: "Get an actor by ID",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"actor_id": map[string]interface{}{
-					"type":        "integer",
-					"description": "The actor ID",
+			Properties: map[string]dto.SchemaProperty{
+				"actor_id": {
+					Type:        "integer",
+					Description: "The actor ID",
 				},
 			},
 			Required: []string{"actor_id"},
@@ -65,22 +65,22 @@ func updateActorTool() dto.Tool {
 		Description: "Update an existing actor",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"id": map[string]interface{}{
-					"type":        "integer",
-					"description": "Actor ID",
+			Properties: map[string]dto.SchemaProperty{
+				"id": {
+					Type:        "integer",
+					Description: "Actor ID",
 				},
-				"name": map[string]interface{}{
-					"type":        "string",
-					"description": "Actor name",
+				"name": {
+					Type:        "string",
+					Description: "Actor name",
 				},
-				"birth_year": map[string]interface{}{
-					"type":        "integer",
-					"description": "Birth year",
+				"birth_year": {
+					Type:        "integer",
+					Description: "Birth year",
 				},
-				"bio": map[string]interface{}{
-					"type":        "string",
-					"description": "Actor biography",
+				"bio": {
+					Type:        "string",
+					Description: "Actor biography",
 				},
 			},
 			Required: []string{"id", "name", "birth_year"},
@@ -94,10 +94,10 @@ func deleteActorTool() dto.Tool {
 		Description: "Delete an actor by ID",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"actor_id": map[string]interface{}{
-					"type":        "integer",
-					"description": "The actor ID to delete",
+			Properties: map[string]dto.SchemaProperty{
+				"actor_id": {
+					Type:        "integer",
+					Description: "The actor ID to delete",
 				},
 			},
 			Required: []string{"actor_id"},
@@ -111,14 +111,14 @@ func linkActorToMovieTool() dto.Tool {
 		Description: "Link an actor to a movie",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"actor_id": map[string]interface{}{
-					"type":        "integer",
-					"description": "Actor ID",
+			Properties: map[string]dto.SchemaProperty{
+				"actor_id": {
+					Type:        "integer",
+					Description: "Actor ID",
 				},
-				"movie_id": map[string]interface{}{
-					"type":        "integer",
-					"description": "Movie ID",
+				"movie_id": {
+					Type:        "integer",
+					Description: "Movie ID",
 				},
 			},
 			Required: []string{"actor_id", "movie_id"},
@@ -132,14 +132,14 @@ func unlinkActorFromMovieTool() dto.Tool {
 		Description: "Unlink an actor from a movie",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"actor_id": map[string]interface{}{
-					"type":        "integer",
-					"description": "Actor ID",
+			Properties: map[string]dto.SchemaProperty{
+				"actor_id": {
+					Type:        "integer",
+					Description: "Actor ID",
 				},
-				"movie_id": map[string]interface{}{
-					"type":        "integer",
-					"description": "Movie ID",
+				"movie_id": {
+					Type:        "integer",
+					Description: "Movie ID",
 				},
 			},
 			Required: []string{"actor_id", "movie_id"},
@@ -153,10 +153,10 @@ func getMovieCastTool() dto.Tool {
 		Description: "Get all actors in a movie",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"movie_id": map[string]interface{}{
-					"type":        "integer",
-					"description": "Movie ID",
+			Properties: map[string]dto.SchemaProperty{
+				"movie_id": {
+					Type:        "integer",
+					Description: "Movie ID",
 				},
 			},
 			Required: []string{"movie_id"},
@@ -170,10 +170,10 @@ func getActorMoviesTool() dto.Tool {
 		Description: "Get all movies an actor appeared in",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"actor_id": map[string]interface{}{
-					"type":        "integer",
-					"description": "Actor ID",
+			Properties: map[string]dto.SchemaProperty{
+				"actor_id": {
+					Type:        "integer",
+					Description: "Actor ID",
 				},
 			},
 			Required: []string{"actor_id"},
@@ -187,10 +187,10 @@ func searchActorsTool() dto.Tool {
 		Description: "Search for actors by name",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"name": map[string]interface{}{
-					"type":        "string",
-					"description": "Actor name to search for",
+			Properties: map[string]dto.SchemaProperty{
+				"name": {
+					Type:        "string",
+					Description: "Actor name to search for",
 				},
 			},
 			Required: []string{"name"},

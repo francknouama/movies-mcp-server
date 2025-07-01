@@ -1,0 +1,69 @@
+# Test fixtures for movie-related scenarios
+# This replaces hardcoded test data in step definitions
+
+movies:
+  - id: 1
+    title: "The Matrix"
+    director: "The Wachowskis"
+    year: 1999
+    genre: "Sci-Fi"
+    rating: 8.7
+    genres: ["Sci-Fi", "Action"]
+    
+  - id: 2
+    title: "Inception"
+    director: "Christopher Nolan"
+    year: 2010
+    genre: "Sci-Fi"
+    rating: 8.8
+    genres: ["Sci-Fi", "Thriller"]
+    
+  - id: 3
+    title: "Interstellar"
+    director: "Christopher Nolan"
+    year: 2014
+    genre: "Sci-Fi"
+    rating: 8.6
+    genres: ["Sci-Fi", "Drama"]
+    
+  - id: 4
+    title: "The Dark Knight"
+    director: "Christopher Nolan"
+    year: 2008
+    genre: "Action"
+    rating: 9.0
+    genres: ["Action", "Crime", "Drama"]
+    
+  - id: 5
+    title: "Pulp Fiction"
+    director: "Quentin Tarantino"
+    year: 1994
+    genre: "Crime"
+    rating: 8.9
+    genres: ["Crime", "Drama"]
+    
+  - id: 6
+    title: "Kill Bill: Volume 1"
+    director: "Quentin Tarantino"
+    year: 2003
+    genre: "Action"
+    rating: 8.1
+    genres: ["Action", "Crime"]
+    
+  - id: 7
+    title: "Goodfellas"
+    director: "Martin Scorsese"
+    year: 1990
+    genre: "Crime"
+    rating: 8.7
+    genres: ["Crime", "Drama"]
+    
+  - id: 8
+    title: "Forrest Gump"
+    director: "Robert Zemeckis"
+    year: 1994
+    genre: "Drama"
+    rating: 8.8
+    genres: ["Drama", "Romance"]
+
+actors: []  # Empty actors list for movie-only fixtures

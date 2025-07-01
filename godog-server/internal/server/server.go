@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	"shared-mcp/pkg/logging"
+	"github.com/francknouama/movies-mcp-server/shared-mcp/pkg/logging"
 
 	"github.com/francknouama/movies-mcp-server/godog-server/internal/config"
 	"github.com/francknouama/movies-mcp-server/godog-server/internal/godog"

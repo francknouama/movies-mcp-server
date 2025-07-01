@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"shared-mcp/pkg/errors"
-	"shared-mcp/pkg/logging"
+	"github.com/francknouama/movies-mcp-server/shared-mcp/pkg/errors"
+	"github.com/francknouama/movies-mcp-server/shared-mcp/pkg/logging"
 
 	gherkin "github.com/cucumber/gherkin/go/v26"
 	messages "github.com/cucumber/messages/go/v21"

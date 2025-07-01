@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"shared-mcp/pkg/errors"
+	"github.com/francknouama/movies-mcp-server/shared-mcp/pkg/errors"
 )
 
 // ValidationRule represents a validation rule

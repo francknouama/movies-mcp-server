@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/francknouama/movies-mcp-server/shared-mcp/pkg/protocol"
 )
 
 // TestContext holds the state for the current test scenario
@@ -23,7 +25,7 @@ type TestContext struct {
 	httpClient       *http.Client
 	lastResponse     *http.Response
 	lastResponseBody []byte
-	lastMCPResponse  *MCPResponse
+	lastMCPResponse  *protocol.MCPResponse
 	lastError        error
 
 	// Test data storage
@@ -43,23 +45,23 @@ type TestContext struct {
 
 // NewTestContext creates a new test context
 func NewTestContext() *TestContext {
-	useRealServer := os.Getenv("USE_REAL_SERVER") == "true"
-
+	// Phase 1 BDD Remediation: Always use real server (removed useRealServer flag)
+	
 	dbHost := os.Getenv("DB_HOST")
 	if dbHost == "" {
 		dbHost = "localhost"
 	}
 	dbPort := os.Getenv("DB_PORT")
 	if dbPort == "" {
-		dbPort = "5433"
+		dbPort = "5435" // Use working test database port
 	}
 	dbUser := os.Getenv("DB_USER")
 	if dbUser == "" {
-		dbUser = "movies_user"
+		dbUser = "test_user" // Use correct test database credentials
 	}
 	dbPassword := os.Getenv("DB_PASSWORD")
 	if dbPassword == "" {
-		dbPassword = "movies_password"
+		dbPassword = "test_password" // Use correct test database credentials
 	}
 	dbName := os.Getenv("DB_NAME")
 	if dbName == "" {
@@ -80,43 +82,24 @@ func NewTestContext() *TestContext {
 		createdActors: make(map[string]int),
 		storedValues:  make(map[string]interface{}),
 		dbConnString:  dbConnString,
-		useRealServer: useRealServer,
+		useRealServer: true, // Phase 1 BDD Remediation: Always use real server
 	}
 }
 
-// MCPRequest represents an MCP JSON-RPC request
-type MCPRequest struct {
-	JSONRPC string      `json:"jsonrpc"`
-	ID      interface{} `json:"id"`
-	Method  string      `json:"method"`
-	Params  interface{} `json:"params,omitempty"`
-}
-
-// MCPResponse represents an MCP JSON-RPC response
-type MCPResponse struct {
-	JSONRPC string      `json:"jsonrpc"`
-	ID      interface{} `json:"id"`
-	Result  interface{} `json:"result,omitempty"`
-	Error   *MCPError   `json:"error,omitempty"`
-}
-
-// MCPError represents an MCP error
-type MCPError struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
-}
+// Type aliases for convenience - using shared protocol types
+type MCPRequest = protocol.MCPRequest
+type MCPResponse = protocol.MCPResponse
+type MCPError = protocol.MCPError
 
 // SendMCPRequest sends an MCP request via stdin or mock
 func (ctx *TestContext) SendMCPRequest(request *MCPRequest) error {
 	ctx.mutex.Lock()
 	defer ctx.mutex.Unlock()
 
-	if ctx.useRealServer {
-		return ctx.sendRealMCPRequest(request)
-	}
-
-	return ctx.sendMockMCPRequest(request)
+	// Phase 1 BDD Remediation: Force all tests to use real server
+	// This eliminates the need for 1000+ lines of mock code
+	fmt.Printf("BDD Remediation: Forcing real server for %s (was useRealServer=%v)\n", request.Method, ctx.useRealServer)
+	return ctx.sendRealMCPRequest(request)
 }
 
 // sendRealMCPRequest sends request to real MCP server via stdin/stdout
@@ -1080,16 +1063,16 @@ func (ctx *TestContext) StartMCPServer() error {
 	fmt.Printf("Starting real MCP server...\n")
 
 	// Path to the MCP server binary
-	serverPath := "../mcp-server/build/movies-server"
+	serverPath := "../mcp-server/mcp-server"
 
-	// Set environment variables for the server
+	// Set environment variables for the server from our configured values
 	env := os.Environ()
-	env = append(env, fmt.Sprintf("DB_HOST=%s", os.Getenv("DB_HOST")))
-	env = append(env, fmt.Sprintf("DB_PORT=%s", os.Getenv("DB_PORT")))
-	env = append(env, fmt.Sprintf("DB_USER=%s", os.Getenv("DB_USER")))
-	env = append(env, fmt.Sprintf("DB_PASSWORD=%s", os.Getenv("DB_PASSWORD")))
-	env = append(env, fmt.Sprintf("DB_NAME=%s", os.Getenv("DB_NAME")))
-	env = append(env, fmt.Sprintf("DB_SSLMODE=%s", os.Getenv("DB_SSLMODE")))
+	env = append(env, fmt.Sprintf("DB_HOST=localhost"))
+	env = append(env, fmt.Sprintf("DB_PORT=5435"))
+	env = append(env, fmt.Sprintf("DB_USER=test_user"))
+	env = append(env, fmt.Sprintf("DB_PASSWORD=test_password"))
+	env = append(env, fmt.Sprintf("DB_NAME=movies_mcp_test"))
+	env = append(env, fmt.Sprintf("DB_SSLMODE=disable"))
 
 	ctx.mcpServerCmd = exec.Command(serverPath, "-skip-migrations")
 	ctx.mcpServerCmd.Env = env

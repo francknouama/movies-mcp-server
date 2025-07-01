@@ -17,24 +17,24 @@ func bulkMovieImportTool() dto.Tool {
 		Description: "Import multiple movies at once",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"movies": map[string]interface{}{
-					"type":        "array",
-					"description": "Array of movies to import",
-					"items": map[string]interface{}{
-						"type": "object",
-						"properties": map[string]interface{}{
-							"title": map[string]interface{}{
-								"type": "string",
+			Properties: map[string]dto.SchemaProperty{
+				"movies": {
+					Type:        "array",
+					Description: "Array of movies to import",
+					Items: &dto.SchemaProperty{
+						Type: "object",
+						Properties: map[string]dto.SchemaProperty{
+							"title": {
+								Type: "string",
 							},
-							"director": map[string]interface{}{
-								"type": "string",
+							"director": {
+								Type: "string",
 							},
-							"year": map[string]interface{}{
-								"type": "integer",
+							"year": {
+								Type: "integer",
 							},
 						},
-						"required": []string{"title", "director", "year"},
+						Required: []string{"title", "director", "year"},
 					},
 				},
 			},
@@ -49,10 +49,10 @@ func movieRecommendationEngineTool() dto.Tool {
 		Description: "Get movie recommendations based on preferences",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"user_preferences": map[string]interface{}{
-					"type":        "object",
-					"description": "User preferences for recommendations",
+			Properties: map[string]dto.SchemaProperty{
+				"user_preferences": {
+					Type:        "object",
+					Description: "User preferences for recommendations",
 				},
 			},
 			Required: []string{"user_preferences"},
@@ -66,10 +66,10 @@ func directorCareerAnalysisTool() dto.Tool {
 		Description: "Analyze a director's career trajectory",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"director_name": map[string]interface{}{
-					"type":        "string",
-					"description": "Director name to analyze",
+			Properties: map[string]dto.SchemaProperty{
+				"director_name": {
+					Type:        "string",
+					Description: "Director name to analyze",
 				},
 			},
 			Required: []string{"director_name"},

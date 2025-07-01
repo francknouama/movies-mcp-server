@@ -15,14 +15,14 @@ func validateToolCallTool() dto.Tool {
 		Description: "Validate a tool call against its schema",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"tool_name": map[string]interface{}{
-					"type":        "string",
-					"description": "Tool name to validate",
+			Properties: map[string]dto.SchemaProperty{
+				"tool_name": {
+					Type:        "string",
+					Description: "Tool name to validate",
 				},
-				"arguments": map[string]interface{}{
-					"type":        "object",
-					"description": "Arguments to validate",
+				"arguments": {
+					Type:        "object",
+					Description: "Arguments to validate",
 				},
 			},
 			Required: []string{"tool_name", "arguments"},

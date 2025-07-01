@@ -1,0 +1,74 @@
+# Test fixtures for actor-related scenarios
+# This replaces hardcoded test data in step definitions
+
+actors:
+  - id: 1
+    name: "Leonardo DiCaprio"
+    birth_year: 1974
+    bio: "American actor and film producer"
+    movie_ids: [2]  # Inception
+    
+  - id: 2
+    name: "Morgan Freeman"
+    birth_year: 1937
+    bio: "American actor and narrator"
+    movie_ids: [4]  # The Dark Knight
+    
+  - id: 3
+    name: "Keanu Reeves"
+    birth_year: 1964
+    bio: "Canadian actor"
+    movie_ids: [1]  # The Matrix
+    
+  - id: 4
+    name: "Samuel L. Jackson"
+    birth_year: 1948
+    bio: "American actor and producer"
+    movie_ids: [5]  # Pulp Fiction
+    
+  - id: 5
+    name: "Uma Thurman"
+    birth_year: 1970
+    bio: "American actress and model"
+    movie_ids: [5, 6]  # Pulp Fiction, Kill Bill
+
+movies:
+  - id: 1
+    title: "The Matrix"
+    director: "The Wachowskis"
+    year: 1999
+    genre: "Sci-Fi"
+    rating: 8.7
+    genres: ["Sci-Fi", "Action"]
+    
+  - id: 2
+    title: "Inception"
+    director: "Christopher Nolan"
+    year: 2010
+    genre: "Sci-Fi"
+    rating: 8.8
+    genres: ["Sci-Fi", "Thriller"]
+    
+  - id: 4
+    title: "The Dark Knight"
+    director: "Christopher Nolan"
+    year: 2008
+    genre: "Action"
+    rating: 9.0
+    genres: ["Action", "Crime", "Drama"]
+    
+  - id: 5
+    title: "Pulp Fiction"
+    director: "Quentin Tarantino"
+    year: 1994
+    genre: "Crime"
+    rating: 8.9
+    genres: ["Crime", "Drama"]
+    
+  - id: 6
+    title: "Kill Bill: Volume 1"
+    director: "Quentin Tarantino"
+    year: 2003
+    genre: "Action"
+    rating: 8.1
+    genres: ["Action", "Crime"]

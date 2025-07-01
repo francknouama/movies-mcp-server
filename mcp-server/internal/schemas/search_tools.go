@@ -18,39 +18,39 @@ func searchMoviesTool() dto.Tool {
 		Description: "Search for movies by various criteria",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"title": map[string]interface{}{
-					"type":        "string",
-					"description": "Search by title",
+			Properties: map[string]dto.SchemaProperty{
+				"title": {
+					Type:        "string",
+					Description: "Search by title",
 				},
-				"director": map[string]interface{}{
-					"type":        "string",
-					"description": "Search by director",
+				"director": {
+					Type:        "string",
+					Description: "Search by director",
 				},
-				"genre": map[string]interface{}{
-					"type":        "string",
-					"description": "Search by genre",
+				"genre": {
+					Type:        "string",
+					Description: "Search by genre",
 				},
-				"min_year": map[string]interface{}{
-					"type":        "integer",
-					"description": "Minimum release year",
+				"min_year": {
+					Type:        "integer",
+					Description: "Minimum release year",
 				},
-				"max_year": map[string]interface{}{
-					"type":        "integer",
-					"description": "Maximum release year",
+				"max_year": {
+					Type:        "integer",
+					Description: "Maximum release year",
 				},
-				"min_rating": map[string]interface{}{
-					"type":        "number",
-					"description": "Minimum rating",
+				"min_rating": {
+					Type:        "number",
+					Description: "Minimum rating",
 				},
-				"max_rating": map[string]interface{}{
-					"type":        "number",
-					"description": "Maximum rating",
+				"max_rating": {
+					Type:        "number",
+					Description: "Maximum rating",
 				},
-				"limit": map[string]interface{}{
-					"type":        "integer",
-					"description": "Maximum number of results",
-					"default":     50,
+				"limit": {
+					Type:        "integer",
+					Description: "Maximum number of results",
+					Default:     50,
 				},
 			},
 			Required: []string{},
@@ -64,10 +64,10 @@ func searchByDecadeTool() dto.Tool {
 		Description: "Search movies by decade (e.g., '1990s', '2000s')",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"decade": map[string]interface{}{
-					"type":        "string",
-					"description": "Decade to search (e.g., '1990s', '2000s')",
+			Properties: map[string]dto.SchemaProperty{
+				"decade": {
+					Type:        "string",
+					Description: "Decade to search (e.g., '1990s', '2000s')",
 				},
 			},
 			Required: []string{"decade"},
@@ -81,18 +81,18 @@ func searchByRatingRangeTool() dto.Tool {
 		Description: "Search movies within a specific rating range",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"min_rating": map[string]interface{}{
-					"type":        "number",
-					"description": "Minimum rating (0-10)",
-					"minimum":     0,
-					"maximum":     10,
+			Properties: map[string]dto.SchemaProperty{
+				"min_rating": {
+					Type:        "number",
+					Description: "Minimum rating (0-10)",
+					Minimum:     Float64Ptr(0),
+					Maximum:     Float64Ptr(10),
 				},
-				"max_rating": map[string]interface{}{
-					"type":        "number",
-					"description": "Maximum rating (0-10)",
-					"minimum":     0,
-					"maximum":     10,
+				"max_rating": {
+					Type:        "number",
+					Description: "Maximum rating (0-10)",
+					Minimum:     Float64Ptr(0),
+					Maximum:     Float64Ptr(10),
 				},
 			},
 			Required: []string{"min_rating", "max_rating"},
@@ -106,15 +106,15 @@ func searchSimilarMoviesTool() dto.Tool {
 		Description: "Find movies similar to a given movie",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"movie_id": map[string]interface{}{
-					"type":        "integer",
-					"description": "Reference movie ID",
+			Properties: map[string]dto.SchemaProperty{
+				"movie_id": {
+					Type:        "integer",
+					Description: "Reference movie ID",
 				},
-				"limit": map[string]interface{}{
-					"type":        "integer",
-					"description": "Number of similar movies to return",
-					"default":     5,
+				"limit": {
+					Type:        "integer",
+					Description: "Number of similar movies to return",
+					Default:     5,
 				},
 			},
 			Required: []string{"movie_id"},

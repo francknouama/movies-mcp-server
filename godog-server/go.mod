@@ -6,7 +6,7 @@ require (
 	github.com/cucumber/gherkin/go/v26 v26.2.0
 	github.com/cucumber/godog v0.15.0
 	github.com/cucumber/messages/go/v21 v21.0.1
-	shared-mcp v0.0.0-00010101000000-000000000000
+	github.com/francknouama/movies-mcp-server/shared-mcp v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -19,4 +19,4 @@ require (
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
 )
 
-replace shared-mcp => ../shared-mcp
+replace github.com/francknouama/movies-mcp-server/shared-mcp => ../shared-mcp

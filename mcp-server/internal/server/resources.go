@@ -148,7 +148,7 @@ func (rm *ResourceManager) handleMoviePoster(uri string, movieID int, sender Res
 	content := dto.ResourceContent{
 		URI:      uri,
 		MimeType: "image/jpeg",
-		Blob:     "", // Base64 encoded image data would go here
+		Blob:     nil, // Base64 encoded image data would go here
 	}
 
 	response := dto.ResourceReadResponse{

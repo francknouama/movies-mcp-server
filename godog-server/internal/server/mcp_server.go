@@ -5,8 +5,9 @@ import (
 	"io"
 	"strings"
 
-	"shared-mcp/pkg/errors"
-	"shared-mcp/pkg/logging"
+	"github.com/francknouama/movies-mcp-server/shared-mcp/pkg/errors"
+	"github.com/francknouama/movies-mcp-server/shared-mcp/pkg/logging"
+	"github.com/francknouama/movies-mcp-server/shared-mcp/pkg/protocol"
 
 	"github.com/francknouama/movies-mcp-server/godog-server/internal/godog"
 )
@@ -27,28 +28,10 @@ type ToolHandler func(arguments map[string]any) (any, error)
 // ResourceHandler represents a function that handles resource requests
 type ResourceHandler func(uri string) (any, error)
 
-// MCPRequest represents an incoming MCP request
-type MCPRequest struct {
-	JSONRPC string `json:"jsonrpc"`
-	ID      any    `json:"id"`
-	Method  string `json:"method"`
-	Params  any    `json:"params,omitempty"`
-}
-
-// MCPResponse represents an outgoing MCP response
-type MCPResponse struct {
-	JSONRPC string `json:"jsonrpc"`
-	ID      any    `json:"id,omitempty"`
-	Result  any    `json:"result,omitempty"`
-	Error   any    `json:"error,omitempty"`
-}
-
-// MCPError represents an MCP error response
-type MCPError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
-}
+// Type aliases for shared protocol types - Phase 2 BDD Remediation
+type MCPRequest = protocol.MCPRequest
+type MCPResponse = protocol.MCPResponse
+type MCPError = protocol.MCPError
 
 // NewMCPServer creates a new MCP server instance
 func NewMCPServer(input io.Reader, output io.Writer, logger *logging.Logger, godogRunner *godog.Runner) *MCPServer {
@@ -112,7 +95,7 @@ func (s *MCPServer) handleRequest(request MCPRequest) MCPResponse {
 		return MCPResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
-			Error: MCPError{
+			Error: &MCPError{
 				Code:    errors.MethodNotFound,
 				Message: "Method not found: " + request.Method,
 			},
@@ -214,7 +197,7 @@ func (s *MCPServer) handleToolCall(request MCPRequest) MCPResponse {
 		return MCPResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
-			Error: MCPError{
+			Error: &MCPError{
 				Code:    errors.InvalidParams,
 				Message: "Invalid parameters",
 			},
@@ -226,7 +209,7 @@ func (s *MCPServer) handleToolCall(request MCPRequest) MCPResponse {
 		return MCPResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
-			Error: MCPError{
+			Error: &MCPError{
 				Code:    errors.InvalidParams,
 				Message: "Tool name is required",
 			},
@@ -243,7 +226,7 @@ func (s *MCPServer) handleToolCall(request MCPRequest) MCPResponse {
 		return MCPResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
-			Error: MCPError{
+			Error: &MCPError{
 				Code:    errors.MethodNotFound,
 				Message: "Tool not found: " + toolName,
 			},
@@ -255,7 +238,7 @@ func (s *MCPServer) handleToolCall(request MCPRequest) MCPResponse {
 		return MCPResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
-			Error: MCPError{
+			Error: &MCPError{
 				Code:    errors.InternalError,
 				Message: err.Error(),
 			},
@@ -321,7 +304,7 @@ func (s *MCPServer) handleResourceRead(request MCPRequest) MCPResponse {
 		return MCPResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
-			Error: MCPError{
+			Error: &MCPError{
 				Code:    errors.InvalidParams,
 				Message: "Invalid parameters",
 			},
@@ -333,7 +316,7 @@ func (s *MCPServer) handleResourceRead(request MCPRequest) MCPResponse {
 		return MCPResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
-			Error: MCPError{
+			Error: &MCPError{
 				Code:    errors.InvalidParams,
 				Message: "URI is required",
 			},
@@ -348,7 +331,7 @@ func (s *MCPServer) handleResourceRead(request MCPRequest) MCPResponse {
 			return MCPResponse{
 				JSONRPC: "2.0",
 				ID:      request.ID,
-				Error: MCPError{
+				Error: &MCPError{
 					Code:    errors.InternalError,
 					Message: err.Error(),
 				},
@@ -375,7 +358,7 @@ func (s *MCPServer) handleResourceRead(request MCPRequest) MCPResponse {
 		return MCPResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
-			Error: MCPError{
+			Error: &MCPError{
 				Code:    errors.MethodNotFound,
 				Message: "Resource not found: " + uri,
 			},
@@ -387,7 +370,7 @@ func (s *MCPServer) handleResourceRead(request MCPRequest) MCPResponse {
 		return MCPResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
-			Error: MCPError{
+			Error: &MCPError{
 				Code:    errors.InternalError,
 				Message: err.Error(),
 			},

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/cucumber/godog"
@@ -37,13 +36,21 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	// Setup hooks for scenario lifecycle
 	sc.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		// This runs before each scenario
+		fmt.Printf("Starting scenario: %s\n", sc.Name)
 		return ctx, nil
 	})
 
 	sc.After(func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
 		// This runs after each scenario
-		// Clean up test data
 		testCtx := step_definitions.NewTestContext()
+
+		if err != nil {
+			fmt.Printf("Scenario failed: %s - %v\n", sc.Name, err)
+		} else {
+			fmt.Printf("Scenario passed: %s\n", sc.Name)
+		}
+
+		// Clean up test data
 		if cleanupErr := testCtx.CleanDatabase(); cleanupErr != nil {
 			fmt.Printf("Warning: failed to clean database after scenario: %v\n", cleanupErr)
 		}
@@ -55,17 +62,4 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 
 		return ctx, nil
 	})
-}
-
-func TestMain(m *testing.M) {
-	// Setup global test environment
-	fmt.Println("Setting up test environment...")
-
-	// Run tests
-	status := m.Run()
-
-	// Cleanup global test environment
-	fmt.Println("Cleaning up test environment...")
-
-	os.Exit(status)
 }
