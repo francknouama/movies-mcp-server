@@ -121,8 +121,8 @@ jobs:
           -- Create random actor-movie relationships
           INSERT INTO movie_actors (movie_id, actor_id, created_at)
           SELECT 
-            (random() * 10000)::int + 1,
-            (random() * 5000)::int + 1,
+            floor(random() * 10000)::int + 1,
+            floor(random() * 5000)::int + 1,
             NOW()
           FROM generate_series(1, 50000)
           ON CONFLICT DO NOTHING;
