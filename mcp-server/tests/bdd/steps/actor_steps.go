@@ -6,27 +6,13 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
+	"github.com/francknouama/movies-mcp-server/mcp-server/internal/interfaces/dto"
 )
-
-// ActorResponse represents the structure of an actor response
-type ActorResponse struct {
-	ID        int    `json:"id"`
-	Name      string `json:"name"`
-	BirthYear int    `json:"birth_year"`
-	Bio       string `json:"bio"`
-	MovieIDs  []int  `json:"movie_ids"`
-}
-
-// ActorsResponse represents a list of actors response
-type ActorsResponse struct {
-	Actors []ActorResponse `json:"actors"`
-	Total  int             `json:"total"`
-}
 
 // MovieCastResponse represents the cast of a movie
 type MovieCastResponse struct {
-	MovieID int             `json:"movie_id"`
-	Cast    []ActorResponse `json:"cast"`
+	MovieID int                    `json:"movie_id"`
+	Cast    []*dto.ActorResponse `json:"cast"`
 }
 
 // ActorMoviesResponse represents movies associated with an actor
@@ -77,7 +63,7 @@ func InitializeActorSteps(ctx *godog.ScenarioContext) {
 
 // theResponseShouldContainAnActorWith verifies actor response contains expected fields
 func (c *CommonStepContext) theResponseShouldContainAnActorWith(table *godog.Table) error {
-	var actor ActorResponse
+	var actor dto.ActorResponse
 	if err := c.bddContext.ParseJSONResponse(&actor); err != nil {
 		return fmt.Errorf("failed to parse actor response: %w", err)
 	}
@@ -113,7 +99,7 @@ func (c *CommonStepContext) theResponseShouldContainAnActorWith(table *godog.Tab
 
 // theActorShouldHaveAnAssignedID verifies the actor has a valid ID
 func (c *CommonStepContext) theActorShouldHaveAnAssignedID() error {
-	var actor ActorResponse
+	var actor dto.ActorResponse
 	if err := c.bddContext.ParseJSONResponse(&actor); err != nil {
 		return fmt.Errorf("failed to parse actor response: %w", err)
 	}
@@ -127,10 +113,10 @@ func (c *CommonStepContext) theActorShouldHaveAnAssignedID() error {
 
 // theResponseShouldContainNActors verifies the response contains the expected number of actors
 func (c *CommonStepContext) theResponseShouldContainNActors(expectedCount int) error {
-	var response ActorsResponse
+	var response dto.ActorsListResponse
 	if err := c.bddContext.ParseJSONResponse(&response); err != nil {
 		// Try parsing as a single actor list
-		var actors []ActorResponse
+		var actors []*dto.ActorResponse
 		if err2 := c.bddContext.ParseJSONResponse(&actors); err2 != nil {
 			return fmt.Errorf("failed to parse actors response: %w", err)
 		}
@@ -251,7 +237,7 @@ func (c *CommonStepContext) anActorExistsWithName(name string) error {
 
 // theResponseShouldContainTheActorDetails verifies the response contains actor details
 func (c *CommonStepContext) theResponseShouldContainTheActorDetails() error {
-	var actor ActorResponse
+	var actor dto.ActorResponse
 	if err := c.bddContext.ParseJSONResponse(&actor); err != nil {
 		return fmt.Errorf("failed to parse actor details: %w", err)
 	}
@@ -269,7 +255,7 @@ func (c *CommonStepContext) theResponseShouldContainTheActorDetails() error {
 
 // theActorNameShouldBe verifies the actor name matches expected value
 func (c *CommonStepContext) theActorNameShouldBe(expectedName string) error {
-	var actor ActorResponse
+	var actor dto.ActorResponse
 	if err := c.bddContext.ParseJSONResponse(&actor); err != nil {
 		return fmt.Errorf("failed to parse actor response: %w", err)
 	}
@@ -288,7 +274,7 @@ func (c *CommonStepContext) theActorNameShouldBeUpdatedTo(expectedName string) e
 
 // theActorBioShouldBeUpdatedTo verifies bio after update
 func (c *CommonStepContext) theActorBioShouldBeUpdatedTo(expectedBio string) error {
-	var actor ActorResponse
+	var actor dto.ActorResponse
 	if err := c.bddContext.ParseJSONResponse(&actor); err != nil {
 		return fmt.Errorf("failed to parse actor response: %w", err)
 	}
@@ -415,7 +401,7 @@ func (c *CommonStepContext) theCastShouldInclude(table *godog.Table) error {
 	var response MovieCastResponse
 	if err := c.bddContext.ParseJSONResponse(&response); err != nil {
 		// Try parsing as actors array
-		var actors []ActorResponse
+		var actors []*dto.ActorResponse
 		if err2 := c.bddContext.ParseJSONResponse(&actors); err2 != nil {
 			return fmt.Errorf("failed to parse cast response: %w", err)
 		}
@@ -536,10 +522,10 @@ func (c *CommonStepContext) theActorShouldBeAssociatedWithAllLinkedMovies() erro
 
 // allActorNamesShouldContain verifies all actor names contain the expected substring
 func (c *CommonStepContext) allActorNamesShouldContain(expectedSubstring string) error {
-	var response ActorsResponse
+	var response dto.ActorsListResponse
 	if err := c.bddContext.ParseJSONResponse(&response); err != nil {
 		// Try parsing as a simple actors array
-		var actors []ActorResponse
+		var actors []*dto.ActorResponse
 		if err2 := c.bddContext.ParseJSONResponse(&actors); err2 != nil {
 			return fmt.Errorf("failed to parse actors response: %w", err)
 		}
@@ -561,10 +547,10 @@ func (c *CommonStepContext) allActorNamesShouldContain(expectedSubstring string)
 
 // allActorsShouldHaveBirthYearBetween verifies all actors have birth year in range
 func (c *CommonStepContext) allActorsShouldHaveBirthYearBetween(minYear, maxYear int) error {
-	var response ActorsResponse
+	var response dto.ActorsListResponse
 	if err := c.bddContext.ParseJSONResponse(&response); err != nil {
 		// Try parsing as a simple actors array
-		var actors []ActorResponse
+		var actors []*dto.ActorResponse
 		if err2 := c.bddContext.ParseJSONResponse(&actors); err2 != nil {
 			return fmt.Errorf("failed to parse actors response: %w", err)
 		}
