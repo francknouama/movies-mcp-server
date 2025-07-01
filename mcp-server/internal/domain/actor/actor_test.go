@@ -66,8 +66,8 @@ func TestNewActor(t *testing.T) {
 				if actor.BirthYear().Value() != tt.birthYear {
 					t.Errorf("NewActor() birthYear = %v, want %v", actor.BirthYear().Value(), tt.birthYear)
 				}
-				if actor.ID().IsZero() {
-					t.Error("NewActor() should not have zero ID after creation")
+				if !actor.ID().IsZero() {
+					t.Error("NewActor() should have zero ID before persistence")
 				}
 			}
 		})

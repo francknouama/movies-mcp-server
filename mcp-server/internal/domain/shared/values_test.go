@@ -21,9 +21,9 @@ func TestNewMovieID(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "invalid zero ID",
+			name:    "valid zero ID",
 			value:   0,
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name:    "invalid negative ID",
@@ -70,9 +70,9 @@ func TestNewActorID(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "invalid zero ID",
+			name:    "valid zero ID",
 			value:   0,
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name:    "invalid negative ID",

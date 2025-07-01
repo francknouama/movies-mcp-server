@@ -89,11 +89,7 @@ func (r *Router) handleToolsCall(req *dto.JSONRPCRequest, protocol *Protocol) {
 		return
 	}
 
-	// Validate tool call if validator is available
-	if r.validator != nil {
-		// Note: For now, we skip validation here since it's handled
-		// by the container's ToolValidator. This can be enhanced later.
-	}
+	// Note: Tool validation is handled by the container's ToolValidator
 
 	// Get and execute tool handler
 	handler, exists := r.registry.GetToolHandler(params.Name)

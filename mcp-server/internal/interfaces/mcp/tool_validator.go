@@ -109,8 +109,15 @@ func (tv *ToolValidator) validateArguments(arguments map[string]interface{}, sch
 func (tv *ToolValidator) validateField(fieldName string, value interface{}, fieldSchema interface{}) []ValidationError {
 	var errors []ValidationError
 
-	schema, ok := fieldSchema.(map[string]interface{})
-	if !ok {
+	// Handle both map[string]interface{} and dto.SchemaProperty types
+	var schema map[string]interface{}
+	switch fs := fieldSchema.(type) {
+	case map[string]interface{}:
+		schema = fs
+	case dto.SchemaProperty:
+		// Convert SchemaProperty to map for validation
+		schema = schemaPropertyToMap(fs)
+	default:
 		return []ValidationError{{
 			Field:   fieldName,
 			Value:   fmt.Sprintf("%v", value),
@@ -473,6 +480,57 @@ func (tv *ToolValidator) validateObject(fieldName string, value interface{}, sch
 }
 
 // Helper functions
+
+// schemaPropertyToMap converts a SchemaProperty struct to a map for validation
+func schemaPropertyToMap(prop dto.SchemaProperty) map[string]interface{} {
+	m := make(map[string]interface{})
+
+	if prop.Type != "" {
+		m["type"] = prop.Type
+	}
+	if prop.Description != "" {
+		m["description"] = prop.Description
+	}
+	if prop.Enum != nil {
+		m["enum"] = prop.Enum
+	}
+	if prop.Default != nil {
+		m["default"] = prop.Default
+	}
+	if prop.Format != "" {
+		m["format"] = prop.Format
+	}
+	if prop.Pattern != "" {
+		m["pattern"] = prop.Pattern
+	}
+	if prop.MinLength != nil {
+		m["minLength"] = float64(*prop.MinLength)
+	}
+	if prop.MaxLength != nil {
+		m["maxLength"] = float64(*prop.MaxLength)
+	}
+	if prop.Minimum != nil {
+		m["minimum"] = *prop.Minimum
+	}
+	if prop.Maximum != nil {
+		m["maximum"] = *prop.Maximum
+	}
+	if prop.Items != nil {
+		m["items"] = schemaPropertyToMap(*prop.Items)
+	}
+	if prop.Properties != nil {
+		props := make(map[string]interface{})
+		for k, v := range prop.Properties {
+			props[k] = schemaPropertyToMap(v)
+		}
+		m["properties"] = props
+	}
+	if prop.Required != nil {
+		m["required"] = prop.Required
+	}
+
+	return m
+}
 
 func isValidDateFormat(dateStr string) bool {
 	if len(dateStr) != 10 {

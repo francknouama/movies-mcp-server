@@ -194,10 +194,10 @@ func TestPromptHandlers_HandlePromptGet(t *testing.T) {
 					if msg.Role == "" {
 						t.Error("Message missing role")
 					}
-					if msg.Content.Type != "text" {
-						t.Errorf("Expected text content type, got %s", msg.Content.Type)
+					if len(msg.Content) == 0 || msg.Content[0].Type != "text" {
+						t.Errorf("Expected text content type, got %v", msg.Content)
 					}
-					if msg.Content.Text == "" {
+					if len(msg.Content) == 0 || msg.Content[0].Text == "" {
 						t.Error("Message missing text content")
 					}
 				}
@@ -229,7 +229,7 @@ func TestPromptHandlers_PromptGeneration(t *testing.T) {
 		}
 
 		// Verify prompt contains expected elements
-		text := msg.Content.Text
+		text := msg.Content[0].Text
 		expectedStrings := []string{"Action", "8.5", "2020-2024"}
 		for _, expected := range expectedStrings {
 			if !containsString(text, expected) {
@@ -247,7 +247,7 @@ func TestPromptHandlers_PromptGeneration(t *testing.T) {
 
 		response := handlers.generateDirectorFilmographyPrompt(args)
 
-		text := response.Messages[0].Content.Text
+		text := response.Messages[0].Content[0].Text
 		if !containsString(text, "Christopher Nolan") {
 			t.Error("Expected prompt to contain director name")
 		}

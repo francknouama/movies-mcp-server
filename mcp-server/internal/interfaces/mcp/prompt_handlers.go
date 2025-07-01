@@ -223,9 +223,11 @@ func (h *PromptHandlers) generateMovieRecommendationPrompt(args map[string]inter
 		Messages: []dto.PromptMessage{
 			{
 				Role: "user",
-				Content: dto.PromptMessageContent{
-					Type: "text",
-					Text: promptText.String(),
+				Content: []dto.ContentBlock{
+					{
+						Type: "text",
+						Text: promptText.String(),
+					},
 				},
 			},
 		},
@@ -253,9 +255,11 @@ func (h *PromptHandlers) generateMovieAnalysisPrompt(args map[string]interface{}
 		Messages: []dto.PromptMessage{
 			{
 				Role: "user",
-				Content: dto.PromptMessageContent{
-					Type: "text",
-					Text: promptText.String(),
+				Content: []dto.ContentBlock{
+					{
+						Type: "text",
+						Text: promptText.String(),
+					},
 				},
 			},
 		},
@@ -281,9 +285,11 @@ func (h *PromptHandlers) generateDirectorFilmographyPrompt(args map[string]inter
 		Messages: []dto.PromptMessage{
 			{
 				Role: "user",
-				Content: dto.PromptMessageContent{
-					Type: "text",
-					Text: promptText.String(),
+				Content: []dto.ContentBlock{
+					{
+						Type: "text",
+						Text: promptText.String(),
+					},
 				},
 			},
 		},
@@ -309,9 +315,11 @@ func (h *PromptHandlers) generateGenreExplorationPrompt(args map[string]interfac
 		Messages: []dto.PromptMessage{
 			{
 				Role: "user",
-				Content: dto.PromptMessageContent{
-					Type: "text",
-					Text: promptText.String(),
+				Content: []dto.ContentBlock{
+					{
+						Type: "text",
+						Text: promptText.String(),
+					},
 				},
 			},
 		},
@@ -340,9 +348,11 @@ func (h *PromptHandlers) generateMovieComparisonPrompt(args map[string]interface
 		Messages: []dto.PromptMessage{
 			{
 				Role: "user",
-				Content: dto.PromptMessageContent{
-					Type: "text",
-					Text: promptText.String(),
+				Content: []dto.ContentBlock{
+					{
+						Type: "text",
+						Text: promptText.String(),
+					},
 				},
 			},
 		},

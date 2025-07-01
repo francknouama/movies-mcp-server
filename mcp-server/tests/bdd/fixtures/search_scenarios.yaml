@@ -1,0 +1,86 @@
+# Test fixtures for search and advanced query scenarios
+# This provides data for testing search functionality
+
+movies:
+  - id: 10
+    title: "Star Wars: A New Hope"
+    director: "George Lucas"
+    year: 1977
+    genre: "Sci-Fi"
+    rating: 8.6
+    genres: ["Sci-Fi", "Adventure"]
+    
+  - id: 11
+    title: "Star Wars: The Empire Strikes Back"
+    director: "Irvin Kershner"
+    year: 1980
+    genre: "Sci-Fi"
+    rating: 8.7
+    genres: ["Sci-Fi", "Adventure"]
+    
+  - id: 12
+    title: "Blade Runner"
+    director: "Ridley Scott"
+    year: 1982
+    genre: "Sci-Fi"
+    rating: 8.1
+    genres: ["Sci-Fi", "Thriller"]
+    
+  - id: 13
+    title: "Alien"
+    director: "Ridley Scott"
+    year: 1979
+    genre: "Horror"
+    rating: 8.4
+    genres: ["Horror", "Sci-Fi"]
+    
+  - id: 14
+    title: "Gladiator"
+    director: "Ridley Scott"
+    year: 2000
+    genre: "Action"
+    rating: 8.5
+    genres: ["Action", "Drama"]
+    
+  - id: 15
+    title: "Titanic"
+    director: "James Cameron"
+    year: 1997
+    genre: "Romance"
+    rating: 7.8
+    genres: ["Romance", "Drama"]
+    
+  - id: 16
+    title: "Avatar"
+    director: "James Cameron"
+    year: 2009
+    genre: "Sci-Fi"
+    rating: 7.8
+    genres: ["Sci-Fi", "Action"]
+    
+  - id: 17
+    title: "Terminator 2: Judgment Day"
+    director: "James Cameron"
+    year: 1991
+    genre: "Action"
+    rating: 8.5
+    genres: ["Action", "Sci-Fi"]
+
+actors:
+  - id: 10
+    name: "Harrison Ford"
+    birth_year: 1942
+    bio: "American actor"
+    movie_ids: [10, 12]  # Star Wars, Blade Runner
+    
+  - id: 11
+    name: "Russell Crowe"
+    birth_year: 1964
+    bio: "New Zealand-Australian actor"
+    movie_ids: [14]  # Gladiator
+    
+  - id: 12
+    name: "Arnold Schwarzenegger"
+    birth_year: 1947
+    bio: "Austrian-American actor and former politician"
+    movie_ids: [17]  # Terminator 2

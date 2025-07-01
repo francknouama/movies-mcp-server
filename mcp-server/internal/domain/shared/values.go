@@ -12,8 +12,8 @@ type MovieID struct {
 
 // NewMovieID creates a new MovieID with validation
 func NewMovieID(id int) (MovieID, error) {
-	if id <= 0 {
-		return MovieID{}, errors.New("movie ID must be positive")
+	if id < 0 {
+		return MovieID{}, errors.New("movie ID must be non-negative")
 	}
 	return MovieID{value: id}, nil
 }
@@ -40,8 +40,8 @@ type ActorID struct {
 
 // NewActorID creates a new ActorID with validation
 func NewActorID(id int) (ActorID, error) {
-	if id <= 0 {
-		return ActorID{}, errors.New("actor ID must be positive")
+	if id < 0 {
+		return ActorID{}, errors.New("actor ID must be non-negative")
 	}
 	return ActorID{value: id}, nil
 }

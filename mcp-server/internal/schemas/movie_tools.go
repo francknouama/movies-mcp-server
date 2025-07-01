@@ -19,10 +19,10 @@ func getMovieTool() dto.Tool {
 		Description: "Get a movie by ID",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"movie_id": map[string]interface{}{
-					"type":        "integer",
-					"description": "The movie ID",
+			Properties: map[string]dto.SchemaProperty{
+				"movie_id": {
+					Type:        "integer",
+					Description: "The movie ID",
 				},
 			},
 			Required: []string{"movie_id"},
@@ -36,35 +36,33 @@ func addMovieTool() dto.Tool {
 		Description: "Add a new movie to the database",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"title": map[string]interface{}{
-					"type":        "string",
-					"description": "Movie title",
+			Properties: map[string]dto.SchemaProperty{
+				"title": {
+					Type:        "string",
+					Description: "Movie title",
 				},
-				"director": map[string]interface{}{
-					"type":        "string",
-					"description": "Movie director",
+				"director": {
+					Type:        "string",
+					Description: "Movie director",
 				},
-				"year": map[string]interface{}{
-					"type":        "integer",
-					"description": "Release year",
+				"year": {
+					Type:        "integer",
+					Description: "Release year",
 				},
-				"rating": map[string]interface{}{
-					"type":        "number",
-					"description": "Movie rating (0-10)",
-					"minimum":     0,
-					"maximum":     10,
+				"rating": {
+					Type:        "number",
+					Description: "Movie rating (0-10)",
+					Minimum:     Float64Ptr(0),
+					Maximum:     Float64Ptr(10),
 				},
-				"genres": map[string]interface{}{
-					"type":        "array",
-					"description": "List of genres",
-					"items": map[string]interface{}{
-						"type": "string",
-					},
+				"genres": {
+					Type:        "array",
+					Description: "List of genres",
+					Items:       StringArrayItems(),
 				},
-				"poster_url": map[string]interface{}{
-					"type":        "string",
-					"description": "URL to movie poster",
+				"poster_url": {
+					Type:        "string",
+					Description: "URL to movie poster",
 				},
 			},
 			Required: []string{"title", "director", "year"},
@@ -78,39 +76,37 @@ func updateMovieTool() dto.Tool {
 		Description: "Update an existing movie",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"id": map[string]interface{}{
-					"type":        "integer",
-					"description": "Movie ID",
+			Properties: map[string]dto.SchemaProperty{
+				"id": {
+					Type:        "integer",
+					Description: "Movie ID",
 				},
-				"title": map[string]interface{}{
-					"type":        "string",
-					"description": "Movie title",
+				"title": {
+					Type:        "string",
+					Description: "Movie title",
 				},
-				"director": map[string]interface{}{
-					"type":        "string",
-					"description": "Movie director",
+				"director": {
+					Type:        "string",
+					Description: "Movie director",
 				},
-				"year": map[string]interface{}{
-					"type":        "integer",
-					"description": "Release year",
+				"year": {
+					Type:        "integer",
+					Description: "Release year",
 				},
-				"rating": map[string]interface{}{
-					"type":        "number",
-					"description": "Movie rating (0-10)",
-					"minimum":     0,
-					"maximum":     10,
+				"rating": {
+					Type:        "number",
+					Description: "Movie rating (0-10)",
+					Minimum:     Float64Ptr(0),
+					Maximum:     Float64Ptr(10),
 				},
-				"genres": map[string]interface{}{
-					"type":        "array",
-					"description": "List of genres",
-					"items": map[string]interface{}{
-						"type": "string",
-					},
+				"genres": {
+					Type:        "array",
+					Description: "List of genres",
+					Items:       StringArrayItems(),
 				},
-				"poster_url": map[string]interface{}{
-					"type":        "string",
-					"description": "URL to movie poster",
+				"poster_url": {
+					Type:        "string",
+					Description: "URL to movie poster",
 				},
 			},
 			Required: []string{"id", "title", "director", "year"},
@@ -124,10 +120,10 @@ func deleteMovieTool() dto.Tool {
 		Description: "Delete a movie by ID",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"movie_id": map[string]interface{}{
-					"type":        "integer",
-					"description": "The movie ID to delete",
+			Properties: map[string]dto.SchemaProperty{
+				"movie_id": {
+					Type:        "integer",
+					Description: "The movie ID to delete",
 				},
 			},
 			Required: []string{"movie_id"},
@@ -141,11 +137,11 @@ func listTopMoviesTool() dto.Tool {
 		Description: "Get top-rated movies",
 		InputSchema: dto.InputSchema{
 			Type: "object",
-			Properties: map[string]interface{}{
-				"limit": map[string]interface{}{
-					"type":        "integer",
-					"description": "Number of movies to return",
-					"default":     10,
+			Properties: map[string]dto.SchemaProperty{
+				"limit": {
+					Type:        "integer",
+					Description: "Number of movies to return",
+					Default:     10,
 				},
 			},
 			Required: []string{},
