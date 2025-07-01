@@ -14,7 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       mcp-server: ${{ steps.changes.outputs.mcp-server }}
-      godog-server: ${{ steps.changes.outputs.godog-server }}
       shared-mcp: ${{ steps.changes.outputs.shared-mcp }}
     steps:
       - uses: actions/checkout@v4
@@ -24,10 +23,6 @@ jobs:
           filters: |
             mcp-server:
               - 'mcp-server/**'
-              - 'shared-mcp/**'
-              - 'go.work'
-            godog-server:
-              - 'godog-server/**'
               - 'shared-mcp/**'
               - 'go.work'
             shared-mcp:
@@ -155,90 +150,6 @@ jobs:
           name: mcp-server-binary
           path: mcp-server/build/movies-server
 
-  test-godog-server:
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.godog-server == 'true'
-    
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: movies_mcp_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5433:5432
-          
-    env:
-      DB_HOST: localhost
-      DB_PORT: 5433
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: movies_mcp_test
-      DB_SSLMODE: disable
-      USE_REAL_SERVER: false
-      
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-godog-${{ hashFiles('godog-server/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-godog-
-            
-      - name: Install dependencies
-        working-directory: godog-server
-        run: go mod download
-        
-      - name: Run ATDD tests (Mock Mode)
-        working-directory: godog-server
-        run: go test -v -timeout=5m
-        
-      - name: Build MCP server for real tests
-        working-directory: mcp-server
-        run: |
-          mkdir -p build
-          go build -o build/movies-server cmd/server/main.go
-        
-      - name: Run ATDD tests (Real Server Mode)
-        working-directory: godog-server
-        env:
-          USE_REAL_SERVER: true
-        run: |
-          # Run migrations first
-          cd ../mcp-server && ./build/movies-server -migrate-only
-          
-          # Run ATDD tests with real server
-          cd ../godog-server
-          go test -v -timeout=10m
-          
-      - name: Generate ATDD report
-        if: always()
-        working-directory: godog-server
-        run: |
-          go test -v -timeout=5m > atdd-report.txt 2>&1 || true
-          
-      - name: Upload ATDD report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atdd-test-report
-          path: godog-server/atdd-report.txt
 
   lint:
     runs-on: ubuntu-latest
@@ -262,13 +173,6 @@ jobs:
         with:
           version: latest
           working-directory: mcp-server
-          args: --config=.golangci.yml
-          
-      - name: Run golangci-lint for godog-server
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          working-directory: godog-server
           args: --config=.golangci.yml
 
   security:
@@ -312,5 +216,4 @@ jobs:
       - name: Check for outdated dependencies
         run: |
           cd mcp-server && go list -u -m -json all | go-mod-outdated -update -direct
-          cd ../godog-server && go list -u -m -json all | go-mod-outdated -update -direct
           cd ../shared-mcp && go list -u -m -json all | go-mod-outdated -update -direct
