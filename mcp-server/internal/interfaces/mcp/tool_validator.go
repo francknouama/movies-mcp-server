@@ -484,7 +484,7 @@ func (tv *ToolValidator) validateObject(fieldName string, value interface{}, sch
 // schemaPropertyToMap converts a SchemaProperty struct to a map for validation
 func schemaPropertyToMap(prop dto.SchemaProperty) map[string]interface{} {
 	m := make(map[string]interface{})
-	
+
 	if prop.Type != "" {
 		m["type"] = prop.Type
 	}
@@ -528,7 +528,7 @@ func schemaPropertyToMap(prop dto.SchemaProperty) map[string]interface{} {
 	if prop.Required != nil {
 		m["required"] = prop.Required
 	}
-	
+
 	return m
 }
 
