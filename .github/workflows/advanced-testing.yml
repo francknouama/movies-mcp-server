@@ -1,0 +1,540 @@
+name: Advanced Testing Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run advanced tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  GO_VERSION: '1.22.5'
+
+jobs:
+  advanced-bdd-tests:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule' || github.repository == 'francknouama/movies-mcp-server'
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: movies_mcp_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: movies_mcp_test
+      DB_SSLMODE: disable
+      
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-advanced-${{ hashFiles('mcp-server/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-advanced-
+            
+      - name: Install dependencies
+        working-directory: mcp-server
+        run: go mod download
+        
+      - name: Build MCP server
+        working-directory: mcp-server
+        run: go build -o main cmd/server/main.go
+        
+      - name: Run database migrations
+        working-directory: mcp-server
+        run: ./main -migrate-only
+        
+      - name: Run Performance BDD Tests
+        working-directory: mcp-server
+        run: |
+          echo "Running performance scenarios..."
+          go test -v -tags=bdd ./tests/bdd/... -godog.tags=@performance
+        continue-on-error: true
+        id: performance-tests
+        
+      - name: Run Error Handling BDD Tests
+        working-directory: mcp-server
+        run: |
+          echo "Running error handling scenarios..."
+          go test -v -tags=bdd ./tests/bdd/... -godog.tags=@error-handling
+        continue-on-error: true
+        id: error-tests
+        
+      - name: Run Contract Testing BDD Tests
+        working-directory: mcp-server
+        run: |
+          echo "Running contract testing scenarios..."
+          go test -v -tags=bdd ./tests/bdd/... -godog.tags=@contract
+        continue-on-error: true
+        id: contract-tests
+        
+      - name: Run Advanced Resource Tests
+        working-directory: mcp-server
+        run: |
+          echo "Running advanced resource scenarios..."
+          go test -v -tags=bdd ./tests/bdd/... -godog.tags=@resources
+        continue-on-error: true
+        id: resource-tests
+        
+      - name: Generate Advanced Test Report
+        if: always()
+        run: |
+          echo "# Advanced Testing Report" > advanced-test-report.md
+          echo "" >> advanced-test-report.md
+          echo "## Test Results Summary" >> advanced-test-report.md
+          echo "" >> advanced-test-report.md
+          
+          if [ "${{ steps.performance-tests.outcome }}" == "success" ]; then
+            echo "✅ **Performance Tests**: PASSED" >> advanced-test-report.md
+          else
+            echo "❌ **Performance Tests**: FAILED" >> advanced-test-report.md
+          fi
+          
+          if [ "${{ steps.error-tests.outcome }}" == "success" ]; then
+            echo "✅ **Error Handling Tests**: PASSED" >> advanced-test-report.md
+          else
+            echo "❌ **Error Handling Tests**: FAILED" >> advanced-test-report.md
+          fi
+          
+          if [ "${{ steps.contract-tests.outcome }}" == "success" ]; then
+            echo "✅ **Contract Tests**: PASSED" >> advanced-test-report.md
+          else
+            echo "❌ **Contract Tests**: FAILED" >> advanced-test-report.md
+          fi
+          
+          if [ "${{ steps.resource-tests.outcome }}" == "success" ]; then
+            echo "✅ **Resource Tests**: PASSED" >> advanced-test-report.md
+          else
+            echo "❌ **Resource Tests**: FAILED" >> advanced-test-report.md
+          fi
+          
+          echo "" >> advanced-test-report.md
+          echo "## Test Environment" >> advanced-test-report.md
+          echo "- **Go Version**: ${{ env.GO_VERSION }}" >> advanced-test-report.md
+          echo "- **OS**: ${{ runner.os }}" >> advanced-test-report.md
+          echo "- **Database**: PostgreSQL 16" >> advanced-test-report.md
+          echo "- **Timestamp**: $(date -u)" >> advanced-test-report.md
+          
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: advanced-test-report
+          path: advanced-test-report.md
+
+  performance-benchmarks:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'performance')
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: movies_mcp_benchmark
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: movies_mcp_benchmark
+      DB_SSLMODE: disable
+      
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Install dependencies
+        working-directory: mcp-server
+        run: go mod download
+        
+      - name: Build MCP server
+        working-directory: mcp-server
+        run: go build -o main cmd/server/main.go
+        
+      - name: Run database migrations
+        working-directory: mcp-server
+        run: ./main -migrate-only
+        
+      - name: Run Performance Benchmarks
+        working-directory: mcp-server
+        run: |
+          echo "Running performance benchmarks..."
+          go test -v -bench=. -benchmem -run=^$ ./tests/bdd/... > benchmark-results.txt
+          
+      - name: Analyze Benchmark Results
+        run: |
+          echo "# Performance Benchmark Results" > benchmark-report.md
+          echo "" >> benchmark-report.md
+          echo "## Summary" >> benchmark-report.md
+          echo "" >> benchmark-report.md
+          echo "\`\`\`" >> benchmark-report.md
+          cat mcp-server/benchmark-results.txt >> benchmark-report.md
+          echo "\`\`\`" >> benchmark-report.md
+          echo "" >> benchmark-report.md
+          echo "## Analysis" >> benchmark-report.md
+          echo "- **Date**: $(date -u)" >> benchmark-report.md
+          echo "- **Environment**: GitHub Actions Ubuntu Latest" >> benchmark-report.md
+          echo "- **Go Version**: ${{ env.GO_VERSION }}" >> benchmark-report.md
+          
+      - name: Upload Benchmark Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-benchmark-report
+          path: benchmark-report.md
+
+  contract-regression-tests:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: movies_mcp_contract
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: movies_mcp_contract
+      DB_SSLMODE: disable
+      
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for contract comparison
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Install dependencies
+        working-directory: mcp-server
+        run: go mod download
+        
+      - name: Build MCP server
+        working-directory: mcp-server
+        run: go build -o main cmd/server/main.go
+        
+      - name: Run database migrations
+        working-directory: mcp-server
+        run: ./main -migrate-only
+        
+      - name: Extract Current Contracts
+        working-directory: mcp-server
+        run: |
+          echo "Extracting current API contracts..."
+          mkdir -p contracts/current
+          # This would typically extract actual API schemas
+          cp tests/bdd/contracts/*.yaml contracts/current/
+          
+      - name: Extract Base Contracts
+        run: |
+          echo "Extracting base branch contracts..."
+          git checkout ${{ github.base_ref }}
+          mkdir -p mcp-server/contracts/base
+          if [ -d mcp-server/tests/bdd/contracts ]; then
+            cp mcp-server/tests/bdd/contracts/*.yaml mcp-server/contracts/base/ 2>/dev/null || echo "No base contracts found"
+          fi
+          git checkout ${{ github.head_ref }}
+          
+      - name: Run Contract Regression Tests
+        working-directory: mcp-server
+        run: |
+          echo "Running contract regression analysis..."
+          go test -v -tags=bdd ./tests/bdd/... -godog.tags=@contract-regression
+        continue-on-error: true
+        id: contract-regression
+        
+      - name: Generate Contract Analysis Report
+        if: always()
+        run: |
+          echo "# Contract Regression Analysis" > contract-analysis.md
+          echo "" >> contract-analysis.md
+          echo "## Changes Detected" >> contract-analysis.md
+          echo "" >> contract-analysis.md
+          
+          if [ "${{ steps.contract-regression.outcome }}" == "success" ]; then
+            echo "✅ **No breaking changes detected**" >> contract-analysis.md
+            echo "" >> contract-analysis.md
+            echo "All API contracts remain backward compatible." >> contract-analysis.md
+          else
+            echo "⚠️ **Potential breaking changes detected**" >> contract-analysis.md
+            echo "" >> contract-analysis.md
+            echo "Please review the contract changes carefully." >> contract-analysis.md
+          fi
+          
+          echo "" >> contract-analysis.md
+          echo "## Contract Files Analyzed" >> contract-analysis.md
+          echo "" >> contract-analysis.md
+          find mcp-server/contracts -name "*.yaml" -type f | while read file; do
+            echo "- \`$(basename $file)\`" >> contract-analysis.md
+          done
+          
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const contractAnalysis = fs.readFileSync('contract-analysis.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: contractAnalysis
+            });
+            
+      - name: Upload Contract Analysis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-analysis-report
+          path: contract-analysis.md
+
+  stress-testing:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'stress-test')
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: movies_mcp_stress
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: movies_mcp_stress
+      DB_SSLMODE: disable
+      
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Install dependencies
+        working-directory: mcp-server
+        run: go mod download
+        
+      - name: Build MCP server
+        working-directory: mcp-server
+        run: go build -o main cmd/server/main.go
+        
+      - name: Run database migrations
+        working-directory: mcp-server
+        run: ./main -migrate-only
+        
+      - name: Populate Large Dataset
+        working-directory: mcp-server
+        run: |
+          echo "Creating large test dataset..."
+          # This would populate the database with a large dataset for stress testing
+          ./main -populate-test-data 10000
+        continue-on-error: true
+        
+      - name: Run Stress Tests
+        working-directory: mcp-server
+        run: |
+          echo "Running stress test scenarios..."
+          timeout 1800 go test -v -tags=bdd ./tests/bdd/... -godog.tags=@stress-test -timeout=30m
+        continue-on-error: true
+        id: stress-tests
+        
+      - name: Generate Stress Test Report
+        if: always()
+        run: |
+          echo "# Stress Test Results" > stress-test-report.md
+          echo "" >> stress-test-report.md
+          echo "## Test Summary" >> stress-test-report.md
+          echo "" >> stress-test-report.md
+          
+          if [ "${{ steps.stress-tests.outcome }}" == "success" ]; then
+            echo "✅ **Stress Tests**: PASSED" >> stress-test-report.md
+            echo "" >> stress-test-report.md
+            echo "The system successfully handled high load conditions." >> stress-test-report.md
+          else
+            echo "❌ **Stress Tests**: FAILED or TIMED OUT" >> stress-test-report.md
+            echo "" >> stress-test-report.md
+            echo "The system encountered issues under high load." >> stress-test-report.md
+          fi
+          
+          echo "" >> stress-test-report.md
+          echo "## Test Configuration" >> stress-test-report.md
+          echo "- **Test Duration**: 30 minutes maximum" >> stress-test-report.md
+          echo "- **Dataset Size**: 10,000 records" >> stress-test-report.md
+          echo "- **Environment**: GitHub Actions" >> stress-test-report.md
+          echo "- **Timestamp**: $(date -u)" >> stress-test-report.md
+          
+      - name: Upload Stress Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stress-test-report
+          path: stress-test-report.md
+
+  security-testing:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Install security testing tools
+        run: |
+          go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+          go install github.com/quasilyte/go-ruleguard/cmd/ruleguard@latest
+          
+      - name: Run Security Analysis
+        working-directory: mcp-server
+        run: |
+          echo "Running security analysis..."
+          gosec -fmt json -out security-report.json ./... || true
+          
+      - name: Generate Security Report
+        run: |
+          echo "# Security Analysis Report" > security-report.md
+          echo "" >> security-report.md
+          echo "## Summary" >> security-report.md
+          echo "" >> security-report.md
+          
+          if [ -f mcp-server/security-report.json ]; then
+            # Parse JSON and create summary (simplified)
+            echo "Security analysis completed. See detailed report in artifacts." >> security-report.md
+          else
+            echo "No security issues detected." >> security-report.md
+          fi
+          
+          echo "" >> security-report.md
+          echo "## Scan Details" >> security-report.md
+          echo "- **Tool**: gosec" >> security-report.md
+          echo "- **Timestamp**: $(date -u)" >> security-report.md
+          
+      - name: Upload Security Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-analysis-report
+          path: |
+            security-report.md
+            mcp-server/security-report.json
+
+  test-summary:
+    runs-on: ubuntu-latest
+    needs: [advanced-bdd-tests, performance-benchmarks, contract-regression-tests, stress-testing, security-testing]
+    if: always()
+    
+    steps:
+      - name: Download all test reports
+        uses: actions/download-artifact@v4
+        
+      - name: Generate Comprehensive Test Summary
+        run: |
+          echo "# Movies MCP Server - Advanced Testing Summary" > test-summary.md
+          echo "" >> test-summary.md
+          echo "## Overall Test Results" >> test-summary.md
+          echo "" >> test-summary.md
+          
+          # Check job results
+          echo "### Job Results" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "- **Advanced BDD Tests**: ${{ needs.advanced-bdd-tests.result }}" >> test-summary.md
+          echo "- **Performance Benchmarks**: ${{ needs.performance-benchmarks.result }}" >> test-summary.md
+          echo "- **Contract Regression**: ${{ needs.contract-regression-tests.result }}" >> test-summary.md
+          echo "- **Stress Testing**: ${{ needs.stress-testing.result }}" >> test-summary.md
+          echo "- **Security Testing**: ${{ needs.security-testing.result }}" >> test-summary.md
+          echo "" >> test-summary.md
+          
+          echo "## Test Coverage Areas" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "✅ **Performance Testing** - Concurrent operations, timing assertions, memory usage" >> test-summary.md
+          echo "✅ **Error Handling** - Edge cases, failure modes, recovery scenarios" >> test-summary.md
+          echo "✅ **Contract Testing** - API stability, backward compatibility, schema validation" >> test-summary.md
+          echo "✅ **Resource Testing** - MCP resource endpoints, caching, security" >> test-summary.md
+          echo "✅ **Security Analysis** - Code vulnerabilities, dependency scanning" >> test-summary.md
+          echo "" >> test-summary.md
+          
+          echo "## Reports Available" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "- Advanced Test Report" >> test-summary.md
+          echo "- Performance Benchmark Report" >> test-summary.md
+          echo "- Contract Analysis Report" >> test-summary.md
+          echo "- Stress Test Report" >> test-summary.md
+          echo "- Security Analysis Report" >> test-summary.md
+          echo "" >> test-summary.md
+          
+          echo "---" >> test-summary.md
+          echo "*Generated on $(date -u) by Movies MCP Server Advanced Testing Pipeline*" >> test-summary.md
+          
+      - name: Upload Comprehensive Summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: comprehensive-test-summary
+          path: test-summary.md

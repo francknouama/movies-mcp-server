@@ -1,0 +1,228 @@
+feature: MCP Resource Contracts
+version: "1.0"
+resources:
+  "movies://database/stats":
+    description: "Database statistics and metrics"
+    response_format:
+      required_fields:
+        - movie_count
+        - actor_count
+        - total_storage_bytes
+        - last_updated
+      optional_fields:
+        - index_size_bytes
+        - table_sizes
+        - performance_metrics
+      field_constraints:
+        movie_count:
+          type: integer
+          minimum: 0
+        actor_count:
+          type: integer
+          minimum: 0
+        total_storage_bytes:
+          type: integer
+          minimum: 0
+        last_updated:
+          type: string
+          format: iso8601_datetime
+        index_size_bytes:
+          type: integer
+          minimum: 0
+        table_sizes:
+          type: object
+          properties:
+            movies:
+              type: integer
+              minimum: 0
+            actors:
+              type: integer
+              minimum: 0
+            movie_actors:
+              type: integer
+              minimum: 0
+    performance_requirements:
+      max_response_time_ms: 200
+      cache_duration_seconds: 60
+
+  "movies://database/all":
+    description: "All movies in the database"
+    response_format:
+      required_fields:
+        - movies
+        - metadata
+      field_constraints:
+        movies:
+          type: array
+          items:
+            required_fields:
+              - id
+              - title
+              - director
+              - year
+              - rating
+            optional_fields:
+              - genre
+              - description
+              - poster_url
+              - created_at
+              - updated_at
+        metadata:
+          type: object
+          required_fields:
+            - total_count
+            - generated_at
+          field_constraints:
+            total_count:
+              type: integer
+              minimum: 0
+            generated_at:
+              type: string
+              format: iso8601_datetime
+    performance_requirements:
+      max_response_time_ms: 1000
+      max_memory_mb: 100
+      
+  "movies://actors/all":
+    description: "All actors in the database"
+    response_format:
+      required_fields:
+        - actors
+        - metadata
+      field_constraints:
+        actors:
+          type: array
+          items:
+            required_fields:
+              - id
+              - name
+              - birth_year
+            optional_fields:
+              - bio
+              - death_year
+              - photo_url
+              - created_at
+              - updated_at
+        metadata:
+          type: object
+          required_fields:
+            - total_count
+            - generated_at
+    performance_requirements:
+      max_response_time_ms: 500
+      max_memory_mb: 50
+
+  "movies://search/recent":
+    description: "Recently added movies"
+    optional_params:
+      - limit
+      - days
+    param_constraints:
+      limit:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+      days:
+        type: integer
+        minimum: 1
+        maximum: 365
+        default: 7
+    response_format:
+      required_fields:
+        - movies
+        - search_criteria
+      field_constraints:
+        movies:
+          type: array
+          items:
+            required_fields:
+              - id
+              - title
+              - director
+              - year
+              - created_at
+        search_criteria:
+          type: object
+          required_fields:
+            - limit_used
+            - days_used
+            - cutoff_date
+    performance_requirements:
+      max_response_time_ms: 300
+
+  "movies://posters/collection":
+    description: "Collection of movie posters"
+    optional_params:
+      - format
+      - size
+      - limit
+    param_constraints:
+      format:
+        type: string
+        enum: ["thumbnail", "medium", "full"]
+        default: "medium"
+      size:
+        type: string
+        enum: ["small", "medium", "large"]
+        default: "medium"
+      limit:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+    response_format:
+      required_fields:
+        - posters
+        - metadata
+      field_constraints:
+        posters:
+          type: array
+          items:
+            required_fields:
+              - movie_id
+              - title
+              - poster_data
+              - format
+              - size_bytes
+            field_constraints:
+              poster_data:
+                type: string
+                format: base64
+              size_bytes:
+                type: integer
+                minimum: 0
+        metadata:
+          type: object
+          required_fields:
+            - total_available
+            - format_used
+            - size_used
+    performance_requirements:
+      max_response_time_ms: 2000
+      max_memory_mb: 200
+
+error_handling:
+  resource_not_found:
+    error_code: -32602
+    message_pattern: "Resource not found: {resource_uri}"
+  
+  invalid_resource_uri:
+    error_code: -32600
+    message_pattern: "Invalid resource URI format: {uri}"
+    
+  resource_unavailable:
+    error_code: -32603
+    message_pattern: "Resource temporarily unavailable: {resource_uri}"
+    
+  parameter_validation:
+    error_code: -32602
+    message_pattern: "Invalid parameter for resource: {details}"
+
+versioning:
+  current_version: "1.0"
+  supported_versions: ["1.0"]
+  backward_compatibility: true
+  deprecation_policy:
+    notice_period_days: 90
+    migration_guide_required: true

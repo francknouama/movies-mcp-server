@@ -1,0 +1,220 @@
+feature: Actor Management Tool Contracts
+version: "1.0"
+tools:
+  add_actor:
+    description: "Add a new actor to the database"
+    required_params:
+      - name
+      - birth_year
+    optional_params:
+      - bio
+      - death_year
+      - photo_url
+    param_constraints:
+      name:
+        type: string
+        max_length: 100
+        min_length: 1
+      birth_year:
+        type: integer
+        minimum: 1800
+        maximum: 2020
+      death_year:
+        type: integer
+        minimum: 1800
+        maximum: 2030
+      bio:
+        type: string
+        max_length: 2000
+      photo_url:
+        type: string
+        format: uri
+        max_length: 500
+    success_response:
+      required_fields:
+        - id
+        - name
+        - birth_year
+        - created_at
+      optional_fields:
+        - bio
+        - death_year
+        - photo_url
+        - updated_at
+    error_codes:
+      - -32602  # Invalid params
+      - -32603  # Internal error
+
+  get_actor:
+    description: "Get actor details by ID"
+    required_params:
+      - actor_id
+    param_constraints:
+      actor_id:
+        type: integer
+        minimum: 1
+    success_response:
+      required_fields:
+        - id
+        - name
+        - birth_year
+        - created_at
+      optional_fields:
+        - bio
+        - death_year
+        - photo_url
+        - updated_at
+    error_codes:
+      - -32602  # Invalid params (actor not found)
+      - -32603  # Internal error
+
+  update_actor:
+    description: "Update actor information"
+    required_params:
+      - actor_id
+    optional_params:
+      - name
+      - birth_year
+      - bio
+      - death_year
+      - photo_url
+    param_constraints:
+      actor_id:
+        type: integer
+        minimum: 1
+      name:
+        type: string
+        max_length: 100
+        min_length: 1
+      birth_year:
+        type: integer
+        minimum: 1800
+        maximum: 2020
+      death_year:
+        type: integer
+        minimum: 1800
+        maximum: 2030
+      bio:
+        type: string
+        max_length: 2000
+      photo_url:
+        type: string
+        format: uri
+        max_length: 500
+    success_response:
+      required_fields:
+        - id
+        - name
+        - birth_year
+        - updated_at
+    error_codes:
+      - -32602  # Invalid params
+      - -32603  # Internal error
+
+  delete_actor:
+    description: "Delete an actor by ID"
+    required_params:
+      - actor_id
+    param_constraints:
+      actor_id:
+        type: integer
+        minimum: 1
+    success_response:
+      required_fields:
+        - success
+        - deleted_id
+    error_codes:
+      - -32602  # Invalid params (actor not found)
+      - -32603  # Internal error
+
+  search_actors:
+    description: "Search actors by various criteria"
+    optional_params:
+      - name
+      - birth_year_min
+      - birth_year_max
+      - is_alive
+      - limit
+      - offset
+    param_constraints:
+      name:
+        type: string
+        max_length: 100
+      birth_year_min:
+        type: integer
+        minimum: 1800
+        maximum: 2020
+      birth_year_max:
+        type: integer
+        minimum: 1800
+        maximum: 2020
+      is_alive:
+        type: boolean
+      limit:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 50
+      offset:
+        type: integer
+        minimum: 0
+        default: 0
+    success_response:
+      required_fields:
+        - actors
+        - total_count
+        - limit
+        - offset
+      array_constraints:
+        actors:
+          item_schema:
+            required_fields:
+              - id
+              - name
+              - birth_year
+    error_codes:
+      - -32602  # Invalid params
+      - -32603  # Internal error
+
+  get_actor_movies:
+    description: "Get movies for a specific actor"
+    required_params:
+      - actor_id
+    optional_params:
+      - limit
+      - offset
+    param_constraints:
+      actor_id:
+        type: integer
+        minimum: 1
+      limit:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 50
+      offset:
+        type: integer
+        minimum: 0
+        default: 0
+    success_response:
+      required_fields:
+        - actor
+        - movies
+        - total_count
+      nested_constraints:
+        actor:
+          required_fields:
+            - id
+            - name
+            - birth_year
+        movies:
+          array_item_schema:
+            required_fields:
+              - id
+              - title
+              - director
+              - year
+              - rating
+    error_codes:
+      - -32602  # Invalid params (actor not found)
+      - -32603  # Internal error

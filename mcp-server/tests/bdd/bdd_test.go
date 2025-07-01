@@ -32,6 +32,11 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 	steps.InitializeActorSteps(ctx)          // Actor operation steps
 	steps.InitializeMCPProtocolSteps(ctx)    // MCP protocol specific steps
 	steps.InitializeAdvancedSearchSteps(ctx) // Advanced search and integration steps
+
+	// Initialize Phase 4 Advanced BDD Testing Capabilities
+	steps.InitializePerformanceSteps(ctx)     // Performance testing steps
+	steps.InitializeErrorHandlingSteps(ctx)   // Error handling and edge case steps
+	steps.InitializeContractTestingSteps(ctx) // Contract testing and API validation steps
 }
 
 // Optional: Run BDD tests from command line

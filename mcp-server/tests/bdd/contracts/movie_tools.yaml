@@ -1,0 +1,248 @@
+feature: Movie Management Tool Contracts
+version: "1.0"
+tools:
+  add_movie:
+    description: "Add a new movie to the database"
+    required_params:
+      - title
+      - director
+      - year
+    optional_params:
+      - genre
+      - rating
+      - description
+      - poster_url
+    param_constraints:
+      title:
+        type: string
+        max_length: 255
+        min_length: 1
+      director:
+        type: string
+        max_length: 100
+        min_length: 1
+      year:
+        type: integer
+        minimum: 1888
+        maximum: 2030
+      genre:
+        type: string
+        max_length: 50
+      rating:
+        type: float
+        minimum: 0.0
+        maximum: 10.0
+      description:
+        type: string
+        max_length: 1000
+      poster_url:
+        type: string
+        format: uri
+        max_length: 500
+    success_response:
+      required_fields:
+        - id
+        - title
+        - director
+        - year
+        - created_at
+      optional_fields:
+        - genre
+        - rating
+        - description
+        - poster_url
+        - updated_at
+    error_codes:
+      - -32602  # Invalid params
+      - -32603  # Internal error
+
+  get_movie:
+    description: "Get movie details by ID"
+    required_params:
+      - movie_id
+    param_constraints:
+      movie_id:
+        type: integer
+        minimum: 1
+    success_response:
+      required_fields:
+        - id
+        - title
+        - director
+        - year
+        - created_at
+      optional_fields:
+        - genre
+        - rating
+        - description
+        - poster_url
+        - updated_at
+    error_codes:
+      - -32602  # Invalid params (movie not found)
+      - -32603  # Internal error
+
+  update_movie:
+    description: "Update movie information"
+    required_params:
+      - movie_id
+    optional_params:
+      - title
+      - director
+      - year
+      - genre
+      - rating
+      - description
+      - poster_url
+    param_constraints:
+      movie_id:
+        type: integer
+        minimum: 1
+      title:
+        type: string
+        max_length: 255
+        min_length: 1
+      director:
+        type: string
+        max_length: 100
+        min_length: 1
+      year:
+        type: integer
+        minimum: 1888
+        maximum: 2030
+      genre:
+        type: string
+        max_length: 50
+      rating:
+        type: float
+        minimum: 0.0
+        maximum: 10.0
+      description:
+        type: string
+        max_length: 1000
+      poster_url:
+        type: string
+        format: uri
+        max_length: 500
+    success_response:
+      required_fields:
+        - id
+        - title
+        - director
+        - year
+        - updated_at
+    error_codes:
+      - -32602  # Invalid params
+      - -32603  # Internal error
+
+  delete_movie:
+    description: "Delete a movie by ID"
+    required_params:
+      - movie_id
+    param_constraints:
+      movie_id:
+        type: integer
+        minimum: 1
+    success_response:
+      required_fields:
+        - success
+        - deleted_id
+    error_codes:
+      - -32602  # Invalid params (movie not found)
+      - -32603  # Internal error
+
+  search_movies:
+    description: "Search movies by various criteria"
+    optional_params:
+      - title
+      - director
+      - genre
+      - year_min
+      - year_max
+      - rating_min
+      - rating_max
+      - limit
+      - offset
+    param_constraints:
+      title:
+        type: string
+        max_length: 255
+      director:
+        type: string
+        max_length: 100
+      genre:
+        type: string
+        max_length: 50
+      year_min:
+        type: integer
+        minimum: 1888
+        maximum: 2030
+      year_max:
+        type: integer
+        minimum: 1888
+        maximum: 2030
+      rating_min:
+        type: float
+        minimum: 0.0
+        maximum: 10.0
+      rating_max:
+        type: float
+        minimum: 0.0
+        maximum: 10.0
+      limit:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 50
+      offset:
+        type: integer
+        minimum: 0
+        default: 0
+    success_response:
+      required_fields:
+        - movies
+        - total_count
+        - limit
+        - offset
+      array_constraints:
+        movies:
+          item_schema:
+            required_fields:
+              - id
+              - title
+              - director
+              - year
+              - rating
+    error_codes:
+      - -32602  # Invalid params
+      - -32603  # Internal error
+
+  list_top_movies:
+    description: "Get top rated movies"
+    optional_params:
+      - limit
+      - genre
+    param_constraints:
+      limit:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+      genre:
+        type: string
+        max_length: 50
+    success_response:
+      required_fields:
+        - movies
+      array_constraints:
+        movies:
+          item_schema:
+            required_fields:
+              - id
+              - title
+              - director
+              - year
+              - rating
+          ordering: rating_desc
+    error_codes:
+      - -32602  # Invalid params
+      - -32603  # Internal error
