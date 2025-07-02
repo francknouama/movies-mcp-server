@@ -86,8 +86,8 @@ COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
 
 # Copy binary with proper ownership
-COPY --from=builder --chown=1001:1001 /build/movies-mcp-server /usr/local/bin/movies-mcp-server
-COPY --from=builder --chown=1001:1001 /build/migrations /migrations
+COPY --from=builder --chown=1001:1001 /build/mcp-server/movies-mcp-server /usr/local/bin/movies-mcp-server
+COPY --from=builder --chown=1001:1001 /build/mcp-server/migrations /migrations
 
 # Security configurations
 ENV PATH=/usr/local/bin \
