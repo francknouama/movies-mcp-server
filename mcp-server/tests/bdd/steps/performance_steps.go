@@ -223,6 +223,9 @@ func (sps *SimplePerformanceSteps) iLoadMoviesWithDetails(count int) error {
 func (sps *SimplePerformanceSteps) operationsShouldCompleteWithinSeconds(seconds int) error {
 	maxDuration := time.Duration(seconds) * time.Second
 	if sps.duration > maxDuration {
+		// Generate performance report for detailed analysis
+		report := sps.getPerformanceReport()
+		sps.bddContext.SetTestData("performance_report", report)
 		return fmt.Errorf("operations took %v, expected under %v", sps.duration, maxDuration)
 	}
 	return nil

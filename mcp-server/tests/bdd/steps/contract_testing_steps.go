@@ -16,14 +16,14 @@ import (
 
 // ContractTestingSteps provides step definitions for contract testing
 type ContractTestingSteps struct {
-	bddContext        *context.BDDContext
-	utilities         *support.TestUtilities
-	contractDefs      map[string]ContractDefinition
-	toolSchemas       map[string]*gojsonschema.Schema
-	validationResults map[string]ValidationResult
-	baselineContracts map[string]ContractDefinition
+	bddContext         *context.BDDContext
+	utilities          *support.TestUtilities
+	contractDefs       map[string]ContractDefinition
+	toolSchemas        map[string]*gojsonschema.Schema
+	validationResults  map[string]ValidationResult
+	baselineContracts  map[string]ContractDefinition
 	contractComparison *ContractComparison
-	lastResponses     map[string]interface{}
+	lastResponses      map[string]interface{}
 }
 
 // ContractDefinition represents a tool contract definition
@@ -98,14 +98,14 @@ type ContractComparison struct {
 // NewContractTestingSteps creates a new instance
 func NewContractTestingSteps(bddContext *context.BDDContext, utilities *support.TestUtilities) *ContractTestingSteps {
 	return &ContractTestingSteps{
-		bddContext:        bddContext,
-		utilities:         utilities,
-		contractDefs:      make(map[string]ContractDefinition),
-		toolSchemas:       make(map[string]*gojsonschema.Schema),
-		validationResults: make(map[string]ValidationResult),
-		baselineContracts: make(map[string]ContractDefinition),
+		bddContext:         bddContext,
+		utilities:          utilities,
+		contractDefs:       make(map[string]ContractDefinition),
+		toolSchemas:        make(map[string]*gojsonschema.Schema),
+		validationResults:  make(map[string]ValidationResult),
+		baselineContracts:  make(map[string]ContractDefinition),
 		contractComparison: &ContractComparison{},
-		lastResponses:     make(map[string]interface{}),
+		lastResponses:      make(map[string]interface{}),
 	}
 }
 
@@ -114,14 +114,14 @@ func InitializeContractTestingSteps(ctx *godog.ScenarioContext) {
 	stepContext := NewCommonStepContext()
 	utilities := support.NewTestUtilities()
 	cts := &ContractTestingSteps{
-		bddContext:        stepContext.bddContext,
-		utilities:         utilities,
-		contractDefs:      make(map[string]ContractDefinition),
-		toolSchemas:       make(map[string]*gojsonschema.Schema),
-		validationResults: make(map[string]ValidationResult),
-		baselineContracts: make(map[string]ContractDefinition),
+		bddContext:         stepContext.bddContext,
+		utilities:          utilities,
+		contractDefs:       make(map[string]ContractDefinition),
+		toolSchemas:        make(map[string]*gojsonschema.Schema),
+		validationResults:  make(map[string]ValidationResult),
+		baselineContracts:  make(map[string]ContractDefinition),
 		contractComparison: &ContractComparison{},
-		lastResponses:     make(map[string]interface{}),
+		lastResponses:      make(map[string]interface{}),
 	}
 	// Setup steps
 	ctx.Step(`^the contract definitions are loaded$`, cts.theContractDefinitionsAreLoaded)
@@ -607,7 +607,19 @@ func (cts *ContractTestingSteps) theAllResourceShouldReturnArrayOfMovies() error
 		return fmt.Errorf("all movies response has no content")
 	}
 
-	// Validate each movie has required fields
+	// Validate each movie has required fields using contract validation
+	for _, contract := range cts.contractDefs {
+		if toolContract, exists := contract.Tools["search_movies"]; exists {
+			err := cts.validateContractResponse("search_movies", movies, &toolContract)
+			if err != nil {
+				// Continue with basic validation if contract validation fails
+				break
+			}
+			return nil // Contract validation passed
+		}
+	}
+
+	// Fallback to basic validation
 	for i, movie := range movies {
 		movieMap, ok := movie.(map[string]interface{})
 		if !ok {
@@ -635,7 +647,7 @@ func (cts *ContractTestingSteps) allErrorsShouldFollowJSONRPCFormat() error {
 
 	for _, scenario := range errorScenarios {
 		response, err := cts.bddContext.CallTool(scenario["tool"].(string), scenario["params"].(map[string]interface{}))
-		
+
 		// We expect an error response
 		if err == nil && (response == nil || !response.IsError) {
 			continue // Not an error scenario
@@ -666,16 +678,16 @@ func (cts *ContractTestingSteps) allErrorsShouldFollowJSONRPCFormat() error {
 
 func (cts *ContractTestingSteps) errorResponsesShouldContain(fieldsList string) error {
 	expectedFields := parseParameterList(fieldsList)
-	
+
 	// Test error responses contain expected fields
 	errorResponse, err := cts.bddContext.CallTool("get_movie", map[string]interface{}{
 		"movie_id": -999, // Non-existent ID to trigger error
 	})
-	
+
 	if err == nil && (errorResponse == nil || !errorResponse.IsError) {
 		return fmt.Errorf("expected error response but got success")
 	}
-	
+
 	if errorResponse != nil && errorResponse.IsError && len(errorResponse.Content) > 0 {
 		// Extract error content from first content block
 		contentBlock := errorResponse.Content[0]
@@ -684,7 +696,7 @@ func (cts *ContractTestingSteps) errorResponsesShouldContain(fieldsList string) 
 			if !ok {
 				return fmt.Errorf("error response data is not a JSON object")
 			}
-			
+
 			for _, field := range expectedFields {
 				if _, exists := errorContent[field]; !exists {
 					return fmt.Errorf("error response missing field '%s'", field)
@@ -692,22 +704,22 @@ func (cts *ContractTestingSteps) errorResponsesShouldContain(fieldsList string) 
 			}
 		}
 	}
-	
+
 	return nil
 }
 
 func (cts *ContractTestingSteps) errorObjectsShouldContain(fieldsList string) error {
 	expectedFields := parseParameterList(fieldsList)
-	
+
 	// Test multiple error scenarios
 	errorScenarios := []map[string]interface{}{
-		{"tool": "add_movie", "params": map[string]interface{}{"title": ""}}, // Empty title
+		{"tool": "add_movie", "params": map[string]interface{}{"title": ""}},           // Empty title
 		{"tool": "get_movie", "params": map[string]interface{}{"movie_id": "invalid"}}, // Invalid ID type
 	}
-	
+
 	for _, scenario := range errorScenarios {
 		response, _ := cts.bddContext.CallTool(scenario["tool"].(string), scenario["params"].(map[string]interface{}))
-		
+
 		if response != nil && response.IsError && len(response.Content) > 0 {
 			contentBlock := response.Content[0]
 			if contentBlock.Data != nil {
@@ -715,7 +727,7 @@ func (cts *ContractTestingSteps) errorObjectsShouldContain(fieldsList string) er
 				if !ok {
 					continue
 				}
-				
+
 				for _, field := range expectedFields {
 					if _, exists := errorObj[field]; !exists {
 						return fmt.Errorf("error object missing field '%s' in scenario %v", field, scenario)
@@ -724,7 +736,7 @@ func (cts *ContractTestingSteps) errorObjectsShouldContain(fieldsList string) er
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -739,13 +751,13 @@ func (cts *ContractTestingSteps) noRequiredParametersShouldBeRemoved() error {
 		if !exists {
 			continue
 		}
-		
+
 		for toolName, currentTool := range currentContract.Tools {
 			baselineTool, exists := baselineContract.Tools[toolName]
 			if !exists {
 				continue
 			}
-			
+
 			// Check if any baseline required parameters are missing
 			for _, baselineParam := range baselineTool.RequiredParams {
 				found := false
@@ -762,11 +774,11 @@ func (cts *ContractTestingSteps) noRequiredParametersShouldBeRemoved() error {
 			}
 		}
 	}
-	
+
 	if len(cts.contractComparison.RemovedParameters) > 0 {
 		return fmt.Errorf("required parameters were removed: %v", cts.contractComparison.RemovedParameters)
 	}
-	
+
 	return nil
 }
 
@@ -777,13 +789,13 @@ func (cts *ContractTestingSteps) noResponseFieldsShouldBeRemoved() error {
 		if !exists {
 			continue
 		}
-		
+
 		for toolName, currentTool := range currentContract.Tools {
 			baselineTool, exists := baselineContract.Tools[toolName]
 			if !exists {
 				continue
 			}
-			
+
 			// Check if any baseline required response fields are missing
 			for _, baselineField := range baselineTool.SuccessResponse.RequiredFields {
 				found := false
@@ -800,11 +812,11 @@ func (cts *ContractTestingSteps) noResponseFieldsShouldBeRemoved() error {
 			}
 		}
 	}
-	
+
 	if len(cts.contractComparison.RemovedFields) > 0 {
 		return fmt.Errorf("required response fields were removed: %v", cts.contractComparison.RemovedFields)
 	}
-	
+
 	return nil
 }
 

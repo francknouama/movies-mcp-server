@@ -167,7 +167,7 @@ func getProjectRoot() (string, error) {
 // buildServerBinary builds the MCP server binary if it doesn't exist
 func buildServerBinary(projectRoot string) (string, error) {
 	serverBinary := filepath.Join(projectRoot, "mcp-server", "movies-mcp-server")
-	
+
 	// Check if binary already exists
 	if _, err := os.Stat(serverBinary); err == nil {
 		return serverBinary, nil
@@ -177,7 +177,7 @@ func buildServerBinary(projectRoot string) (string, error) {
 	serverMainPath := filepath.Join(projectRoot, "mcp-server", "cmd", "server", "main.go")
 	buildCmd := exec.Command("go", "build", "-o", serverBinary, serverMainPath)
 	buildCmd.Dir = projectRoot // Set working directory to project root
-	
+
 	output, err := buildCmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to build server binary: %w\nOutput: %s", err, string(output))

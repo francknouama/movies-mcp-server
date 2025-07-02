@@ -2,7 +2,6 @@ package support
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"net"
 	"runtime"
@@ -14,20 +13,17 @@ import (
 
 // FaultInjector provides mechanisms for injecting faults into the system for testing
 type FaultInjector struct {
-	dbContainer       testcontainers.Container
-	networkBlocks     map[string]bool
-	memoryPressure    bool
-	networkMutex      sync.RWMutex
-	memoryMutex       sync.RWMutex
-	activeConnections []*sql.DB
-	connectionsMutex  sync.Mutex
+	dbContainer    testcontainers.Container
+	networkBlocks  map[string]bool
+	memoryPressure bool
+	networkMutex   sync.RWMutex
+	memoryMutex    sync.RWMutex
 }
 
 // NewFaultInjector creates a new fault injection utility
 func NewFaultInjector() *FaultInjector {
 	return &FaultInjector{
-		networkBlocks:     make(map[string]bool),
-		activeConnections: make([]*sql.DB, 0),
+		networkBlocks: make(map[string]bool),
 	}
 }
 
@@ -143,8 +139,8 @@ func (fi *FaultInjector) createMemoryPressure(targetMB int) {
 		time.Sleep(1 * time.Second)
 	}
 
-	// Release memory
-	chunks = nil
+	// Release memory and force garbage collection
+	_ = chunks // Use the variable to avoid ineffectual assignment
 	runtime.GC()
 }
 
@@ -180,11 +176,11 @@ func (fi *FaultInjector) MonitorResourceUsage() (*ResourceMetrics, error) {
 	runtime.ReadMemStats(&m)
 
 	metrics := &ResourceMetrics{
-		MemoryUsedMB:    int(m.Alloc / 1024 / 1024),
-		MemoryTotalMB:   int(m.Sys / 1024 / 1024),
-		GoroutineCount:  runtime.NumGoroutine(),
-		GCCount:         int(m.NumGC),
-		Timestamp:       time.Now(),
+		MemoryUsedMB:   int(m.Alloc / 1024 / 1024),
+		MemoryTotalMB:  int(m.Sys / 1024 / 1024),
+		GoroutineCount: runtime.NumGoroutine(),
+		GCCount:        int(m.NumGC),
+		Timestamp:      time.Now(),
 	}
 
 	return metrics, nil
@@ -290,12 +286,12 @@ func (fi *FaultInjector) RestoreAllSystems(ctx context.Context) error {
 
 // ChaosConfig configures chaos engineering scenarios
 type ChaosConfig struct {
-	DatabaseFailure   bool
-	NetworkErrors     bool
-	NetworkTargets    []string
-	MemoryPressure    bool
-	MemoryPressureMB  int
-	TimeoutDuration   time.Duration
+	DatabaseFailure    bool
+	NetworkErrors      bool
+	NetworkTargets     []string
+	MemoryPressure     bool
+	MemoryPressureMB   int
+	TimeoutDuration    time.Duration
 	PartialFailureRate float64
 }
 
@@ -324,3 +320,4 @@ var ValidationScenarios = map[string]ChaosConfig{
 		PartialFailureRate: 0.5,
 	},
 }
+
