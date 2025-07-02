@@ -123,7 +123,8 @@ jobs:
         shell: pwsh
         run: |
           cd dist
-          tar -xzf ${{ matrix.artifact_name }}
+          $tarFile = Get-ChildItem -Path "*Windows*x86_64.tar.gz" | Select-Object -First 1
+          tar -xzf $tarFile.Name
           .\${{ matrix.binary_name }} --version
           .\${{ matrix.binary_name }} --help
 
