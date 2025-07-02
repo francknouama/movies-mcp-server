@@ -123,7 +123,8 @@ jobs:
         shell: pwsh
         run: |
           cd dist
-          Expand-Archive -Path "${{ matrix.artifact_name }}" -DestinationPath .
+          $zipFile = Get-ChildItem -Path "${{ matrix.artifact_name }}" | Select-Object -First 1
+          Expand-Archive -Path $zipFile.FullName -DestinationPath .
           .\${{ matrix.binary_name }} --version
           .\${{ matrix.binary_name }} --help
 
