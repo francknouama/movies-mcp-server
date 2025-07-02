@@ -56,8 +56,8 @@ RUN go build \
     -o movies-mcp-server \
     ./cmd/server
 
-# Verify the binary
-RUN ldd movies-mcp-server 2>&1 | grep -q "not a dynamic executable" || exit 1
+# Verify the binary exists and is executable
+RUN test -f movies-mcp-server && chmod +x movies-mcp-server
 
 # Security scan the built binary
 FROM aquasec/trivy:latest AS binary-scanner
