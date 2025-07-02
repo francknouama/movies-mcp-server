@@ -373,14 +373,14 @@ func (sps *SimplePerformanceSteps) validateResourceUsage() error {
 		violation := fmt.Sprintf("memory increased by %.1f%%, exceeds threshold of %.1f%%",
 			memoryIncreaseRatio*100, maxMemoryIncreaseRatio*100)
 		sps.performanceViolations = append(sps.performanceViolations, violation)
-		return fmt.Errorf(violation)
+		return fmt.Errorf("%s", violation)
 	}
 
 	if memoryIncrease > maxMemoryIncreaseMB*1024*1024 {
 		violation := fmt.Sprintf("memory increased by %d MB, exceeds threshold of %d MB",
 			memoryIncrease/(1024*1024), maxMemoryIncreaseMB)
 		sps.performanceViolations = append(sps.performanceViolations, violation)
-		return fmt.Errorf(violation)
+		return fmt.Errorf("%s", violation)
 	}
 
 	return nil
