@@ -123,10 +123,18 @@ jobs:
         shell: pwsh
         run: |
           cd dist
-          $zipFile = Get-ChildItem -Path "${{ matrix.artifact_name }}" | Select-Object -First 1
-          Expand-Archive -Path $zipFile.FullName -DestinationPath .
-          .\${{ matrix.binary_name }} --version
-          .\${{ matrix.binary_name }} --help
+          Write-Host "Contents of dist directory:"
+          Get-ChildItem -Path . | Format-Table Name, Length
+          $zipFile = Get-ChildItem -Path "*Windows*x86_64.zip" | Select-Object -First 1
+          if ($zipFile) {
+            Write-Host "Found zip file: $($zipFile.Name)"
+            Expand-Archive -Path $zipFile.FullName -DestinationPath .
+            .\${{ matrix.binary_name }} --version
+            .\${{ matrix.binary_name }} --help
+          } else {
+            Write-Error "No Windows x86_64 zip file found"
+            exit 1
+          }
 
   docker-build:
     runs-on: ubuntu-latest
