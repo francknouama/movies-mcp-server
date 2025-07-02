@@ -470,7 +470,7 @@ jobs:
           
       - name: Install security testing tools
         run: |
-          go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
           go install github.com/quasilyte/go-ruleguard/cmd/ruleguard@latest
           
       - name: Run Security Analysis
