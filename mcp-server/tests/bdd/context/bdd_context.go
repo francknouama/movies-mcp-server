@@ -175,6 +175,7 @@ func buildServerBinary(projectRoot string) (string, error) {
 
 	// Build the server binary
 	serverMainPath := filepath.Join(projectRoot, "mcp-server", "cmd", "server", "main.go")
+	// #nosec G204 - Safe: building our own Go binary in test environment
 	buildCmd := exec.Command("go", "build", "-o", serverBinary, serverMainPath)
 	buildCmd.Dir = projectRoot // Set working directory to project root
 
@@ -200,6 +201,7 @@ func (ctx *BDDContext) StartMCPServer() error {
 	}
 
 	// Start the real MCP server (no mocks - Phase 1 remediation)
+	// #nosec G204 - Safe: executing our own built binary in test environment
 	ctx.serverProcess = exec.Command(serverBinary)
 
 	// Set database environment if database configuration was provided
