@@ -178,26 +178,34 @@ func (fi *FaultInjector) MonitorResourceUsage() (*ResourceMetrics, error) {
 	// Safe conversion from uint64 to int with bounds checking
 	const maxInt = int(^uint(0) >> 1)
 
-	memoryUsedMB := int64(m.Alloc / 1024 / 1024)
-	if memoryUsedMB > int64(maxInt) {
-		memoryUsedMB = int64(maxInt)
+	// Convert to MB safely with explicit bounds checking
+	var memoryUsedMB, memoryTotalMB, gcCount int
+
+	memUsedBytes := m.Alloc / 1024 / 1024
+	if memUsedBytes > uint64(maxInt) {
+		memoryUsedMB = maxInt
+	} else {
+		memoryUsedMB = int(memUsedBytes)
 	}
 
-	memoryTotalMB := int64(m.Sys / 1024 / 1024)
-	if memoryTotalMB > int64(maxInt) {
-		memoryTotalMB = int64(maxInt)
+	memTotalBytes := m.Sys / 1024 / 1024
+	if memTotalBytes > uint64(maxInt) {
+		memoryTotalMB = maxInt
+	} else {
+		memoryTotalMB = int(memTotalBytes)
 	}
 
-	gcCount := int64(m.NumGC)
-	if gcCount > int64(maxInt) {
-		gcCount = int64(maxInt)
+	if m.NumGC > uint32(^uint32(0)>>1) {
+		gcCount = int(^uint32(0) >> 1)
+	} else {
+		gcCount = int(m.NumGC)
 	}
 
 	metrics := &ResourceMetrics{
-		MemoryUsedMB:   int(memoryUsedMB),
-		MemoryTotalMB:  int(memoryTotalMB),
+		MemoryUsedMB:   memoryUsedMB,
+		MemoryTotalMB:  memoryTotalMB,
 		GoroutineCount: runtime.NumGoroutine(),
-		GCCount:        int(gcCount),
+		GCCount:        gcCount,
 		Timestamp:      time.Now(),
 	}
 
