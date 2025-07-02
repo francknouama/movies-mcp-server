@@ -14,17 +14,17 @@ import (
 
 // SimplePerformanceSteps provides basic performance step definitions
 type SimplePerformanceSteps struct {
-	bddContext       *context.BDDContext
-	utilities        *support.TestUtilities
-	startTime        time.Time
-	endTime          time.Time
-	duration         time.Duration
-	operationCount   int32
-	errorCount       int32
-	results          []interface{}
-	errors           []error
-	memoryBefore     runtime.MemStats
-	memoryAfter      runtime.MemStats
+	bddContext            *context.BDDContext
+	utilities             *support.TestUtilities
+	startTime             time.Time
+	endTime               time.Time
+	duration              time.Duration
+	operationCount        int32
+	errorCount            int32
+	results               []interface{}
+	errors                []error
+	memoryBefore          runtime.MemStats
+	memoryAfter           runtime.MemStats
 	performanceThresholds map[string]time.Duration
 	throughputMetrics     map[string]float64
 	performanceViolations []string
@@ -36,12 +36,12 @@ func NewSimplePerformanceSteps(bddContext *context.BDDContext, utilities *suppor
 		bddContext: bddContext,
 		utilities:  utilities,
 		performanceThresholds: map[string]time.Duration{
-			"simple_operation":  500 * time.Millisecond,
-			"search_operation":  1 * time.Second,
-			"batch_operation":   10 * time.Second,
-			"memory_operation":  2 * time.Second,
+			"simple_operation": 500 * time.Millisecond,
+			"search_operation": 1 * time.Second,
+			"batch_operation":  10 * time.Second,
+			"memory_operation": 2 * time.Second,
 		},
-		throughputMetrics: make(map[string]float64),
+		throughputMetrics:     make(map[string]float64),
 		performanceViolations: make([]string, 0),
 	}
 }
@@ -54,12 +54,12 @@ func InitializePerformanceSteps(ctx *godog.ScenarioContext) {
 		bddContext: stepContext.bddContext,
 		utilities:  utilities,
 		performanceThresholds: map[string]time.Duration{
-			"simple_operation":  500 * time.Millisecond,
-			"search_operation":  1 * time.Second,
-			"batch_operation":   10 * time.Second,
-			"memory_operation":  2 * time.Second,
+			"simple_operation": 500 * time.Millisecond,
+			"search_operation": 1 * time.Second,
+			"batch_operation":  10 * time.Second,
+			"memory_operation": 2 * time.Second,
 		},
-		throughputMetrics: make(map[string]float64),
+		throughputMetrics:     make(map[string]float64),
 		performanceViolations: make([]string, 0),
 	}
 	// Data setup
@@ -307,10 +307,15 @@ func (sps *SimplePerformanceSteps) memoryIncreaseShouldNotExceed(mb int) error {
 		return violation
 	}
 
-	// Enforce memory usage contract
+	// Enforce memory usage contract and performance thresholds
 	err := sps.validateResourceUsage()
 	if err != nil {
 		sps.bddContext.SetTestData("memory_performance_violation", err.Error())
+	}
+
+	// Enforce performance contract for memory operations
+	if performanceErr := sps.enforcePerformanceContract("memory_operation"); performanceErr != nil {
+		sps.bddContext.SetTestData("performance_contract_violation", performanceErr.Error())
 	}
 
 	return nil
@@ -322,14 +327,14 @@ func (sps *SimplePerformanceSteps) enforcePerformanceContract(operationType stri
 	if !exists {
 		return fmt.Errorf("no performance threshold defined for operation type: %s", operationType)
 	}
-	
+
 	if sps.duration > threshold {
-		violation := fmt.Sprintf("%s operation took %v, contract requires under %v", 
+		violation := fmt.Sprintf("%s operation took %v, contract requires under %v",
 			operationType, sps.duration, threshold)
 		sps.performanceViolations = append(sps.performanceViolations, violation)
-		return fmt.Errorf(violation)
+		return fmt.Errorf("%s", violation)
 	}
-	
+
 	return nil
 }
 
@@ -338,11 +343,11 @@ func (sps *SimplePerformanceSteps) measureThroughput() {
 	if sps.duration > 0 && sps.operationCount > 0 {
 		throughput := float64(sps.operationCount) / sps.duration.Seconds()
 		errorRate := float64(sps.errorCount) / float64(sps.operationCount)
-		
+
 		sps.throughputMetrics["throughput"] = throughput
 		sps.throughputMetrics["error_rate"] = errorRate
 		sps.throughputMetrics["success_rate"] = 1.0 - errorRate
-		
+
 		// Store in context for reporting
 		sps.bddContext.SetTestData("performance_metrics", map[string]interface{}{
 			"throughput_ops_per_sec": throughput,
@@ -359,43 +364,43 @@ func (sps *SimplePerformanceSteps) measureThroughput() {
 func (sps *SimplePerformanceSteps) validateResourceUsage() error {
 	memoryIncrease := sps.memoryAfter.Alloc - sps.memoryBefore.Alloc
 	memoryIncreaseRatio := float64(memoryIncrease) / float64(sps.memoryBefore.Alloc)
-	
+
 	// Define memory usage thresholds
 	const maxMemoryIncreaseRatio = 0.5 // 50% increase allowed
 	const maxMemoryIncreaseMB = 100    // 100MB absolute increase
-	
+
 	if memoryIncreaseRatio > maxMemoryIncreaseRatio {
 		violation := fmt.Sprintf("memory increased by %.1f%%, exceeds threshold of %.1f%%",
 			memoryIncreaseRatio*100, maxMemoryIncreaseRatio*100)
 		sps.performanceViolations = append(sps.performanceViolations, violation)
 		return fmt.Errorf(violation)
 	}
-	
+
 	if memoryIncrease > maxMemoryIncreaseMB*1024*1024 {
 		violation := fmt.Sprintf("memory increased by %d MB, exceeds threshold of %d MB",
 			memoryIncrease/(1024*1024), maxMemoryIncreaseMB)
 		sps.performanceViolations = append(sps.performanceViolations, violation)
 		return fmt.Errorf(violation)
 	}
-	
+
 	return nil
 }
 
 // getPerformanceReport generates a comprehensive performance report
 func (sps *SimplePerformanceSteps) getPerformanceReport() map[string]interface{} {
 	sps.measureThroughput()
-	
+
 	report := map[string]interface{}{
-		"operation_count":         sps.operationCount,
-		"error_count":             sps.errorCount,
-		"duration_ms":             sps.duration.Milliseconds(),
-		"throughput_metrics":      sps.throughputMetrics,
+		"operation_count":        sps.operationCount,
+		"error_count":            sps.errorCount,
+		"duration_ms":            sps.duration.Milliseconds(),
+		"throughput_metrics":     sps.throughputMetrics,
 		"performance_violations": sps.performanceViolations,
-		"memory_before_mb":        sps.memoryBefore.Alloc / 1024 / 1024,
-		"memory_after_mb":         sps.memoryAfter.Alloc / 1024 / 1024,
-		"memory_increase_mb":      (sps.memoryAfter.Alloc - sps.memoryBefore.Alloc) / 1024 / 1024,
-		"thresholds":              sps.performanceThresholds,
+		"memory_before_mb":       sps.memoryBefore.Alloc / 1024 / 1024,
+		"memory_after_mb":        sps.memoryAfter.Alloc / 1024 / 1024,
+		"memory_increase_mb":     (sps.memoryAfter.Alloc - sps.memoryBefore.Alloc) / 1024 / 1024,
+		"thresholds":             sps.performanceThresholds,
 	}
-	
+
 	return report
 }

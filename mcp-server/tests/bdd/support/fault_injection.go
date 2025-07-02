@@ -320,4 +320,3 @@ var ValidationScenarios = map[string]ChaosConfig{
 		PartialFailureRate: 0.5,
 	},
 }
-

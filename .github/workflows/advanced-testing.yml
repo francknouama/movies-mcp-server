@@ -8,6 +8,19 @@ on:
   schedule:
     # Run advanced tests daily at 2 AM UTC
     - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of test to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - performance
+        - stress
+        - security
+        - contracts
 
 env:
   GO_VERSION: '1.23'
@@ -15,7 +28,8 @@ env:
 jobs:
   advanced-bdd-tests:
     runs-on: ubuntu-latest
-    if: github.event_name != 'schedule' || github.repository == 'francknouama/movies-mcp-server'
+    # Run on all events except when specifically skipped
+    if: "!contains(github.event.head_commit.message, '[skip advanced-tests]')"
     
     services:
       postgres:
@@ -73,25 +87,28 @@ jobs:
         working-directory: mcp-server
         run: |
           echo "Running performance scenarios..."
-          go test -v -tags=bdd ./tests/bdd/... -godog.tags=@performance
+          go test -v -tags=bdd ./tests/bdd/... -godog.tags=@performance -timeout=10m
         continue-on-error: true
         id: performance-tests
+        timeout-minutes: 15
         
       - name: Run Error Handling BDD Tests
         working-directory: mcp-server
         run: |
           echo "Running error handling scenarios..."
-          go test -v -tags=bdd ./tests/bdd/... -godog.tags=@error-handling
+          go test -v -tags=bdd ./tests/bdd/... -godog.tags=@error-handling -timeout=10m
         continue-on-error: true
         id: error-tests
+        timeout-minutes: 15
         
       - name: Run Contract Testing BDD Tests
         working-directory: mcp-server
         run: |
           echo "Running contract testing scenarios..."
-          go test -v -tags=bdd ./tests/bdd/... -godog.tags=@contract
+          go test -v -tags=bdd ./tests/bdd/... -godog.tags=@contract -timeout=10m
         continue-on-error: true
         id: contract-tests
+        timeout-minutes: 15
         
       - name: Run Advanced Resource Tests
         working-directory: mcp-server
@@ -149,7 +166,8 @@ jobs:
 
   performance-benchmarks:
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'performance')
+    # Run on main branch pushes and PRs, or when specifically requested
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request' || github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'performance')
     
     services:
       postgres:
@@ -222,7 +240,8 @@ jobs:
 
   contract-regression-tests:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    # Run on PRs and main branch pushes to catch contract changes
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     
     services:
       postgres:
@@ -343,7 +362,8 @@ jobs:
 
   stress-testing:
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'stress-test')
+    # Run on schedule, manual trigger, or when stress-test label is present
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'stress-test') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[stress-test]'))
     
     services:
       postgres:
@@ -437,7 +457,8 @@ jobs:
 
   security-testing:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
+    # Run on all PRs, main pushes, and schedule
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule' || github.ref == 'refs/heads/main'
     
     steps:
       - uses: actions/checkout@v4

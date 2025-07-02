@@ -14,13 +14,13 @@ import (
 
 // ErrorHandlingSteps provides step definitions for error handling scenarios
 type ErrorHandlingSteps struct {
-	bddContext     *bddcontext.BDDContext
-	utilities      *support.TestUtilities
-	faultInjector  *support.FaultInjector
-	lastResponse   interface{}
-	lastError      error
-	testMovies     []map[string]interface{}
-	ctx            context.Context
+	bddContext      *bddcontext.BDDContext
+	utilities       *support.TestUtilities
+	faultInjector   *support.FaultInjector
+	lastResponse    interface{}
+	lastError       error
+	testMovies      []map[string]interface{}
+	ctx             context.Context
 	baselineMetrics *support.ResourceMetrics
 }
 
@@ -169,14 +169,14 @@ func (ehs *ErrorHandlingSteps) theDatabaseConnectionIsLost() error {
 		// For now, simulate the effect
 		ehs.bddContext.SetTestData("database_failed", true)
 	}
-	
+
 	// Inject actual database failure
 	err := ehs.faultInjector.InjectDatabaseFailure(ehs.ctx)
 	if err != nil {
 		// If we can't inject failure, at least mark it for simulation
 		ehs.bddContext.SetTestData("expect_database_errors", true)
 	}
-	
+
 	return nil
 }
 
@@ -188,12 +188,12 @@ func (ehs *ErrorHandlingSteps) theSystemIsUnderMemoryPressure() error {
 		ehs.bddContext.SetTestData("expect_memory_errors", true)
 		return err
 	}
-	
+
 	// Monitor baseline metrics
 	metrics, _ := ehs.faultInjector.MonitorResourceUsage()
 	ehs.baselineMetrics = metrics
 	ehs.bddContext.SetTestData("memory_pressure_active", true)
-	
+
 	return nil
 }
 
@@ -206,7 +206,7 @@ func (ehs *ErrorHandlingSteps) networkErrorsOccurDuringCommunication() error {
 		ehs.bddContext.SetTestData("expect_network_errors", true)
 		return err
 	}
-	
+
 	ehs.bddContext.SetTestData("network_errors_active", true)
 	return nil
 }
@@ -217,14 +217,14 @@ func (ehs *ErrorHandlingSteps) oneComponentFails() error {
 		PartialFailureRate: 0.5, // 50% failure rate
 		DatabaseFailure:    true,
 	}
-	
+
 	err := ehs.faultInjector.InjectChaosConditions(ehs.ctx, chaosConfig)
 	if err != nil {
 		// If injection fails, simulate the condition
 		ehs.bddContext.SetTestData("component_failure", true)
 		return err
 	}
-	
+
 	ehs.bddContext.SetTestData("chaos_conditions_active", true)
 	return nil
 }
