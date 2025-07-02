@@ -29,12 +29,16 @@ ENV CGO_ENABLED=0 \
 
 WORKDIR /build
 
-# Copy dependency files for layer caching
-COPY go.mod go.sum ./
-RUN go mod download && go mod verify
+# Copy workspace files for Go workspace support
+COPY go.work go.work.sum* ./
+COPY shared-mcp/ ./shared-mcp/
+COPY mcp-server/ ./mcp-server/
 
-# Copy source with proper ownership
-COPY --chown=appuser:appuser . .
+# Set working directory for the main module
+WORKDIR /build/mcp-server
+
+# Download and verify dependencies
+RUN go mod download && go mod verify
 
 # Build with security flags and optimizations
 ARG VERSION=unknown

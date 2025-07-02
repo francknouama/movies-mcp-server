@@ -160,11 +160,11 @@ dockers:
       - "--label=org.opencontainers.image.source={{.GitURL}}"
       - "--platform=linux/amd64,linux/arm64"
 
-# SBOM generation
-sboms:
-  - artifacts: archive
-    documents:
-      - "movies-mcp-server-{{ .Version }}.sbom.json"
+# SBOM generation - disabled for CI compatibility
+# sboms:
+#   - artifacts: archive
+#     documents:
+#       - "movies-mcp-server-{{ .Version }}.sbom.json"
 
 # Announce releases
 announce:
