@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -138,10 +139,68 @@ func parseConnectionString(connStr string) (*dbConfig, error) {
 	}, nil
 }
 
+// getProjectRoot finds the project root directory by looking for go.work file
+func getProjectRoot() (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	// Walk up the directory tree looking for go.work file
+	for {
+		goWorkPath := filepath.Join(wd, "go.work")
+		if _, err := os.Stat(goWorkPath); err == nil {
+			return wd, nil
+		}
+
+		parent := filepath.Dir(wd)
+		if parent == wd {
+			// Reached filesystem root
+			break
+		}
+		wd = parent
+	}
+
+	return "", fmt.Errorf("project root with go.work file not found")
+}
+
+// buildServerBinary builds the MCP server binary if it doesn't exist
+func buildServerBinary(projectRoot string) (string, error) {
+	serverBinary := filepath.Join(projectRoot, "mcp-server", "movies-mcp-server")
+	
+	// Check if binary already exists
+	if _, err := os.Stat(serverBinary); err == nil {
+		return serverBinary, nil
+	}
+
+	// Build the server binary
+	serverMainPath := filepath.Join(projectRoot, "mcp-server", "cmd", "server", "main.go")
+	buildCmd := exec.Command("go", "build", "-o", serverBinary, serverMainPath)
+	buildCmd.Dir = projectRoot // Set working directory to project root
+	
+	output, err := buildCmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to build server binary: %w\nOutput: %s", err, string(output))
+	}
+
+	return serverBinary, nil
+}
+
 // StartMCPServer starts the real MCP server for testing
 func (ctx *BDDContext) StartMCPServer() error {
+	// Find project root and build server binary
+	projectRoot, err := getProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to find project root: %w", err)
+	}
+
+	serverBinary, err := buildServerBinary(projectRoot)
+	if err != nil {
+		return fmt.Errorf("failed to build server binary: %w", err)
+	}
+
 	// Start the real MCP server (no mocks - Phase 1 remediation)
-	ctx.serverProcess = exec.Command("../../main")
+	ctx.serverProcess = exec.Command(serverBinary)
 
 	// Set database environment if database configuration was provided
 	env := os.Environ()

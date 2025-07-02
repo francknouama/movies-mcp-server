@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	_ "github.com/lib/pq" // PostgreSQL driver
@@ -15,12 +16,71 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Singleton pattern for shared test database
+var (
+	sharedTestDB     *TestContainerDatabase
+	sharedTestDBOnce sync.Once
+	sharedTestDBMu   sync.RWMutex
+)
+
 // TestContainerDatabase provides database operations using Testcontainers for isolation
 type TestContainerDatabase struct {
 	container *postgres.PostgresContainer
 	db        *sql.DB
 	fixtures  map[string][]interface{}
 	ctx       context.Context
+}
+
+// GetSharedTestDatabase returns a singleton test database instance
+func GetSharedTestDatabase(ctx context.Context) (*TestContainerDatabase, error) {
+	sharedTestDBMu.RLock()
+	if sharedTestDB != nil {
+		defer sharedTestDBMu.RUnlock()
+		return sharedTestDB, nil
+	}
+	sharedTestDBMu.RUnlock()
+
+	var err error
+	sharedTestDBOnce.Do(func() {
+		sharedTestDBMu.Lock()
+		defer sharedTestDBMu.Unlock()
+		sharedTestDB, err = NewTestContainerDatabase(ctx)
+	})
+
+	return sharedTestDB, err
+}
+
+// CleanupSharedTestDatabase cleans up the shared test database
+func CleanupSharedTestDatabase() error {
+	sharedTestDBMu.Lock()
+	defer sharedTestDBMu.Unlock()
+
+	if sharedTestDB != nil {
+		err := sharedTestDB.Cleanup()
+		sharedTestDB = nil
+		// Reset the once so a new database can be created if needed
+		sharedTestDBOnce = sync.Once{}
+		return err
+	}
+	return nil
+}
+
+// ClearData clears all data from the database but keeps the schema
+func (tdb *TestContainerDatabase) ClearData() error {
+	// Clear data in reverse dependency order to avoid foreign key conflicts
+	tables := []string{
+		"movie_actors", // Junction table first
+		"actors",
+		"movies",
+	}
+
+	for _, table := range tables {
+		if _, err := tdb.db.Exec(fmt.Sprintf("DELETE FROM %s", table)); err != nil {
+			return fmt.Errorf("failed to clear table %s: %w", table, err)
+		}
+	}
+
+	return nil
 }
 
 // NewTestContainerDatabase creates a new test database instance using Testcontainers
@@ -108,10 +168,40 @@ func isDockerAvailable() bool {
 	return true
 }
 
+// getProjectRoot finds the project root directory by looking for go.work file
+func getProjectRoot() (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	// Walk up the directory tree looking for go.work file
+	for {
+		goWorkPath := filepath.Join(wd, "go.work")
+		if _, err := os.Stat(goWorkPath); err == nil {
+			return wd, nil
+		}
+
+		parent := filepath.Dir(wd)
+		if parent == wd {
+			// Reached filesystem root
+			break
+		}
+		wd = parent
+	}
+
+	return "", fmt.Errorf("project root with go.work file not found")
+}
+
 // runMigrations applies database migrations to the test database
 func (tdb *TestContainerDatabase) runMigrations() error {
-	// Look for migration files relative to the BDD test directory
-	migrationsDir := "../../migrations"
+	// Find project root and locate migrations directory
+	projectRoot, err := getProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to find project root: %w", err)
+	}
+
+	migrationsDir := filepath.Join(projectRoot, "mcp-server", "migrations")
 
 	// Check if migrations directory exists
 	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {

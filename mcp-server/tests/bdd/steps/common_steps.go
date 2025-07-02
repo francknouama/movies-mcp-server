@@ -64,10 +64,10 @@ func InitializeMCPSteps(ctx *godog.ScenarioContext) {
 func (c *CommonStepContext) setupScenario() error {
 	var err error
 
-	// Try to initialize Testcontainer database first, fallback to regular database
-	c.testContainerDB, err = support.NewTestContainerDatabase(c.ctx)
+	// Use shared Testcontainer database, fallback to regular database
+	c.testContainerDB, err = support.GetSharedTestDatabase(c.ctx)
 	if err != nil {
-		fmt.Printf("Warning: Could not initialize Testcontainer database (%v), falling back to regular database\n", err)
+		fmt.Printf("Warning: Could not initialize shared Testcontainer database (%v), falling back to regular database\n", err)
 
 		// Fallback to regular test database
 		regularDB, fallbackErr := support.NewTestDatabase()
@@ -76,14 +76,21 @@ func (c *CommonStepContext) setupScenario() error {
 		}
 		c.testDB = regularDB
 	} else {
-		// Use Testcontainer database
+		// Use shared Testcontainer database
 		c.testDB = c.testContainerDB
 	}
 
-	// Clean database before each scenario
-	err = c.testDB.CleanupAfterScenario()
-	if err != nil {
-		return fmt.Errorf("failed to clean database before scenario: %w", err)
+	// Clean database data before each scenario (but keep schema)
+	if c.testContainerDB != nil {
+		err = c.testContainerDB.ClearData()
+		if err != nil {
+			return fmt.Errorf("failed to clear database data before scenario: %w", err)
+		}
+	} else {
+		err = c.testDB.CleanupAfterScenario()
+		if err != nil {
+			return fmt.Errorf("failed to clean database before scenario: %w", err)
+		}
 	}
 
 	// Configure database environment for MCP server if using Testcontainer
@@ -126,17 +133,17 @@ func (c *CommonStepContext) teardownScenario() error {
 		}
 	}
 
-	// Clean up test database
-	if c.testDB != nil {
+	// Clean up test database (only for regular test database)
+	if c.testDB != nil && c.testContainerDB == nil {
 		if err := c.testDB.CleanupAfterScenario(); err != nil {
 			errors = append(errors, fmt.Errorf("database cleanup failed: %w", err))
 		}
 	}
 
-	// Clean up Testcontainer if used
+	// For shared Testcontainer database, only clear data, don't terminate container
 	if c.testContainerDB != nil {
-		if err := c.testContainerDB.Cleanup(); err != nil {
-			errors = append(errors, fmt.Errorf("testcontainer cleanup failed: %w", err))
+		if err := c.testContainerDB.ClearData(); err != nil {
+			errors = append(errors, fmt.Errorf("testcontainer data cleanup failed: %w", err))
 		}
 	}
 
