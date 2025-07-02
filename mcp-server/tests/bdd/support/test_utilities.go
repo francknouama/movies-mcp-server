@@ -427,3 +427,17 @@ func (tu *TestUtilities) DeepCopyMap(original map[string]interface{}) map[string
 
 	return copy
 }
+
+// GenerateRandomFloat generates a random float between 0.0 and 1.0
+func (tu *TestUtilities) GenerateRandomFloat() float64 {
+	// Use the existing rand instance from GenerateRandomString
+	return float64(tu.generateRandomInt(0, 1000)) / 1000.0
+}
+
+// generateRandomInt generates a random integer between min and max
+func (tu *TestUtilities) generateRandomInt(min, max int) int {
+	if max <= min {
+		return min
+	}
+	return min + (int(tu.GenerateRandomString(1)[0]) * (max - min) / 256)
+}
