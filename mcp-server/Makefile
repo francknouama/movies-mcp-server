@@ -3,7 +3,7 @@
 # Variables
 BINARY_NAME=movies-server
 BINARY_NAME_CLEAN=movies-server-clean
-GO_VERSION=1.24.4
+GO_VERSION=1.23
 MAIN_PATH=cmd/server/main.go
 MAIN_PATH_CLEAN=cmd/server-new/main.go
 MIGRATE_PATH=tools/migrate/main.go

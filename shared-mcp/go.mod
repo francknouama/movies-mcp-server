@@ -1,6 +1,8 @@
 module github.com/francknouama/movies-mcp-server/shared-mcp
 
-go 1.24
+go 1.23.0
+
+toolchain go1.24.4
 
 require github.com/sirupsen/logrus v1.9.3
 

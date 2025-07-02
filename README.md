@@ -58,7 +58,7 @@ Cucumber BDD testing integration for AI-driven test management and execution.
 This repository uses Go workspaces (introduced in Go 1.18) to manage multiple modules. Each server is a separate Go module that can be developed and versioned independently. The shared-mcp module provides common functionality used across servers.
 
 ### Prerequisites
-- Go 1.24.4 or later
+- Go 1.23 or later
 - Docker and Docker Compose (for mcp-server)
 - Godog CLI (for godog-server)
 

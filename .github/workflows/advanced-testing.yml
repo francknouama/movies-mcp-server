@@ -10,7 +10,7 @@ on:
     - cron: '0 2 * * *'
 
 env:
-  GO_VERSION: '1.22.5'
+  GO_VERSION: '1.23'
 
 jobs:
   advanced-bdd-tests:
