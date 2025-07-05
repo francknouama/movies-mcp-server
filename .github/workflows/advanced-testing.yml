@@ -67,24 +67,20 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-advanced-${{ hashFiles('mcp-server/go.sum') }}
+          key: ${{ runner.os }}-go-advanced-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-advanced-
             
       - name: Install dependencies
-        working-directory: mcp-server
         run: go mod download
         
       - name: Build MCP server
-        working-directory: mcp-server
         run: go build -o main cmd/server/main.go
         
       - name: Run database migrations
-        working-directory: mcp-server
         run: ./main -migrate-only
         
       - name: Run Performance BDD Tests
-        working-directory: mcp-server
         run: |
           echo "Running performance scenarios..."
           go test -v -tags=bdd ./tests/bdd/... -godog.tags=@performance -timeout=10m
@@ -93,7 +89,6 @@ jobs:
         timeout-minutes: 15
         
       - name: Run Error Handling BDD Tests
-        working-directory: mcp-server
         run: |
           echo "Running error handling scenarios..."
           go test -v -tags=bdd ./tests/bdd/... -godog.tags=@error-handling -timeout=10m
@@ -102,7 +97,6 @@ jobs:
         timeout-minutes: 15
         
       - name: Run Contract Testing BDD Tests
-        working-directory: mcp-server
         run: |
           echo "Running contract testing scenarios..."
           go test -v -tags=bdd ./tests/bdd/... -godog.tags=@contract -timeout=10m
@@ -111,7 +105,6 @@ jobs:
         timeout-minutes: 15
         
       - name: Run Advanced Resource Tests
-        working-directory: mcp-server
         run: |
           echo "Running advanced resource scenarios..."
           go test -v -tags=bdd ./tests/bdd/... -godog.tags=@resources
@@ -200,19 +193,15 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           
       - name: Install dependencies
-        working-directory: mcp-server
         run: go mod download
         
       - name: Build MCP server
-        working-directory: mcp-server
         run: go build -o main cmd/server/main.go
         
       - name: Run database migrations
-        working-directory: mcp-server
         run: ./main -migrate-only
         
       - name: Run Performance Benchmarks
-        working-directory: mcp-server
         run: |
           echo "Running performance benchmarks..."
           go test -v -bench=. -benchmem -run=^$ ./tests/bdd/... > benchmark-results.txt
@@ -224,7 +213,7 @@ jobs:
           echo "## Summary" >> benchmark-report.md
           echo "" >> benchmark-report.md
           echo "\`\`\`" >> benchmark-report.md
-          cat mcp-server/benchmark-results.txt >> benchmark-report.md
+          cat benchmark-results.txt >> benchmark-report.md
           echo "\`\`\`" >> benchmark-report.md
           echo "" >> benchmark-report.md
           echo "## Analysis" >> benchmark-report.md
@@ -276,19 +265,15 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           
       - name: Install dependencies
-        working-directory: mcp-server
         run: go mod download
         
       - name: Build MCP server
-        working-directory: mcp-server
         run: go build -o main cmd/server/main.go
         
       - name: Run database migrations
-        working-directory: mcp-server
         run: ./main -migrate-only
         
       - name: Extract Current Contracts
-        working-directory: mcp-server
         run: |
           echo "Extracting current API contracts..."
           mkdir -p contracts/current
@@ -299,14 +284,13 @@ jobs:
         run: |
           echo "Extracting base branch contracts..."
           git checkout ${{ github.base_ref }}
-          mkdir -p mcp-server/contracts/base
-          if [ -d mcp-server/tests/bdd/contracts ]; then
-            cp mcp-server/tests/bdd/contracts/*.yaml mcp-server/contracts/base/ 2>/dev/null || echo "No base contracts found"
+          mkdir -p contracts/base
+          if [ -d tests/bdd/contracts ]; then
+            cp tests/bdd/contracts/*.yaml contracts/base/ 2>/dev/null || echo "No base contracts found"
           fi
           git checkout ${{ github.head_ref }}
           
       - name: Run Contract Regression Tests
-        working-directory: mcp-server
         run: |
           echo "Running contract regression analysis..."
           go test -v -tags=bdd ./tests/bdd/... -godog.tags=@contract-regression
@@ -334,7 +318,7 @@ jobs:
           echo "" >> contract-analysis.md
           echo "## Contract Files Analyzed" >> contract-analysis.md
           echo "" >> contract-analysis.md
-          find mcp-server/contracts -name "*.yaml" -type f | while read file; do
+          find contracts -name "*.yaml" -type f | while read file; do
             echo "- \`$(basename $file)\`" >> contract-analysis.md
           done
           
@@ -396,19 +380,15 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           
       - name: Install dependencies
-        working-directory: mcp-server
         run: go mod download
         
       - name: Build MCP server
-        working-directory: mcp-server
         run: go build -o main cmd/server/main.go
         
       - name: Run database migrations
-        working-directory: mcp-server
         run: ./main -migrate-only
         
       - name: Populate Large Dataset
-        working-directory: mcp-server
         run: |
           echo "Creating large test dataset..."
           # This would populate the database with a large dataset for stress testing
@@ -416,7 +396,6 @@ jobs:
         continue-on-error: true
         
       - name: Run Stress Tests
-        working-directory: mcp-server
         run: |
           echo "Running stress test scenarios..."
           timeout 1800 go test -v -tags=bdd ./tests/bdd/... -godog.tags=@stress-test -timeout=30m
@@ -474,7 +453,6 @@ jobs:
           go install github.com/quasilyte/go-ruleguard/cmd/ruleguard@latest
           
       - name: Run Security Analysis
-        working-directory: mcp-server
         run: |
           echo "Running security analysis..."
           gosec -fmt json -out security-report.json ./... || true
@@ -486,7 +464,7 @@ jobs:
           echo "## Summary" >> security-report.md
           echo "" >> security-report.md
           
-          if [ -f mcp-server/security-report.json ]; then
+          if [ -f security-report.json ]; then
             # Parse JSON and create summary (simplified)
             echo "Security analysis completed. See detailed report in artifacts." >> security-report.md
           else
@@ -505,7 +483,7 @@ jobs:
           name: security-analysis-report
           path: |
             security-report.md
-            mcp-server/security-report.json
+            security-report.json
 
   test-summary:
     runs-on: ubuntu-latest

@@ -41,9 +41,12 @@ func (c *CommonStepContext) iHaveAValidMCPClientConnection() error {
 	}
 
 	// Try to list tools to verify connection is working
-	_, err := c.bddContext.CallTool("list_tools", map[string]interface{}{})
-	if err != nil && !c.bddContext.HasError() {
-		return fmt.Errorf("MCP client connection not valid: %w", err)
+	// Note: This should use the MCP client's ListTools method, not CallTool
+	if mcpClient := c.bddContext.GetMCPClient(); mcpClient != nil {
+		_, err := mcpClient.ListTools()
+		if err != nil {
+			return fmt.Errorf("MCP client connection not valid: %w", err)
+		}
 	}
 
 	return nil
@@ -138,9 +141,11 @@ func (c *CommonStepContext) theProtocolVersionShouldBe(expectedVersion string) e
 // iSendAToolsListRequest sends a tools/list request
 func (c *CommonStepContext) iSendAToolsListRequest() error {
 	// Use our MCP client to list tools
-	_, err := c.bddContext.CallTool("list_tools", map[string]interface{}{})
-	if err != nil {
-		return fmt.Errorf("failed to send tools/list request: %w", err)
+	if mcpClient := c.bddContext.GetMCPClient(); mcpClient != nil {
+		_, err := mcpClient.ListTools()
+		if err != nil {
+			return fmt.Errorf("failed to send tools/list request: %w", err)
+		}
 	}
 
 	// Store that we sent a tools list request
@@ -152,9 +157,11 @@ func (c *CommonStepContext) iSendAToolsListRequest() error {
 // iSendAResourcesListRequest sends a resources/list request
 func (c *CommonStepContext) iSendAResourcesListRequest() error {
 	// Use our MCP client to list resources
-	_, err := c.bddContext.CallTool("list_resources", map[string]interface{}{})
-	if err != nil {
-		return fmt.Errorf("failed to send resources/list request: %w", err)
+	if mcpClient := c.bddContext.GetMCPClient(); mcpClient != nil {
+		_, err := mcpClient.ListResources()
+		if err != nil {
+			return fmt.Errorf("failed to send resources/list request: %w", err)
+		}
 	}
 
 	// Store that we sent a resources list request

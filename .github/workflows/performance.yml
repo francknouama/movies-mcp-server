@@ -71,16 +71,14 @@ jobs:
             
       - name: Install dependencies
         run: |
-          cd mcp-server && go mod download
+          go mod download
           
       - name: Build MCP server for performance testing
-        working-directory: mcp-server
         run: |
           mkdir -p build
           CGO_ENABLED=0 go build -ldflags="-w -s" -o build/movies-server cmd/server/main.go
           
       - name: Setup database and seed data
-        working-directory: mcp-server
         run: |
           # Run migrations
           ./build/movies-server -migrate-only
@@ -119,7 +117,6 @@ jobs:
           "
           
       - name: Start simple health check server for testing
-        working-directory: mcp-server
         run: |
           # Verify the MCP server binary exists and is executable
           if [ ! -f "./build/movies-server" ]; then
@@ -464,7 +461,6 @@ jobs:
           
       - name: Stop performance test server
         if: always()
-        working-directory: mcp-server
         run: |
           if [ -f server.pid ]; then
             kill $(cat server.pid) || true

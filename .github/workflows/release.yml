@@ -141,32 +141,19 @@ jobs:
             ${{ runner.os }}-go-release-
             
       - name: Install dependencies
-        run: |
-          cd shared-mcp && go mod download
-          cd ../mcp-server && go mod download
-          cd ../godog-server && go mod download
+        run: go mod download
           
       - name: Run comprehensive tests
         run: |
           echo "Running tests for release $VERSION"
           
-          # Test shared components
-          cd shared-mcp
-          go test -v -race -coverprofile=coverage.out ./...
-          
-          # Test MCP server
-          cd ../mcp-server
+          # Build MCP server
           go build -o build/movies-server cmd/server/main.go
           ./build/movies-server -migrate-only
           go test -v -race -coverprofile=coverage.out ./...
           go test -v -tags=integration ./tests/integration/...
           
-          # Test ATDD scenarios
-          cd ../godog-server
-          go test -v -timeout=10m
-          
       - name: Build release binaries
-        working-directory: mcp-server
         run: |
           BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           LDFLAGS="-w -s -X 'main.Version=$VERSION' -X 'main.BuildTime=$BUILD_TIME'"
@@ -181,7 +168,7 @@ jobs:
           GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-windows-amd64.exe cmd/server/main.go
           
       - name: Create checksums
-        working-directory: mcp-server/dist
+        working-directory: dist
         run: |
           sha256sum * > checksums.txt
           cat checksums.txt
@@ -190,7 +177,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-binaries
-          path: mcp-server/dist/
+          path: dist/
 
   build-docker:
     needs: [validate-version, build-and-test, check-ci-status]
@@ -224,8 +211,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./mcp-server
-          file: ./mcp-server/Dockerfile.production
+          context: .
+          file: ./Dockerfile.production
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

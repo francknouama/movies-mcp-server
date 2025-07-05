@@ -139,17 +139,17 @@ func parseConnectionString(connStr string) (*dbConfig, error) {
 	}, nil
 }
 
-// getProjectRoot finds the project root directory by looking for go.work file
+// getProjectRoot finds the project root directory by looking for go.mod file
 func getProjectRoot() (string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
 
-	// Walk up the directory tree looking for go.work file
+	// Walk up the directory tree looking for go.mod file
 	for {
-		goWorkPath := filepath.Join(wd, "go.work")
-		if _, err := os.Stat(goWorkPath); err == nil {
+		goModPath := filepath.Join(wd, "go.mod")
+		if _, err := os.Stat(goModPath); err == nil {
 			return wd, nil
 		}
 
@@ -161,12 +161,12 @@ func getProjectRoot() (string, error) {
 		wd = parent
 	}
 
-	return "", fmt.Errorf("project root with go.work file not found")
+	return "", fmt.Errorf("project root with go.mod file not found")
 }
 
 // buildServerBinary builds the MCP server binary if it doesn't exist
 func buildServerBinary(projectRoot string) (string, error) {
-	serverBinary := filepath.Join(projectRoot, "mcp-server", "movies-mcp-server")
+	serverBinary := filepath.Join(projectRoot, "movies-mcp-server")
 
 	// Check if binary already exists
 	if _, err := os.Stat(serverBinary); err == nil {
@@ -174,7 +174,7 @@ func buildServerBinary(projectRoot string) (string, error) {
 	}
 
 	// Build the server binary
-	serverMainPath := filepath.Join(projectRoot, "mcp-server", "cmd", "server", "main.go")
+	serverMainPath := filepath.Join(projectRoot, "cmd", "server", "main.go")
 	// #nosec G204 - Safe: building our own Go binary in test environment
 	buildCmd := exec.Command("go", "build", "-o", serverBinary, serverMainPath)
 	buildCmd.Dir = projectRoot // Set working directory to project root
@@ -437,4 +437,9 @@ func (ctx *BDDContext) GetErrorMessage() string {
 		return fmt.Sprintf("Tool call failed: %v", ctx.lastResponse.Content)
 	}
 	return ""
+}
+
+// GetMCPClient returns the MCP client for direct access
+func (ctx *BDDContext) GetMCPClient() *client.MCPClient {
+	return ctx.mcpClient
 }

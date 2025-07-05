@@ -22,12 +22,9 @@ jobs:
         with:
           filters: |
             mcp-server:
-              - 'mcp-server/**'
-              - 'shared-mcp/**'
-              - 'go.work'
+              - '**'
             shared-mcp:
-              - 'shared-mcp/**'
-              - 'go.work'
+              - '**'
 
   test-shared-mcp:
     runs-on: ubuntu-latest
@@ -47,27 +44,24 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-shared-${{ hashFiles('shared-mcp/go.sum') }}
+          key: ${{ runner.os }}-go-shared-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-shared-
             
       - name: Install dependencies
-        working-directory: shared-mcp
         run: go mod download
         
       - name: Run tests
-        working-directory: shared-mcp
         run: go test -v -race -coverprofile=coverage.out ./...
         
       - name: Generate coverage report
-        working-directory: shared-mcp
         run: go tool cover -html=coverage.out -o coverage.html
         
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: shared-mcp-coverage
-          path: shared-mcp/coverage.html
+          path: coverage.html
 
   test-mcp-server:
     runs-on: ubuntu-latest
@@ -110,45 +104,39 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-mcp-${{ hashFiles('mcp-server/go.sum') }}
+          key: ${{ runner.os }}-go-mcp-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-mcp-
             
       - name: Install dependencies
-        working-directory: mcp-server
         run: go mod download
         
       - name: Build application
-        working-directory: mcp-server
         run: go build -o build/movies-server cmd/server/main.go
         
       - name: Run database migrations
-        working-directory: mcp-server
         run: ./build/movies-server -migrate-only
           
       - name: Run unit tests
-        working-directory: mcp-server
         run: go test -v -race -coverprofile=coverage.out $(go list ./... | grep -v tests/bdd)
         
       - name: Run integration tests
-        working-directory: mcp-server
         run: go test -v -tags=integration ./tests/integration/...
         
       - name: Generate coverage report
-        working-directory: mcp-server
         run: go tool cover -html=coverage.out -o coverage.html
         
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: mcp-server-coverage
-          path: mcp-server/coverage.html
+          path: coverage.html
           
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
           name: mcp-server-binary
-          path: mcp-server/build/movies-server
+          path: build/movies-server
 
 
   lint:
@@ -161,18 +149,10 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           
-      - name: Run golangci-lint for shared-mcp
+      - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          working-directory: shared-mcp
-          args: --config=.golangci.yml
-          
-      - name: Run golangci-lint for mcp-server
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          working-directory: mcp-server
           args: --config=.golangci.yml
 
   security:
@@ -205,15 +185,9 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           
-      - name: Verify go.work consistency
-        run: |
-          go work sync
-          git diff --exit-code go.work
-          
       - name: Install go-mod-outdated
         run: go install github.com/psampaz/go-mod-outdated@latest
           
       - name: Check for outdated dependencies
         run: |
-          cd mcp-server && go list -u -m -json all | go-mod-outdated -update -direct
-          cd ../shared-mcp && go list -u -m -json all | go-mod-outdated -update -direct
+          go list -u -m -json all | go-mod-outdated -update -direct
