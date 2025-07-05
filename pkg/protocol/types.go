@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 )
 
-// JSONRPCRequest represents a JSON-RPC 2.0 request
+// JSONRPCRequest represents a JSON-RPC 2.0 request.
 type JSONRPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      interface{}     `json:"id,omitempty"`
@@ -12,7 +12,7 @@ type JSONRPCRequest struct {
 	Params  json.RawMessage `json:"params,omitempty"`
 }
 
-// JSONRPCResponse represents a JSON-RPC 2.0 response
+// JSONRPCResponse represents a JSON-RPC 2.0 response.
 type JSONRPCResponse struct {
 	JSONRPC string        `json:"jsonrpc"`
 	ID      interface{}   `json:"id,omitempty"`
@@ -20,14 +20,14 @@ type JSONRPCResponse struct {
 	Error   *JSONRPCError `json:"error,omitempty"`
 }
 
-// JSONRPCError represents a JSON-RPC 2.0 error
+// JSONRPCError represents a JSON-RPC 2.0 error.
 type JSONRPCError struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
-// MCPRequest represents an MCP protocol request (higher-level wrapper)
+// MCPRequest represents an MCP protocol request (higher-level wrapper).
 type MCPRequest struct {
 	JSONRPC string      `json:"jsonrpc"`
 	ID      interface{} `json:"id"`
@@ -35,7 +35,7 @@ type MCPRequest struct {
 	Params  interface{} `json:"params,omitempty"`
 }
 
-// MCPResponse represents an MCP protocol response (higher-level wrapper)
+// MCPResponse represents an MCP protocol response (higher-level wrapper).
 type MCPResponse struct {
 	JSONRPC string      `json:"jsonrpc"`
 	ID      interface{} `json:"id,omitempty"`
@@ -43,14 +43,14 @@ type MCPResponse struct {
 	Error   *MCPError   `json:"error,omitempty"`
 }
 
-// MCPError represents an MCP protocol error
+// MCPError represents an MCP protocol error.
 type MCPError struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
-// ToJSONRPC converts an MCPRequest to a JSONRPCRequest
+// ToJSONRPC converts an MCPRequest to a JSONRPCRequest.
 func (r *MCPRequest) ToJSONRPC() (*JSONRPCRequest, error) {
 	params, err := json.Marshal(r.Params)
 	if err != nil {
@@ -65,7 +65,7 @@ func (r *MCPRequest) ToJSONRPC() (*JSONRPCRequest, error) {
 	}, nil
 }
 
-// ToMCP converts a JSONRPCRequest to an MCPRequest
+// ToMCP converts a JSONRPCRequest to an MCPRequest.
 func (r *JSONRPCRequest) ToMCP() (*MCPRequest, error) {
 	var params interface{}
 	if len(r.Params) > 0 {
@@ -82,7 +82,7 @@ func (r *JSONRPCRequest) ToMCP() (*MCPRequest, error) {
 	}, nil
 }
 
-// ToJSONRPC converts an MCPResponse to a JSONRPCResponse
+// ToJSONRPC converts an MCPResponse to a JSONRPCResponse.
 func (r *MCPResponse) ToJSONRPC() *JSONRPCResponse {
 	var err *JSONRPCError
 	if r.Error != nil {
@@ -101,7 +101,7 @@ func (r *MCPResponse) ToJSONRPC() *JSONRPCResponse {
 	}
 }
 
-// ToMCP converts a JSONRPCResponse to an MCPResponse
+// ToMCP converts a JSONRPCResponse to an MCPResponse.
 func (r *JSONRPCResponse) ToMCP() *MCPResponse {
 	var err *MCPError
 	if r.Error != nil {
