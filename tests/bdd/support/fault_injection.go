@@ -151,7 +151,7 @@ func (fi *FaultInjector) InjectConnectionTimeout(host string, port int, timeoutD
 	if err != nil {
 		return err // This is expected for timeout injection
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	return nil
 }

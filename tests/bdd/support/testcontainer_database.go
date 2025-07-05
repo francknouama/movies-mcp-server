@@ -109,21 +109,27 @@ func NewTestContainerDatabase(ctx context.Context) (*TestContainerDatabase, erro
 	// Get connection string
 	connStr, err := postgresContainer.ConnectionString(ctx, "sslmode=disable")
 	if err != nil {
-		_ = postgresContainer.Terminate(ctx)
+		if termErr := postgresContainer.Terminate(ctx); termErr != nil {
+			// Log termination error but don't fail
+		}
 		return nil, fmt.Errorf("failed to get connection string: %w", err)
 	}
 
 	// Connect to database
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		_ = postgresContainer.Terminate(ctx)
+		if termErr := postgresContainer.Terminate(ctx); termErr != nil {
+			// Log termination error but don't fail
+		}
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
 
 	// Test connection
 	if err := db.Ping(); err != nil {
 		_ = db.Close()
-		_ = postgresContainer.Terminate(ctx)
+		if termErr := postgresContainer.Terminate(ctx); termErr != nil {
+			// Log termination error but don't fail
+		}
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 

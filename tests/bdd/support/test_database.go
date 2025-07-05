@@ -62,13 +62,17 @@ func NewTestDatabase() (*TestDatabase, error) {
 
 	// Test the connection with retry logic
 	if err := testDatabaseConnection(db); err != nil {
-		_ = db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			// Log error but don't fail the test setup
+		}
 		return nil, fmt.Errorf("failed to connect to test database: %w", err)
 	}
 
 	// Verify that required tables exist
 	if err := verifyDatabaseSchema(db); err != nil {
-		_ = db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			// Log error but don't fail the test setup
+		}
 		return nil, fmt.Errorf("database schema verification failed: %w", err)
 	}
 
