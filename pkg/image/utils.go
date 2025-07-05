@@ -15,6 +15,12 @@ import (
 	// Config will need to be passed as parameters or made configurable
 )
 
+// MIME type constants
+const (
+	MimeTypeJPEG = "image/jpeg"
+	MimeTypePNG  = "image/png"
+)
+
 // ImageProcessor handles image operations for the MCP server
 type ImageProcessor struct {
 	config *ImageConfig
@@ -66,10 +72,10 @@ func (p *ImageProcessor) isValidMimeType(mimeType string) bool {
 // validateImageFormat checks if the image data matches the declared MIME type
 func (p *ImageProcessor) validateImageFormat(data []byte, mimeType string) bool {
 	switch mimeType {
-	case "image/jpeg":
+	case MimeTypeJPEG:
 		// JPEG files start with FF D8 FF
 		return len(data) >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF
-	case "image/png":
+	case MimeTypePNG:
 		// PNG files start with specific signature
 		pngHeader := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
 		if len(data) < len(pngHeader) {
@@ -116,7 +122,11 @@ func (p *ImageProcessor) DownloadImageFromURL(url string) ([]byte, string, error
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to download image from %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			// Log error but don't fail the operation
+		}
+	}()
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {
@@ -153,12 +163,12 @@ func (p *ImageProcessor) DownloadImageFromURL(url string) ([]byte, string, error
 // detectMimeType attempts to detect MIME type from image data
 func (p *ImageProcessor) detectMimeType(data []byte) string {
 	if len(data) >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF {
-		return "image/jpeg"
+		return MimeTypeJPEG
 	}
 
 	pngHeader := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
 	if len(data) >= len(pngHeader) && bytes.Equal(data[:len(pngHeader)], pngHeader) {
-		return "image/png"
+		return MimeTypePNG
 	}
 
 	if len(data) >= 12 && string(data[0:4]) == "RIFF" && string(data[8:12]) == "WEBP" {
@@ -232,9 +242,9 @@ func (p *ImageProcessor) decodeImage(data []byte, mimeType string) (image.Image,
 	reader := bytes.NewReader(data)
 
 	switch mimeType {
-	case "image/jpeg":
+	case MimeTypeJPEG:
 		return jpeg.Decode(reader)
-	case "image/png":
+	case MimeTypePNG:
 		return png.Decode(reader)
 	default:
 		// Try generic decode
@@ -296,9 +306,9 @@ type ImageInfo struct {
 // getFormatFromMimeType extracts format from MIME type
 func (p *ImageProcessor) getFormatFromMimeType(mimeType string) string {
 	switch mimeType {
-	case "image/jpeg":
+	case MimeTypeJPEG:
 		return "JPEG"
-	case "image/png":
+	case MimeTypePNG:
 		return "PNG"
 	case "image/webp":
 		return "WebP"
