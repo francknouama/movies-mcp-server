@@ -57,7 +57,9 @@ jobs:
         run: go mod download
         
       - name: Build application
-        run: go build -o build/movies-server ./cmd/server/main.go
+        run: |
+          mkdir -p build
+          go build -o build/movies-server ./cmd/server/main.go
         
       - name: Run database migrations
         run: ./build/movies-server -migrate-only
