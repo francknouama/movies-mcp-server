@@ -26,7 +26,7 @@ func TestLoad(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "default values",
+			name:    "default values",
 			envVars: map[string]string{},
 			want: &Config{
 				Database: DatabaseConfig{
@@ -57,22 +57,22 @@ func TestLoad(t *testing.T) {
 		{
 			name: "custom values",
 			envVars: map[string]string{
-				"DB_HOST":               "db.example.com",
-				"DB_PORT":               "5433",
-				"DB_NAME":               "custom_db",
-				"DB_USER":               "custom_user",
-				"DB_PASSWORD":           "custom_pass",
-				"DB_SSLMODE":            "require",
-				"DB_MAX_OPEN_CONNS":     "50",
-				"DB_MAX_IDLE_CONNS":     "10",
-				"DB_CONN_MAX_LIFETIME":  "2h",
-				"MIGRATIONS_PATH":       "file://custom/migrations",
-				"LOG_LEVEL":             "debug",
-				"SERVER_TIMEOUT":        "1m",
-				"MAX_IMAGE_SIZE":        "10485760",
-				"ALLOWED_IMAGE_TYPES":   "image/jpeg,image/png",
-				"ENABLE_THUMBNAILS":     "false",
-				"THUMBNAIL_SIZE":        "300x300",
+				"DB_HOST":              "db.example.com",
+				"DB_PORT":              "5433",
+				"DB_NAME":              "custom_db",
+				"DB_USER":              "custom_user",
+				"DB_PASSWORD":          "custom_pass",
+				"DB_SSLMODE":           "require",
+				"DB_MAX_OPEN_CONNS":    "50",
+				"DB_MAX_IDLE_CONNS":    "10",
+				"DB_CONN_MAX_LIFETIME": "2h",
+				"MIGRATIONS_PATH":      "file://custom/migrations",
+				"LOG_LEVEL":            "debug",
+				"SERVER_TIMEOUT":       "1m",
+				"MAX_IMAGE_SIZE":       "10485760",
+				"ALLOWED_IMAGE_TYPES":  "image/jpeg,image/png",
+				"ENABLE_THUMBNAILS":    "false",
+				"THUMBNAIL_SIZE":       "300x300",
 			},
 			want: &Config{
 				Database: DatabaseConfig{
@@ -138,7 +138,7 @@ func TestLoad(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clear environment
 			os.Clearenv()
-			
+
 			// Set test environment variables
 			for k, v := range tt.envVars {
 				os.Setenv(k, v)
@@ -365,12 +365,12 @@ func TestGetEnvHelpers(t *testing.T) {
 
 	t.Run("getEnv", func(t *testing.T) {
 		os.Clearenv()
-		
+
 		// Test default value
 		if got := getEnv("MISSING_VAR", "default"); got != "default" {
 			t.Errorf("getEnv() = %v, want %v", got, "default")
 		}
-		
+
 		// Test existing value
 		os.Setenv("EXISTING_VAR", "value")
 		if got := getEnv("EXISTING_VAR", "default"); got != "value" {
@@ -380,18 +380,18 @@ func TestGetEnvHelpers(t *testing.T) {
 
 	t.Run("getEnvAsInt", func(t *testing.T) {
 		os.Clearenv()
-		
+
 		// Test default value
 		if got := getEnvAsInt("MISSING_VAR", 42); got != 42 {
 			t.Errorf("getEnvAsInt() = %v, want %v", got, 42)
 		}
-		
+
 		// Test valid int
 		os.Setenv("INT_VAR", "123")
 		if got := getEnvAsInt("INT_VAR", 42); got != 123 {
 			t.Errorf("getEnvAsInt() = %v, want %v", got, 123)
 		}
-		
+
 		// Test invalid int
 		os.Setenv("INVALID_INT", "not-a-number")
 		if got := getEnvAsInt("INVALID_INT", 42); got != 42 {
@@ -401,12 +401,12 @@ func TestGetEnvHelpers(t *testing.T) {
 
 	t.Run("getEnvAsInt64", func(t *testing.T) {
 		os.Clearenv()
-		
+
 		// Test default value
 		if got := getEnvAsInt64("MISSING_VAR", 42); got != 42 {
 			t.Errorf("getEnvAsInt64() = %v, want %v", got, 42)
 		}
-		
+
 		// Test valid int64
 		os.Setenv("INT64_VAR", "9223372036854775807")
 		if got := getEnvAsInt64("INT64_VAR", 42); got != 9223372036854775807 {
@@ -416,12 +416,12 @@ func TestGetEnvHelpers(t *testing.T) {
 
 	t.Run("getEnvAsBool", func(t *testing.T) {
 		os.Clearenv()
-		
+
 		// Test default value
 		if got := getEnvAsBool("MISSING_VAR", true); got != true {
 			t.Errorf("getEnvAsBool() = %v, want %v", got, true)
 		}
-		
+
 		// Test true values
 		for _, v := range []string{"true", "True", "TRUE", "1"} {
 			os.Setenv("BOOL_VAR", v)
@@ -429,7 +429,7 @@ func TestGetEnvHelpers(t *testing.T) {
 				t.Errorf("getEnvAsBool() with %s = %v, want %v", v, got, true)
 			}
 		}
-		
+
 		// Test false values
 		for _, v := range []string{"false", "False", "FALSE", "0"} {
 			os.Setenv("BOOL_VAR", v)
@@ -441,18 +441,18 @@ func TestGetEnvHelpers(t *testing.T) {
 
 	t.Run("getEnvAsDuration", func(t *testing.T) {
 		os.Clearenv()
-		
+
 		// Test default value
 		if got := getEnvAsDuration("MISSING_VAR", "1h"); got != time.Hour {
 			t.Errorf("getEnvAsDuration() = %v, want %v", got, time.Hour)
 		}
-		
+
 		// Test valid duration
 		os.Setenv("DURATION_VAR", "30m")
 		if got := getEnvAsDuration("DURATION_VAR", "1h"); got != 30*time.Minute {
 			t.Errorf("getEnvAsDuration() = %v, want %v", got, 30*time.Minute)
 		}
-		
+
 		// Test invalid duration (should use default)
 		os.Setenv("INVALID_DURATION", "not-a-duration")
 		if got := getEnvAsDuration("INVALID_DURATION", "1h"); got != time.Hour {
@@ -462,20 +462,20 @@ func TestGetEnvHelpers(t *testing.T) {
 
 	t.Run("getEnvAsStringSlice", func(t *testing.T) {
 		os.Clearenv()
-		
+
 		// Test default value
 		defaultSlice := []string{"a", "b", "c"}
 		if got := getEnvAsStringSlice("MISSING_VAR", defaultSlice); !reflect.DeepEqual(got, defaultSlice) {
 			t.Errorf("getEnvAsStringSlice() = %v, want %v", got, defaultSlice)
 		}
-		
+
 		// Test comma-separated values
 		os.Setenv("SLICE_VAR", "one,two,three")
 		want := []string{"one", "two", "three"}
 		if got := getEnvAsStringSlice("SLICE_VAR", defaultSlice); !reflect.DeepEqual(got, want) {
 			t.Errorf("getEnvAsStringSlice() = %v, want %v", got, want)
 		}
-		
+
 		// Test single value
 		os.Setenv("SINGLE_VAR", "single")
 		want = []string{"single"}
@@ -494,3 +494,4 @@ func splitEnvVar(env string) []string {
 	}
 	return []string{env, ""}
 }
+

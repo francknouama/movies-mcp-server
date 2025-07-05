@@ -1,60 +1,14 @@
+//go:build integration
+// +build integration
+
 package postgres
 
 import (
 	"context"
-	"database/sql"
-	"os"
 	"testing"
-
-	_ "github.com/lib/pq"
 
 	"github.com/francknouama/movies-mcp-server/mcp-server/internal/domain/movie"
 )
-
-// Integration tests for MovieRepository
-// These tests require a PostgreSQL database connection
-
-func setupTestDB(t *testing.T) *sql.DB {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	dbURL := os.Getenv("TEST_DATABASE_URL")
-	if dbURL == "" {
-		t.Skip("TEST_DATABASE_URL not set, skipping integration tests")
-	}
-
-	db, err := sql.Open("postgres", dbURL)
-	if err != nil {
-		t.Fatalf("Failed to connect to test database: %v", err)
-	}
-
-	if err := db.Ping(); err != nil {
-		t.Fatalf("Failed to ping test database: %v", err)
-	}
-
-	return db
-}
-
-func cleanupTestDB(t *testing.T, db *sql.DB) {
-	// Clean up test data
-	_, err := db.Exec("DELETE FROM movie_actors")
-	if err != nil {
-		t.Logf("Warning: failed to clean up movie_actors: %v", err)
-	}
-
-	_, err = db.Exec("DELETE FROM movies")
-	if err != nil {
-		t.Logf("Warning: failed to clean up movies: %v", err)
-	}
-
-	_, err = db.Exec("DELETE FROM actors")
-	if err != nil {
-		t.Logf("Warning: failed to clean up actors: %v", err)
-	}
-
-	db.Close()
-}
 
 func createTestMovie(t *testing.T) *movie.Movie {
 	movie, err := movie.NewMovie("Test Movie", "Test Director", 2023)

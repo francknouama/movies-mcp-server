@@ -25,8 +25,8 @@ type Movie struct {
 
 // NewMovie creates a new Movie with validation
 func NewMovie(title, director string, year int) (*Movie, error) {
-	// Generate a temporary ID - this will be replaced when saved to repository
-	id, err := shared.NewMovieID(1) // Temporary ID
+	// Generate a zero ID - this will be replaced when saved to repository
+	id, err := shared.NewMovieID(0) // Zero ID indicates new movie
 	if err != nil {
 		return nil, err
 	}
@@ -61,8 +61,8 @@ func NewMovieWithID(id shared.MovieID, title, director string, year int) (*Movie
 		updatedAt:     now,
 	}
 
-	// Emit domain event for new movie creation (only for non-temporary IDs)
-	if !id.IsZero() && id.Value() != 1 { // Skip temporary ID
+	// Emit domain event for new movie creation (only for non-zero IDs)
+	if !id.IsZero() { // Skip zero ID
 		event := NewMovieCreatedEvent(movie, movie.Version()+1)
 		movie.AddEvent(event)
 	}

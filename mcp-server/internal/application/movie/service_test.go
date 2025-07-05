@@ -11,13 +11,13 @@ import (
 
 // MockMovieRepository implements movie.Repository for testing
 type MockMovieRepository struct {
-	movies              map[int]*movie.Movie
-	nextID              int
-	findByIDFunc        func(ctx context.Context, id shared.MovieID) (*movie.Movie, error)
-	saveFunc            func(ctx context.Context, m *movie.Movie) error
-	deleteFunc          func(ctx context.Context, id shared.MovieID) error
-	findByCriteriaFunc  func(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error)
-	findTopRatedFunc    func(ctx context.Context, limit int) ([]*movie.Movie, error)
+	movies             map[int]*movie.Movie
+	nextID             int
+	findByIDFunc       func(ctx context.Context, id shared.MovieID) (*movie.Movie, error)
+	saveFunc           func(ctx context.Context, m *movie.Movie) error
+	deleteFunc         func(ctx context.Context, id shared.MovieID) error
+	findByCriteriaFunc func(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error)
+	findTopRatedFunc   func(ctx context.Context, limit int) ([]*movie.Movie, error)
 }
 
 func NewMockMovieRepository() *MockMovieRepository {
@@ -189,7 +189,6 @@ func (m *MockMovieRepository) DeleteAll(ctx context.Context) error {
 	m.movies = make(map[int]*movie.Movie)
 	return nil
 }
-
 
 func TestService_CreateMovie(t *testing.T) {
 	repo := NewMockMovieRepository()
@@ -885,148 +884,148 @@ func TestService_SearchMovies_ComprehensiveCoverage(t *testing.T) {
 		desc     string
 	}{
 		{
-			name: "empty query with default limit",
-			query: SearchMoviesQuery{},
+			name:     "empty query with default limit",
+			query:    SearchMoviesQuery{},
 			expected: 5,
-			desc: "Should return all movies with default limit",
+			desc:     "Should return all movies with default limit",
 		},
 		{
-			name: "zero limit defaults to 50",
-			query: SearchMoviesQuery{Limit: 0},
+			name:     "zero limit defaults to 50",
+			query:    SearchMoviesQuery{Limit: 0},
 			expected: 5,
-			desc: "Should apply default limit of 50",
+			desc:     "Should apply default limit of 50",
 		},
 		{
-			name: "search by title exact match",
-			query: SearchMoviesQuery{Title: "Inception", Limit: 10},
+			name:     "search by title exact match",
+			query:    SearchMoviesQuery{Title: "Inception", Limit: 10},
 			expected: 1,
-			desc: "Should find exact title match",
+			desc:     "Should find exact title match",
 		},
 		{
-			name: "search by director",
-			query: SearchMoviesQuery{Director: "Christopher Nolan", Limit: 10},
+			name:     "search by director",
+			query:    SearchMoviesQuery{Director: "Christopher Nolan", Limit: 10},
 			expected: 3,
-			desc: "Should find all Nolan movies",
+			desc:     "Should find all Nolan movies",
 		},
 		{
-			name: "search by genre",
-			query: SearchMoviesQuery{Genre: "Sci-Fi", Limit: 10},
+			name:     "search by genre",
+			query:    SearchMoviesQuery{Genre: "Sci-Fi", Limit: 10},
 			expected: 3,
-			desc: "Should find all Sci-Fi movies",
+			desc:     "Should find all Sci-Fi movies",
 		},
 		{
-			name: "search by year range",
-			query: SearchMoviesQuery{MinYear: 2008, MaxYear: 2014, Limit: 10},
+			name:     "search by year range",
+			query:    SearchMoviesQuery{MinYear: 2008, MaxYear: 2014, Limit: 10},
 			expected: 3,
-			desc: "Should find movies between 2008-2014",
+			desc:     "Should find movies between 2008-2014",
 		},
 		{
-			name: "search by min year only",
-			query: SearchMoviesQuery{MinYear: 2010, Limit: 10},
+			name:     "search by min year only",
+			query:    SearchMoviesQuery{MinYear: 2010, Limit: 10},
 			expected: 2,
-			desc: "Should find movies from 2010 onwards",
+			desc:     "Should find movies from 2010 onwards",
 		},
 		{
-			name: "search by max year only",
-			query: SearchMoviesQuery{MaxYear: 2000, Limit: 10},
+			name:     "search by max year only",
+			query:    SearchMoviesQuery{MaxYear: 2000, Limit: 10},
 			expected: 2,
-			desc: "Should find movies before 2000",
+			desc:     "Should find movies before 2000",
 		},
 		{
-			name: "search by rating range",
-			query: SearchMoviesQuery{MinRating: 8.8, MaxRating: 9.0, Limit: 10},
+			name:     "search by rating range",
+			query:    SearchMoviesQuery{MinRating: 8.8, MaxRating: 9.0, Limit: 10},
 			expected: 3,
-			desc: "Should find highly rated movies",
+			desc:     "Should find highly rated movies",
 		},
 		{
-			name: "search by min rating only",
-			query: SearchMoviesQuery{MinRating: 8.8, Limit: 10},
+			name:     "search by min rating only",
+			query:    SearchMoviesQuery{MinRating: 8.8, Limit: 10},
 			expected: 3,
-			desc: "Should find movies with rating >= 8.8",
+			desc:     "Should find movies with rating >= 8.8",
 		},
 		{
-			name: "search by max rating only",
-			query: SearchMoviesQuery{MaxRating: 8.7, Limit: 10},
+			name:     "search by max rating only",
+			query:    SearchMoviesQuery{MaxRating: 8.7, Limit: 10},
 			expected: 2,
-			desc: "Should find movies with rating <= 8.7",
+			desc:     "Should find movies with rating <= 8.7",
 		},
 		{
-			name: "search with limit",
-			query: SearchMoviesQuery{Limit: 3},
+			name:     "search with limit",
+			query:    SearchMoviesQuery{Limit: 3},
 			expected: 3,
-			desc: "Should respect limit",
+			desc:     "Should respect limit",
 		},
 		{
-			name: "search with offset",
-			query: SearchMoviesQuery{Limit: 10, Offset: 2},
+			name:     "search with offset",
+			query:    SearchMoviesQuery{Limit: 10, Offset: 2},
 			expected: 3,
-			desc: "Should skip first 2 movies",
+			desc:     "Should skip first 2 movies",
 		},
 		{
-			name: "search with high offset",
-			query: SearchMoviesQuery{Limit: 10, Offset: 10},
+			name:     "search with high offset",
+			query:    SearchMoviesQuery{Limit: 10, Offset: 10},
 			expected: 0,
-			desc: "Should return empty when offset exceeds total",
+			desc:     "Should return empty when offset exceeds total",
 		},
 		{
-			name: "search by non-existent title",
-			query: SearchMoviesQuery{Title: "Non Existent", Limit: 10},
+			name:     "search by non-existent title",
+			query:    SearchMoviesQuery{Title: "Non Existent", Limit: 10},
 			expected: 0,
-			desc: "Should return empty for non-existent title",
+			desc:     "Should return empty for non-existent title",
 		},
 		{
-			name: "search by non-existent director",
-			query: SearchMoviesQuery{Director: "Non Existent", Limit: 10},
+			name:     "search by non-existent director",
+			query:    SearchMoviesQuery{Director: "Non Existent", Limit: 10},
 			expected: 0,
-			desc: "Should return empty for non-existent director",
+			desc:     "Should return empty for non-existent director",
 		},
 		{
-			name: "search by non-existent genre",
-			query: SearchMoviesQuery{Genre: "NonExistent", Limit: 10},
+			name:     "search by non-existent genre",
+			query:    SearchMoviesQuery{Genre: "NonExistent", Limit: 10},
 			expected: 0,
-			desc: "Should return empty for non-existent genre",
+			desc:     "Should return empty for non-existent genre",
 		},
 		{
-			name: "order by title",
-			query: SearchMoviesQuery{OrderBy: "title", OrderDir: "asc", Limit: 10},
+			name:     "order by title",
+			query:    SearchMoviesQuery{OrderBy: "title", OrderDir: "asc", Limit: 10},
 			expected: 5,
-			desc: "Should order by title ascending",
+			desc:     "Should order by title ascending",
 		},
 		{
-			name: "order by director desc",
-			query: SearchMoviesQuery{OrderBy: "director", OrderDir: "desc", Limit: 10},
+			name:     "order by director desc",
+			query:    SearchMoviesQuery{OrderBy: "director", OrderDir: "desc", Limit: 10},
 			expected: 5,
-			desc: "Should order by director descending",
+			desc:     "Should order by director descending",
 		},
 		{
-			name: "order by year",
-			query: SearchMoviesQuery{OrderBy: "year", Limit: 10},
+			name:     "order by year",
+			query:    SearchMoviesQuery{OrderBy: "year", Limit: 10},
 			expected: 5,
-			desc: "Should order by year",
+			desc:     "Should order by year",
 		},
 		{
-			name: "order by rating",
-			query: SearchMoviesQuery{OrderBy: "rating", Limit: 10},
+			name:     "order by rating",
+			query:    SearchMoviesQuery{OrderBy: "rating", Limit: 10},
 			expected: 5,
-			desc: "Should order by rating",
+			desc:     "Should order by rating",
 		},
 		{
-			name: "order by created_at",
-			query: SearchMoviesQuery{OrderBy: "created_at", Limit: 10},
+			name:     "order by created_at",
+			query:    SearchMoviesQuery{OrderBy: "created_at", Limit: 10},
 			expected: 5,
-			desc: "Should order by created_at",
+			desc:     "Should order by created_at",
 		},
 		{
-			name: "order by updated_at",
-			query: SearchMoviesQuery{OrderBy: "updated_at", Limit: 10},
+			name:     "order by updated_at",
+			query:    SearchMoviesQuery{OrderBy: "updated_at", Limit: 10},
 			expected: 5,
-			desc: "Should order by updated_at",
+			desc:     "Should order by updated_at",
 		},
 		{
-			name: "invalid order by defaults to title",
-			query: SearchMoviesQuery{OrderBy: "invalid", Limit: 10},
+			name:     "invalid order by defaults to title",
+			query:    SearchMoviesQuery{OrderBy: "invalid", Limit: 10},
 			expected: 5,
-			desc: "Should default to title ordering",
+			desc:     "Should default to title ordering",
 		},
 		{
 			name: "complex search with multiple criteria",
@@ -1039,7 +1038,7 @@ func TestService_SearchMovies_ComprehensiveCoverage(t *testing.T) {
 				Limit:     10,
 			},
 			expected: 2,
-			desc: "Should find movies matching all criteria",
+			desc:     "Should find movies matching all criteria",
 		},
 	}
 

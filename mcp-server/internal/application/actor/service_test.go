@@ -11,12 +11,12 @@ import (
 
 // MockActorRepository implements actor.Repository for testing
 type MockActorRepository struct {
-	actors              map[int]*actor.Actor
-	nextID              int
-	findByIDFunc        func(ctx context.Context, id shared.ActorID) (*actor.Actor, error)
-	saveFunc            func(ctx context.Context, a *actor.Actor) error
-	deleteFunc          func(ctx context.Context, id shared.ActorID) error
-	findByCriteriaFunc  func(ctx context.Context, criteria actor.SearchCriteria) ([]*actor.Actor, error)
+	actors             map[int]*actor.Actor
+	nextID             int
+	findByIDFunc       func(ctx context.Context, id shared.ActorID) (*actor.Actor, error)
+	saveFunc           func(ctx context.Context, a *actor.Actor) error
+	deleteFunc         func(ctx context.Context, id shared.ActorID) error
+	findByCriteriaFunc func(ctx context.Context, criteria actor.SearchCriteria) ([]*actor.Actor, error)
 }
 
 func NewMockActorRepository() *MockActorRepository {
@@ -726,14 +726,12 @@ func TestService_SearchActors_ExtendedCriteria(t *testing.T) {
 		{Name: "Leonardo da Vinci", BirthYear: 1452}, // This should fail validation but let's test search
 	}
 
-	var createdActors []*ActorDTO
 	for _, cmd := range actors {
 		if cmd.BirthYear >= 1888 { // Only create valid actors
-			created, err := service.CreateActor(context.Background(), cmd)
+			_, err := service.CreateActor(context.Background(), cmd)
 			if err != nil {
 				t.Fatalf("Failed to create test actor: %v", err)
 			}
-			createdActors = append(createdActors, created)
 		}
 	}
 
@@ -824,7 +822,7 @@ func TestService_SearchActors_ComprehensiveCoverage(t *testing.T) {
 
 	// Create test actors with movies
 	actors := []struct {
-		cmd CreateActorCommand
+		cmd      CreateActorCommand
 		movieIDs []int
 	}{
 		{CreateActorCommand{Name: "Leonardo DiCaprio", BirthYear: 1974}, []int{1, 2}},
@@ -855,87 +853,87 @@ func TestService_SearchActors_ComprehensiveCoverage(t *testing.T) {
 		desc     string
 	}{
 		{
-			name: "empty query with default limit",
-			query: SearchActorsQuery{},
+			name:     "empty query with default limit",
+			query:    SearchActorsQuery{},
 			expected: 4,
-			desc: "Should return all actors with default limit",
+			desc:     "Should return all actors with default limit",
 		},
 		{
-			name: "zero limit defaults to 50",
-			query: SearchActorsQuery{Limit: 0},
+			name:     "zero limit defaults to 50",
+			query:    SearchActorsQuery{Limit: 0},
 			expected: 4,
-			desc: "Should apply default limit of 50",
+			desc:     "Should apply default limit of 50",
 		},
 		{
-			name: "search by specific movie",
-			query: SearchActorsQuery{MovieID: 2},
+			name:     "search by specific movie",
+			query:    SearchActorsQuery{MovieID: 2},
 			expected: 2,
-			desc: "Should find actors in movie 2 (Leonardo and Matt)",
+			desc:     "Should find actors in movie 2 (Leonardo and Matt)",
 		},
 		{
-			name: "search by movie with limit",
-			query: SearchActorsQuery{MovieID: 2, Limit: 1},
+			name:     "search by movie with limit",
+			query:    SearchActorsQuery{MovieID: 2, Limit: 1},
 			expected: 1,
-			desc: "Should respect limit when searching by movie",
+			desc:     "Should respect limit when searching by movie",
 		},
 		{
-			name: "search by birth year range",
-			query: SearchActorsQuery{MinBirthYear: 1970, MaxBirthYear: 1980, Limit: 10},
+			name:     "search by birth year range",
+			query:    SearchActorsQuery{MinBirthYear: 1970, MaxBirthYear: 1980, Limit: 10},
 			expected: 2,
-			desc: "Should find Leonardo and Matt born between 1970-1980",
+			desc:     "Should find Leonardo and Matt born between 1970-1980",
 		},
 		{
-			name: "search with min birth year only",
-			query: SearchActorsQuery{MinBirthYear: 1960, Limit: 10},
+			name:     "search with min birth year only",
+			query:    SearchActorsQuery{MinBirthYear: 1960, Limit: 10},
 			expected: 2,
-			desc: "Should find actors born after 1960",
+			desc:     "Should find actors born after 1960",
 		},
 		{
-			name: "search with max birth year only",
-			query: SearchActorsQuery{MaxBirthYear: 1950, Limit: 10},
+			name:     "search with max birth year only",
+			query:    SearchActorsQuery{MaxBirthYear: 1950, Limit: 10},
 			expected: 1,
-			desc: "Should find actors born before 1950",
+			desc:     "Should find actors born before 1950",
 		},
 		{
-			name: "search with offset",
-			query: SearchActorsQuery{Limit: 2, Offset: 2},
+			name:     "search with offset",
+			query:    SearchActorsQuery{Limit: 2, Offset: 2},
 			expected: 2,
-			desc: "Should skip first 2 actors and return next 2",
+			desc:     "Should skip first 2 actors and return next 2",
 		},
 		{
-			name: "search with high offset",
-			query: SearchActorsQuery{Limit: 10, Offset: 10},
+			name:     "search with high offset",
+			query:    SearchActorsQuery{Limit: 10, Offset: 10},
 			expected: 0,
-			desc: "Should return empty when offset exceeds total",
+			desc:     "Should return empty when offset exceeds total",
 		},
 		{
-			name: "search by name exact match",
-			query: SearchActorsQuery{Name: "Tom Hanks", Limit: 10},
+			name:     "search by name exact match",
+			query:    SearchActorsQuery{Name: "Tom Hanks", Limit: 10},
 			expected: 1,
-			desc: "Should find exact name match",
+			desc:     "Should find exact name match",
 		},
 		{
-			name: "search by non-existent name",
-			query: SearchActorsQuery{Name: "Non Existent", Limit: 10},
+			name:     "search by non-existent name",
+			query:    SearchActorsQuery{Name: "Non Existent", Limit: 10},
 			expected: 0,
-			desc: "Should return empty for non-existent name",
+			desc:     "Should return empty for non-existent name",
 		},
 		{
-			name: "search by non-existent movie",
-			query: SearchActorsQuery{MovieID: 999, Limit: 10},
+			name:     "search by non-existent movie",
+			query:    SearchActorsQuery{MovieID: 999, Limit: 10},
 			expected: 0,
-			desc: "Should return empty for non-existent movie",
+			desc:     "Should return empty for non-existent movie",
 		},
 		{
 			name: "complex search with multiple criteria",
 			query: SearchActorsQuery{
-				MovieID: 2,
+				MovieID:      2,
 				MinBirthYear: 1970,
 				MaxBirthYear: 1980,
-				Limit: 10,
+				Limit:        10,
 			},
 			expected: 2,
-			desc: "Should find actors matching all criteria",
+			desc:     "Should find actors matching all criteria",
 		},
 	}
 

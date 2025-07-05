@@ -112,7 +112,8 @@ func (c *DatabaseConfig) ConnectionString() string {
 // Helper functions
 
 func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
+	value, exists := os.LookupEnv(key)
+	if exists {
 		return value
 	}
 	return defaultValue
@@ -156,7 +157,11 @@ func getEnvAsDuration(key string, defaultValue string) time.Duration {
 }
 
 func getEnvAsStringSlice(key string, defaultValue []string) []string {
-	if value := os.Getenv(key); value != "" {
+	value, exists := os.LookupEnv(key)
+	if exists {
+		if value == "" {
+			return []string{}
+		}
 		return strings.Split(value, ",")
 	}
 	return defaultValue

@@ -244,3 +244,4 @@ func findProjectRoot() string {
 	}
 	return "."
 }
+
