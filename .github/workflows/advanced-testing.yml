@@ -75,7 +75,7 @@ jobs:
         run: go mod download
         
       - name: Build MCP server
-        run: go build -o main cmd/server/main.go
+        run: go build -o main ./cmd/server/main.go
         
       - name: Run database migrations
         run: ./main -migrate-only
@@ -196,7 +196,7 @@ jobs:
         run: go mod download
         
       - name: Build MCP server
-        run: go build -o main cmd/server/main.go
+        run: go build -o main ./cmd/server/main.go
         
       - name: Run database migrations
         run: ./main -migrate-only
@@ -268,7 +268,7 @@ jobs:
         run: go mod download
         
       - name: Build MCP server
-        run: go build -o main cmd/server/main.go
+        run: go build -o main ./cmd/server/main.go
         
       - name: Run database migrations
         run: ./main -migrate-only
@@ -383,7 +383,7 @@ jobs:
         run: go mod download
         
       - name: Build MCP server
-        run: go build -o main cmd/server/main.go
+        run: go build -o main ./cmd/server/main.go
         
       - name: Run database migrations
         run: ./main -migrate-only

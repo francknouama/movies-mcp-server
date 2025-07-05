@@ -76,7 +76,7 @@ jobs:
       - name: Build MCP server for performance testing
         run: |
           mkdir -p build
-          CGO_ENABLED=0 go build -ldflags="-w -s" -o build/movies-server cmd/server/main.go
+          CGO_ENABLED=0 go build -ldflags="-w -s" -o build/movies-server ./cmd/server/main.go
           
       - name: Setup database and seed data
         run: |

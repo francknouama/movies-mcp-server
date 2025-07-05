@@ -148,7 +148,7 @@ jobs:
           echo "Running tests for release $VERSION"
           
           # Build MCP server
-          go build -o build/movies-server cmd/server/main.go
+          go build -o build/movies-server ./cmd/server/main.go
           ./build/movies-server -migrate-only
           go test -v -race -coverprofile=coverage.out ./...
           go test -v -tags=integration ./tests/integration/...
@@ -161,11 +161,11 @@ jobs:
           mkdir -p dist
           
           # Build for multiple platforms
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-linux-amd64 cmd/server/main.go
-          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-linux-arm64 cmd/server/main.go
-          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-darwin-amd64 cmd/server/main.go
-          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-darwin-arm64 cmd/server/main.go
-          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-windows-amd64.exe cmd/server/main.go
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-linux-amd64 ./cmd/server/main.go
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-linux-arm64 ./cmd/server/main.go
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-darwin-amd64 ./cmd/server/main.go
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-darwin-arm64 ./cmd/server/main.go
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o dist/movies-mcp-server-windows-amd64.exe ./cmd/server/main.go
           
       - name: Create checksums
         working-directory: dist
