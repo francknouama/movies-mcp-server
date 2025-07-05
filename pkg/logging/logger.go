@@ -1,3 +1,4 @@
+// Package logging provides structured logging functionality for the movies MCP server.
 package logging
 
 import (
