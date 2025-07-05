@@ -494,4 +494,3 @@ func splitEnvVar(env string) []string {
 	}
 	return []string{env, ""}
 }
-

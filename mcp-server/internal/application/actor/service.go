@@ -228,7 +228,7 @@ func (s *Service) SearchActors(ctx context.Context, query SearchActorsQuery) ([]
 	}
 
 	// Set MovieID if provided
-	if query.MovieID > 0 {
+	if query.MovieID != 0 {
 		movieID, err := shared.NewMovieID(query.MovieID)
 		if err != nil {
 			return nil, fmt.Errorf("invalid movie ID: %w", err)
