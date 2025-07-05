@@ -1,54 +1,31 @@
-# Environment files
-.env
-.env.local
-.env.production
-
-# Database files
-*.db
-*.sqlite
-
-# Binaries for both modules
+# Binaries for programs and plugins
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+main
+mcp-server
+movies-mcp-server
+server
 
-# Movies MCP server binaries
-movies-mcp-server/movies-server
-movies-mcp-server/movies-mcp-server
-movies-mcp-server/server
-movies-mcp-server/*.test
-movies-mcp-server/migrate
-movies-mcp-server/integration.test
-movies-mcp-server/mcp.test
-mcp-server/main
-
-# Godog server binaries  
-godog-server/godog-server
-godog-server/*.test
-
-# Legacy binaries (can be removed after cleanup)
-main_new
-server-new
-/migrate
-
-# Test binaries and coverage
+# Test binary, built with `go test -c`
 *.test
+bdd.test
+mcp.test
+
+# Output of the go coverage tool
 *.out
-coverage.html
-*/coverage.html
+coverage*.out
+coverage*.html
+app-coverage*.out
+app-detailed.out
 
-# Go workspace sum file (keep go.work in version control)
-go.work.sum
+# Dependency directories (remove the comment below to include it)
+# vendor/
 
-# Module-specific reports and logs
-movies-mcp-server/reports/
-godog-server/reports/
-movies-mcp-server/logs/
-godog-server/logs/
-movies-mcp-server/*.log
-godog-server/*.log
+# Go workspace file
+go.work
 
 # IDE files
 .vscode/
@@ -60,40 +37,31 @@ godog-server/*.log
 .DS_Store
 Thumbs.db
 
-# Dependency directories
-vendor/
+# Log files
+*.log
 
 # Temporary files
 *.tmp
+*.temp
 
-# Build directories
-dist/
+# Build artifacts
 build/
-movies-mcp-server/build/
-godog-server/build/
+dist/
 
-# Documentation build outputs
-*/doc/
-*/docs/_build/
+# Environment files
+.env
+.env.local
+.env.*.local
 
-# Test results and artifacts  
-TEST-*.xml
-test-results/
-*/test-results/
+# Database files
+*.db
+*.sqlite
+*.sqlite3
 
-# Godog-specific ignores
-godog-server/features/
+# Docker volumes
+postgres_data/
+redis_data/
 
-# Movies MCP server specific ignores
-movies-mcp-server/postgres-data/
-movies-mcp-server/redis-data/
-
-# Claude configuration
-.claude/settings.local.json
-
-# Mac extended attributes
-._*
-
-# Windows files
-Thumbs.db
-Desktop.ini
+# Local configuration
+config.toml
+config.local.toml

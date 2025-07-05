@@ -1,153 +1,245 @@
-# 🎬 Movies MCP Server
-> A comprehensive movie database for AI assistants via Model Context Protocol
+# Movies MCP Server
 
-Transform your AI assistant into a powerful movie database manager with full CRUD operations, advanced search, and image support.
+A Model Context Protocol (MCP) server that provides a comprehensive movie database with advanced search, CRUD operations, and image support. Built with Go and PostgreSQL, this server enables AI assistants to manage and query movie information through a standardized protocol.
 
-## ⚡ Quick Start
+## Features
 
-**New to MCP?** → [5-minute setup](docs/getting-started/README.md)  
-**Claude Desktop user?** → [Integration guide](docs/getting-started/claude-desktop.md)  
-**Developer?** → [Development setup](docs/development/README.md)  
-**Production deployment?** → [Deployment guide](docs/deployment/README.md)
+- **Full CRUD Operations**: Create, read, update, and delete movies
+- **Advanced Search**: Search by title, genre, director, actors, or any text field
+- **Image Support**: Store and retrieve movie posters with base64 encoding
+- **Resource Endpoints**: Access database statistics, genre lists, and bulk data
+- **Production Ready**: Includes health checks, metrics, logging, and monitoring
+- **Docker Support**: Complete Docker setup for easy deployment
+- **Comprehensive Testing**: Unit and integration tests with high coverage
 
-## 🎯 What You Can Do
+## Quick Start
 
-- 🔍 **Search & Browse**: Find movies by title, genre, director, or plot keywords
-- 📝 **Manage Collection**: Add, update, and organize your personal movie database  
-- 🖼️ **Handle Images**: Store and retrieve movie posters with automatic processing
-- 📊 **Get Insights**: Database statistics, top-rated films, and smart recommendations
-- 🎭 **Track People**: Manage actors, directors, and their filmographies
+### Prerequisites
 
-## 🏗️ Architecture Options
+- Go 1.24.4 or later
+- Docker and Docker Compose
+- PostgreSQL 17 (or use Docker)
+- Make (optional but recommended)
 
-| Version | Status | Best For | Migration Tool |
-|---------|--------|----------|----------------|
-| [**Clean Architecture**](docs/development/architecture.md) | ✅ **Recommended** | Production, new projects | 🔄 Built-in (automatic) |
-| [Legacy](docs/appendices/migration-guide.md) | 🔄 Maintenance | Existing integrations | ⚠️ External (manual) |
+### Installation
 
-## 🚀 Repository Structure
-
-This workspace contains multiple Model Context Protocol (MCP) servers:
-
-```
-📁 movies-mcp-server/
-├── 📁 mcp-server/           # 🎬 Movies database server (main)
-├── 📁 godog-server/         # 🧪 Cucumber/BDD testing server  
-├── 📁 shared-mcp/           # 📚 Shared MCP utilities
-└── 📁 docs/                 # 📖 User-centered documentation
-    ├── 🚀 getting-started/  # Quick setup guides
-    ├── 📖 guides/           # User manuals & examples
-    ├── 🔧 development/      # Developer resources
-    ├── 🚢 deployment/       # Production deployment
-    ├── 🔍 reference/        # API & configuration
-    └── 📊 appendices/       # FAQ, migration, performance
+1. Clone the repository:
+```bash
+git clone https://github.com/francknouama/movies-mcp-server.git
+cd movies-mcp-server
 ```
 
-### 🎬 Movies MCP Server (Primary)
-Full-featured movie database with clean architecture, PostgreSQL, and comprehensive MCP tool suite.
+2. Copy the environment file:
+```bash
+cp .env.example .env
+```
 
-**→ [Complete Guide](docs/getting-started/README.md)**
+3. Start the database:
+```bash
+make docker-up
+```
 
-### 🧪 Godog MCP Server  
-Cucumber BDD testing integration for AI-driven test management and execution.
+4. Set up the database:
+```bash
+make db-setup
+make db-migrate
+make db-seed
+```
 
-**→ [Godog Documentation](./godog-server/README.md)**
+5. Build the server:
+```bash
+make build
+```
+
+6. Run the server:
+```bash
+./build/movies-server
+```
+
+## MCP Tools
+
+The server implements the following MCP tools:
+
+### Movie Operations
+- `get_movie` - Retrieve a movie by ID
+- `add_movie` - Add a new movie with optional poster
+- `update_movie` - Update movie details including poster
+- `delete_movie` - Remove a movie from the database
+
+### Search and Query
+- `search_movies` - Advanced search with multiple criteria
+- `list_top_movies` - Get top-rated movies with filtering
+
+## MCP Resources
+
+Access movie data through these resource URIs:
+
+- `movies://database/all` - All movies in JSON format
+- `movies://database/stats` - Database statistics
+- `movies://database/genres` - List of all genres
+- `movies://database/directors` - List of all directors
+- `movies://posters/{movie-id}` - Individual movie poster
+- `movies://posters/collection` - Gallery of all posters
+
+## Usage Examples
+
+### Initialize Connection
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "example-client",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+### Add a Movie
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "add_movie",
+    "arguments": {
+      "title": "The Matrix",
+      "director": "The Wachowskis",
+      "release_year": 1999,
+      "genre": "Sci-Fi",
+      "rating": 8.7,
+      "description": "A computer hacker learns about the true nature of reality",
+      "poster_url": "https://example.com/matrix-poster.jpg"
+    }
+  }
+}
+```
+
+### Search Movies
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "search_movies",
+    "arguments": {
+      "query": "sci-fi",
+      "search_type": "genre"
+    }
+  }
+}
+```
+
+## Configuration
+
+The server uses environment variables for configuration. See `.env.example` for all available options:
+
+```bash
+# Database configuration
+DATABASE_URL=postgres://movies_user:movies_password@localhost:5432/movies_db?sslmode=disable
+
+# Server configuration
+LOG_LEVEL=info
+SERVER_TIMEOUT=30s
+MAX_CONNECTIONS=100
+
+# Image handling
+MAX_IMAGE_SIZE_MB=10
+ALLOWED_IMAGE_TYPES=image/jpeg,image/png,image/webp
+```
 
 ## Development
 
-This repository uses Go workspaces (introduced in Go 1.18) to manage multiple modules. Each server is a separate Go module that can be developed and versioned independently. The shared-mcp module provides common functionality used across servers.
+### Running Tests
+```bash
+# Run all tests
+make test
 
-### Prerequisites
-- Go 1.23 or later
-- Docker and Docker Compose (for mcp-server)
-- Godog CLI (for godog-server)
+# Run with coverage
+make test-coverage
+
+# Run integration tests
+DATABASE_URL=... make test-integration
+```
+
+### Database Migrations
+```bash
+# Apply migrations
+make db-migrate
+
+# Rollback one migration
+make db-migrate-down
+
+# Reset database
+make db-migrate-reset
+```
 
 ### Building
-
-Build all servers:
 ```bash
+# Build for current platform
+make build
+
+# Build for multiple platforms
 make build-all
+
+# Build Docker image
+make docker-build
 ```
 
-Build specific server:
-```bash
-# Movies MCP server
-cd mcp-server && go build -o movies-mcp-server cmd/server/main.go
+## Monitoring
 
-# Godog server
-cd godog-server && go build -o godog-server cmd/server/main.go
+The server includes Prometheus metrics and health endpoints:
+
+- `/health` - Health check endpoint
+- `/metrics` - Prometheus metrics
+
+A Grafana dashboard is included in `monitoring/grafana-dashboard.json`.
+
+## Bruno Collection
+
+Interactive API testing is available through the included Bruno collection in `bruno-collection/`. This provides pre-configured requests for all MCP operations.
+
+## Architecture
+
+The server follows clean architecture principles:
+
 ```
-
-### Testing
-
-Run all tests:
-```bash
-make test-all
+├── cmd/               # Application entrypoints
+├── internal/          # Private application code
+│   ├── config/       # Configuration management
+│   ├── database/     # Database layer
+│   ├── models/       # Domain models
+│   └── server/       # MCP server implementation
+├── pkg/              # Public packages
+│   ├── errors/       # Error handling
+│   ├── health/       # Health checks
+│   ├── logging/      # Structured logging
+│   └── metrics/      # Prometheus metrics
+├── migrations/       # Database migrations
+└── scripts/          # Utility scripts
 ```
-
-### Adding a New Server
-
-1. Create a new directory for your server
-2. Initialize a Go module: `cd new-server && go mod init your-module-name`
-3. Add it to the workspace: `go work use ./new-server`
-4. Follow the existing server patterns for structure
-
-## Claude Desktop Integration
-
-To use the Movies MCP Server with Claude Desktop, you need to configure it in your Claude Desktop settings.
-
-### Configuration
-
-1. **Build the Movies MCP Server**:
-   ```bash
-   cd mcp-server && go build -o movies-mcp-server cmd/server/main.go
-   ```
-
-2. **Set up the database** (see [mcp-server/README.md](./mcp-server/README.md) for detailed instructions):
-   ```bash
-   cd mcp-server
-   docker-compose up -d  # Start PostgreSQL
-   make migrate-up       # Run database migrations
-   ```
-
-3. **Add to Claude Desktop config** (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
-   ```json
-   {
-     "mcpServers": {
-       "movies-mcp-server": {
-         "command": "/absolute/path/to/movies-mcp-server/mcp-server/movies-mcp-server",
-         "args": [],
-         "env": {
-           "DATABASE_URL": "postgres://movies_user:movies_password@localhost:5432/movies_db"
-         }
-       }
-     }
-   }
-   ```
-
-4. **Restart Claude Desktop** to load the new configuration.
-
-### Usage
-
-Once configured, you can interact with Claude Desktop to:
-- Search and manage movies in the database
-- Add, update, and delete movie records
-- Search by title, genre, director, or year
-- Manage actors and their relationships with movies
-- Get movie recommendations and statistics
-
-### Troubleshooting
-
-- Ensure the server binary has execute permissions: `chmod +x mcp-server/movies-mcp-server`
-- Verify the absolute path in the configuration is correct
-- Check that PostgreSQL is running and accessible
-- Ensure the DATABASE_URL environment variable matches your database setup
-- Check Claude Desktop logs for connection issues
 
 ## Contributing
 
-See individual server READMEs for specific contribution guidelines.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-Each server may have its own license. Check the LICENSE file in each server directory.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- Built for the [Model Context Protocol](https://modelcontextprotocol.io/) ecosystem
+- PostgreSQL for reliable data storage
+- The Go community for excellent libraries and tools
