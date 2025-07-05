@@ -1183,7 +1183,7 @@ func (cts *ContractTestingSteps) isMoreRestrictive(current, baseline ParamConstr
 }
 
 // validateContractResponse validates an actual response against a contract
-func (cts *ContractTestingSteps) validateContractResponse(toolName string, response interface{}, contract *ToolContract) error {
+func (cts *ContractTestingSteps) validateContractResponse(_ string, response interface{}, contract *ToolContract) error {
 	respMap, ok := response.(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("response is not a JSON object")
