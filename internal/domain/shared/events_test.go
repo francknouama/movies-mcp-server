@@ -56,7 +56,7 @@ func TestAggregateRoot(t *testing.T) {
 
 	// Add an event
 	event := NewBaseDomainEvent("TestEvent", "123", "TestAggregate", 1)
-	ar.AddEvent(event)
+	ar.AddEvent(&event)
 
 	// Verify state after adding event
 	if ar.Version() != 1 {
@@ -73,7 +73,7 @@ func TestAggregateRoot(t *testing.T) {
 
 	// Add another event
 	event2 := NewBaseDomainEvent("TestEvent2", "123", "TestAggregate", 2)
-	ar.AddEvent(event2)
+	ar.AddEvent(&event2)
 
 	// Verify state after adding second event
 	if ar.Version() != 2 {
