@@ -261,7 +261,7 @@ func (s *Service) GetTopRatedMovies(ctx context.Context, limit int) ([]*MovieDTO
 		return nil, fmt.Errorf("failed to get top rated movies: %w", err)
 	}
 
-	var dtos []*MovieDTO
+	dtos := make([]*MovieDTO, 0, len(domainMovies))
 	for _, domainMovie := range domainMovies {
 		dtos = append(dtos, s.toDTO(domainMovie))
 	}

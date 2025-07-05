@@ -81,12 +81,24 @@ test:
 	@echo "$(GREEN)Running tests...$(NC)"
 	@$(GOTEST) -v ./...
 
+# Run integration tests with testcontainers
+test-integration:
+	@echo "$(GREEN)Running integration tests with testcontainers...$(NC)"
+	@$(GOTEST) -v -tags=integration ./internal/infrastructure/postgres/...
+
 # Run tests with coverage
 test-coverage:
 	@echo "$(GREEN)Running tests with coverage...$(NC)"
 	@$(GOTEST) -v -coverprofile=coverage.out ./...
 	@$(GOCMD) tool cover -html=coverage.out -o coverage.html
 	@echo "$(GREEN)Coverage report generated: coverage.html$(NC)"
+
+# Run integration tests with coverage
+test-integration-coverage:
+	@echo "$(GREEN)Running integration tests with coverage...$(NC)"
+	@$(GOTEST) -v -tags=integration -coverprofile=coverage-integration.out ./internal/infrastructure/postgres/...
+	@$(GOCMD) tool cover -html=coverage-integration.out -o coverage-integration.html
+	@echo "$(GREEN)Integration coverage report generated: coverage-integration.html$(NC)"
 
 # Run the basic init test
 test-init: build
@@ -269,7 +281,9 @@ help:
 	@echo ""
 	@echo "$(YELLOW)Testing:$(NC)"
 	@echo "  $(YELLOW)make test$(NC)         - Run unit tests"
+	@echo "  $(YELLOW)make test-integration$(NC) - Run integration tests with testcontainers"
 	@echo "  $(YELLOW)make test-coverage$(NC) - Run tests with coverage"
+	@echo "  $(YELLOW)make test-integration-coverage$(NC) - Run integration tests with coverage"
 	@echo "  $(YELLOW)make test-init$(NC)    - Test MCP initialization"
 	@echo "  $(YELLOW)make test-all$(NC)     - Run all integration tests"
 	@echo ""
