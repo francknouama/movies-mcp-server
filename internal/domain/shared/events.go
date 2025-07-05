@@ -1,3 +1,4 @@
+// Package shared provides common domain event types and utilities.
 package shared
 
 import (
@@ -6,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// DomainEvent represents a domain event that occurs within the system
+// DomainEvent represents a domain event that occurs within the system.
 type DomainEvent interface {
 	// EventID returns the unique identifier for this event
 	EventID() string
@@ -27,7 +28,7 @@ type DomainEvent interface {
 	Version() int
 }
 
-// BaseDomainEvent provides common functionality for all domain events
+// BaseDomainEvent provides common functionality for all domain events.
 type BaseDomainEvent struct {
 	eventID       string
 	eventType     string
@@ -37,7 +38,7 @@ type BaseDomainEvent struct {
 	version       int
 }
 
-// NewBaseDomainEvent creates a new base domain event
+// NewBaseDomainEvent creates a new base domain event.
 func NewBaseDomainEvent(eventType, aggregateID, aggregateType string, version int) BaseDomainEvent {
 	return BaseDomainEvent{
 		eventID:       uuid.New().String(),
@@ -50,32 +51,32 @@ func NewBaseDomainEvent(eventType, aggregateID, aggregateType string, version in
 }
 
 // EventID returns the unique identifier for this event
-func (e BaseDomainEvent) EventID() string {
+func (e *BaseDomainEvent) EventID() string {
 	return e.eventID
 }
 
 // EventType returns the type of event
-func (e BaseDomainEvent) EventType() string {
+func (e *BaseDomainEvent) EventType() string {
 	return e.eventType
 }
 
 // AggregateID returns the ID of the aggregate that generated this event
-func (e BaseDomainEvent) AggregateID() string {
+func (e *BaseDomainEvent) AggregateID() string {
 	return e.aggregateID
 }
 
 // AggregateType returns the type of aggregate
-func (e BaseDomainEvent) AggregateType() string {
+func (e *BaseDomainEvent) AggregateType() string {
 	return e.aggregateType
 }
 
 // OccurredAt returns when the event occurred
-func (e BaseDomainEvent) OccurredAt() time.Time {
+func (e *BaseDomainEvent) OccurredAt() time.Time {
 	return e.occurredAt
 }
 
 // Version returns the aggregate version when this event was created
-func (e BaseDomainEvent) Version() int {
+func (e *BaseDomainEvent) Version() int {
 	return e.version
 }
 
