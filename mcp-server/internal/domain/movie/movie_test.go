@@ -76,8 +76,8 @@ func TestNewMovie(t *testing.T) {
 				if movie.Year().Value() != tt.year {
 					t.Errorf("NewMovie() year = %v, want %v", movie.Year().Value(), tt.year)
 				}
-				if movie.ID().IsZero() {
-					t.Error("NewMovie() should not have zero ID after creation")
+				if !movie.ID().IsZero() {
+					t.Error("NewMovie() should have zero ID after creation (gets assigned when saved)")
 				}
 			}
 		})
