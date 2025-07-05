@@ -8,12 +8,12 @@ import (
 
 // Repository defines the interface for movie data access
 type Repository interface {
-	MovieReader
-	MovieWriter
+	Reader
+	Writer
 }
 
-// MovieReader defines read operations for movies
-type MovieReader interface {
+// Reader defines read operations for movies
+type Reader interface {
 	// FindByID retrieves a movie by its ID
 	FindByID(ctx context.Context, id shared.MovieID) (*Movie, error)
 
@@ -36,8 +36,8 @@ type MovieReader interface {
 	CountAll(ctx context.Context) (int, error)
 }
 
-// MovieWriter defines write operations for movies
-type MovieWriter interface {
+// Writer defines write operations for movies
+type Writer interface {
 	// Save persists a movie (insert or update)
 	Save(ctx context.Context, movie *Movie) error
 

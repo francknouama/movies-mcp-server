@@ -8,12 +8,12 @@ import (
 
 // Repository defines the interface for actor data access
 type Repository interface {
-	ActorReader
-	ActorWriter
+	Reader
+	Writer
 }
 
-// ActorReader defines read operations for actors
-type ActorReader interface {
+// Reader defines read operations for actors
+type Reader interface {
 	// FindByID retrieves an actor by their ID
 	FindByID(ctx context.Context, id shared.ActorID) (*Actor, error)
 
@@ -30,8 +30,8 @@ type ActorReader interface {
 	CountAll(ctx context.Context) (int, error)
 }
 
-// ActorWriter defines write operations for actors
-type ActorWriter interface {
+// Writer defines write operations for actors
+type Writer interface {
 	// Save persists an actor (insert or update)
 	Save(ctx context.Context, actor *Actor) error
 

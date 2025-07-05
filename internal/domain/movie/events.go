@@ -1,3 +1,4 @@
+// Package movie provides domain events for movie entities.
 package movie
 
 import (

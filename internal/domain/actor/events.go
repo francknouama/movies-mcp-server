@@ -1,3 +1,4 @@
+// Package actor provides domain events for actor entities.
 package actor
 
 import (
