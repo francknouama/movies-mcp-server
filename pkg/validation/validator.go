@@ -1,3 +1,4 @@
+// Package validation provides request validation functionality for the movies MCP server.
 package validation
 
 import (
@@ -125,7 +126,7 @@ func (v *Validator) ValidateStruct(s interface{}) error {
 }
 
 // validateFieldByTag validates a field based on a tag rule
-func (v *Validator) validateFieldByTag(fieldName string, value interface{}, rule string) error {
+func (v *Validator) validateFieldByTag(_ string, value interface{}, rule string) error {
 	parts := strings.Split(rule, "=")
 	ruleName := parts[0]
 	var ruleValue string
@@ -199,7 +200,7 @@ func Required() ValidationRule {
 }
 
 // MinLength validates minimum length for strings and slices
-func MinLength(min int) ValidationRule {
+func MinLength(minLength int) ValidationRule {
 	return func(value interface{}) error {
 		if value == nil {
 			return nil
@@ -215,8 +216,8 @@ func MinLength(min int) ValidationRule {
 			return fmt.Errorf("field type does not support length validation")
 		}
 
-		if length < min {
-			return fmt.Errorf("minimum length is %d, got %d", min, length)
+		if length < minLength {
+			return fmt.Errorf("minimum length is %d, got %d", minLength, length)
 		}
 
 		return nil
@@ -224,7 +225,7 @@ func MinLength(min int) ValidationRule {
 }
 
 // MaxLength validates maximum length for strings and slices
-func MaxLength(max int) ValidationRule {
+func MaxLength(maxLength int) ValidationRule {
 	return func(value interface{}) error {
 		if value == nil {
 			return nil
@@ -240,44 +241,50 @@ func MaxLength(max int) ValidationRule {
 			return fmt.Errorf("field type does not support length validation")
 		}
 
-		if length > max {
-			return fmt.Errorf("maximum length is %d, got %d", max, length)
+		if length > maxLength {
+			return fmt.Errorf("maximum length is %d, got %d", maxLength, length)
 		}
 
 		return nil
 	}
 }
 
+// parseNumericValue converts various types to float64
+func parseNumericValue(value interface{}) (float64, error) {
+	switch v := value.(type) {
+	case int:
+		return float64(v), nil
+	case int64:
+		return float64(v), nil
+	case float32:
+		return float64(v), nil
+	case float64:
+		return v, nil
+	case string:
+		numValue, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return 0, fmt.Errorf("field must be a number")
+		}
+		return numValue, nil
+	default:
+		return 0, fmt.Errorf("field must be a number")
+	}
+}
+
 // Min validates minimum value for numbers
-func Min(min float64) ValidationRule {
+func Min(minValue float64) ValidationRule {
 	return func(value interface{}) error {
 		if value == nil {
 			return nil
 		}
 
-		var numValue float64
-		var err error
-
-		switch v := value.(type) {
-		case int:
-			numValue = float64(v)
-		case int64:
-			numValue = float64(v)
-		case float32:
-			numValue = float64(v)
-		case float64:
-			numValue = v
-		case string:
-			numValue, err = strconv.ParseFloat(v, 64)
-			if err != nil {
-				return fmt.Errorf("field must be a number")
-			}
-		default:
-			return fmt.Errorf("field must be a number")
+		numValue, err := parseNumericValue(value)
+		if err != nil {
+			return err
 		}
 
-		if numValue < min {
-			return fmt.Errorf("minimum value is %.2f, got %.2f", min, numValue)
+		if numValue < minValue {
+			return fmt.Errorf("minimum value is %.2f, got %.2f", minValue, numValue)
 		}
 
 		return nil
@@ -285,35 +292,19 @@ func Min(min float64) ValidationRule {
 }
 
 // Max validates maximum value for numbers
-func Max(max float64) ValidationRule {
+func Max(maxValue float64) ValidationRule {
 	return func(value interface{}) error {
 		if value == nil {
 			return nil
 		}
 
-		var numValue float64
-		var err error
-
-		switch v := value.(type) {
-		case int:
-			numValue = float64(v)
-		case int64:
-			numValue = float64(v)
-		case float32:
-			numValue = float64(v)
-		case float64:
-			numValue = v
-		case string:
-			numValue, err = strconv.ParseFloat(v, 64)
-			if err != nil {
-				return fmt.Errorf("field must be a number")
-			}
-		default:
-			return fmt.Errorf("field must be a number")
+		numValue, err := parseNumericValue(value)
+		if err != nil {
+			return err
 		}
 
-		if numValue > max {
-			return fmt.Errorf("maximum value is %.2f, got %.2f", max, numValue)
+		if numValue > maxValue {
+			return fmt.Errorf("maximum value is %.2f, got %.2f", maxValue, numValue)
 		}
 
 		return nil
@@ -706,43 +697,27 @@ func (rv *RequestValidator) validateMovieData(args map[string]interface{}, requi
 	return validator.Validate(args)
 }
 
+// validateStringField validates a string field and adds appropriate rules
+func (rv *RequestValidator) validateStringField(args map[string]interface{}, fieldName string, minLen, maxLen int, validator *Validator) bool {
+	if value, exists := args[fieldName]; exists && value != nil {
+		if str, ok := value.(string); ok && strings.TrimSpace(str) != "" {
+			validator.AddRule(fieldName, MinLength(minLen))
+			validator.AddRule(fieldName, MaxLength(maxLen))
+			return true
+		}
+	}
+	return false
+}
+
 // ValidateSearchQuery validates search query parameters
 func (rv *RequestValidator) ValidateSearchQuery(args map[string]interface{}) error {
 	validator := NewValidator()
 
-	// At least one search parameter is required
-	hasQuery := false
-	if query, exists := args["query"]; exists && query != nil {
-		if str, ok := query.(string); ok && strings.TrimSpace(str) != "" {
-			hasQuery = true
-			validator.AddRule("query", MinLength(1))
-			validator.AddRule("query", MaxLength(500))
-		}
-	}
-
-	if title, exists := args["title"]; exists && title != nil {
-		if str, ok := title.(string); ok && strings.TrimSpace(str) != "" {
-			hasQuery = true
-			validator.AddRule("title", MinLength(1))
-			validator.AddRule("title", MaxLength(255))
-		}
-	}
-
-	if director, exists := args["director"]; exists && director != nil {
-		if str, ok := director.(string); ok && strings.TrimSpace(str) != "" {
-			hasQuery = true
-			validator.AddRule("director", MinLength(1))
-			validator.AddRule("director", MaxLength(255))
-		}
-	}
-
-	if genre, exists := args["genre"]; exists && genre != nil {
-		if str, ok := genre.(string); ok && strings.TrimSpace(str) != "" {
-			hasQuery = true
-			validator.AddRule("genre", MinLength(1))
-			validator.AddRule("genre", MaxLength(100))
-		}
-	}
+	// Check each search parameter
+	hasQuery := rv.validateStringField(args, "query", 1, 500, validator)
+	hasQuery = rv.validateStringField(args, "title", 1, 255, validator) || hasQuery
+	hasQuery = rv.validateStringField(args, "director", 1, 255, validator) || hasQuery
+	hasQuery = rv.validateStringField(args, "genre", 1, 100, validator) || hasQuery
 
 	if !hasQuery {
 		return errors.NewValidationError(

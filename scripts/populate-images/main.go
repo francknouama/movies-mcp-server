@@ -1,3 +1,4 @@
+// Package main provides a script to populate movie poster images in the database.
 package main
 
 import (
@@ -11,14 +12,14 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// Movie represents a movie with its poster URL
+// Movie represents a movie with its poster URL.
 type Movie struct {
 	ID        int
 	Title     string
 	PosterURL string
 }
 
-// posterURLs maps movie titles to their poster URLs
+// posterURLs maps movie titles to their poster URLs.
 var posterURLs = map[string]string{
 	"The Shawshank Redemption": "https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg",
 	"The Godfather":            "https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsRolD1fZdja1.jpg",
@@ -66,11 +67,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			log.Printf("Error closing database connection: %v", closeErr)
+		}
+	}()
 
 	// Test database connection
 	if err := db.Ping(); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
+		log.Printf("Failed to ping database: %v", err)
+		return
 	}
 
 	fmt.Println("✅ Connected to database successfully")
@@ -134,7 +140,7 @@ func main() {
 	}
 }
 
-// getMoviesWithoutPosters retrieves all movies that don't have poster data
+// getMoviesWithoutPosters retrieves all movies that don't have poster data.
 func getMoviesWithoutPosters(db *sql.DB) ([]Movie, error) {
 	query := `
 		SELECT id, title 
@@ -162,7 +168,7 @@ func getMoviesWithoutPosters(db *sql.DB) ([]Movie, error) {
 	return movies, nil
 }
 
-// updateMoviePoster updates a movie's poster data in the database
+// updateMoviePoster updates a movie's poster data in the database.
 func updateMoviePoster(db *sql.DB, movieID int, posterData []byte, mimeType string) error {
 	query := `
 		UPDATE movies 

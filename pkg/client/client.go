@@ -137,61 +137,19 @@ func (c *MCPClient) CallTool(name string, arguments map[string]interface{}) (*pr
 
 // ListTools lists available tools
 func (c *MCPClient) ListTools() (*protocol.ToolsListResponse, error) {
-	if !c.initialized {
-		return nil, fmt.Errorf("client not initialized")
-	}
-
-	request := &protocol.JSONRPCRequest{
-		JSONRPC: protocol.JSONRPC2Version,
-		ID:      c.nextRequestID(),
-		Method:  protocol.MethodToolsList,
-		Params:  c.marshalParams(protocol.ListRequest{}),
-	}
-
-	response, err := c.sendRequest(request)
-	if err != nil {
-		return nil, fmt.Errorf("list tools failed: %w", err)
-	}
-
-	if response.Error != nil {
-		return nil, fmt.Errorf("list tools error: %s", response.Error.Message)
-	}
-
 	var toolsResponse protocol.ToolsListResponse
-	if err := c.unmarshalResult(response.Result, &toolsResponse); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal tools response: %w", err)
+	if err := c.listResource(protocol.MethodToolsList, &toolsResponse, "list tools"); err != nil {
+		return nil, err
 	}
-
 	return &toolsResponse, nil
 }
 
 // ListResources lists available resources
 func (c *MCPClient) ListResources() (*protocol.ResourcesListResponse, error) {
-	if !c.initialized {
-		return nil, fmt.Errorf("client not initialized")
-	}
-
-	request := &protocol.JSONRPCRequest{
-		JSONRPC: protocol.JSONRPC2Version,
-		ID:      c.nextRequestID(),
-		Method:  protocol.MethodResourcesList,
-		Params:  c.marshalParams(protocol.ListRequest{}),
-	}
-
-	response, err := c.sendRequest(request)
-	if err != nil {
-		return nil, fmt.Errorf("list resources failed: %w", err)
-	}
-
-	if response.Error != nil {
-		return nil, fmt.Errorf("list resources error: %s", response.Error.Message)
-	}
-
 	var resourcesResponse protocol.ResourcesListResponse
-	if err := c.unmarshalResult(response.Result, &resourcesResponse); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal resources response: %w", err)
+	if err := c.listResource(protocol.MethodResourcesList, &resourcesResponse, "list resources"); err != nil {
+		return nil, err
 	}
-
 	return &resourcesResponse, nil
 }
 
@@ -308,4 +266,33 @@ func (c *MCPClient) sendRequest(request *protocol.JSONRPCRequest) (*protocol.JSO
 	}
 
 	return response, nil
+}
+
+// listResource is a helper function to reduce code duplication in list operations
+func (c *MCPClient) listResource(method string, result interface{}, errorPrefix string) error {
+	if !c.initialized {
+		return fmt.Errorf("client not initialized")
+	}
+
+	request := &protocol.JSONRPCRequest{
+		JSONRPC: protocol.JSONRPC2Version,
+		ID:      c.nextRequestID(),
+		Method:  method,
+		Params:  c.marshalParams(protocol.ListRequest{}),
+	}
+
+	response, err := c.sendRequest(request)
+	if err != nil {
+		return fmt.Errorf("%s failed: %w", errorPrefix, err)
+	}
+
+	if response.Error != nil {
+		return fmt.Errorf("%s error: %s", errorPrefix, response.Error.Message)
+	}
+
+	if err := c.unmarshalResult(response.Result, result); err != nil {
+		return fmt.Errorf("failed to unmarshal %s response: %w", errorPrefix, err)
+	}
+
+	return nil
 }

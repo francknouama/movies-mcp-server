@@ -1,3 +1,4 @@
+// Package config provides configuration management for the movies MCP server.
 package config
 
 import (
@@ -8,14 +9,14 @@ import (
 	"time"
 )
 
-// Config holds all configuration for the application
+// Config holds all configuration for the application.
 type Config struct {
 	Database DatabaseConfig
 	Server   ServerConfig
 	Image    ImageConfig
 }
 
-// DatabaseConfig holds database-specific configuration
+// DatabaseConfig holds database-specific configuration.
 type DatabaseConfig struct {
 	Host            string
 	Port            int
@@ -29,13 +30,13 @@ type DatabaseConfig struct {
 	MigrationsPath  string
 }
 
-// ServerConfig holds server-specific configuration
+// ServerConfig holds server-specific configuration.
 type ServerConfig struct {
 	LogLevel string
 	Timeout  time.Duration
 }
 
-// ImageConfig holds image-related configuration
+// ImageConfig holds image-related configuration.
 type ImageConfig struct {
 	MaxSize          int64
 	AllowedTypes     []string
@@ -152,7 +153,11 @@ func getEnvAsDuration(key string, defaultValue string) time.Duration {
 		return duration
 	}
 	// Return default if parsing fails
-	duration, _ := time.ParseDuration(defaultValue)
+	duration, err := time.ParseDuration(defaultValue)
+	if err != nil {
+		// If default value is also invalid, return 0
+		return 0
+	}
 	return duration
 }
 

@@ -4,12 +4,12 @@ import (
 	"github.com/francknouama/movies-mcp-server/pkg/protocol"
 )
 
-// Type aliases for shared protocol types - Phase 2 BDD Remediation
+// Type aliases for shared protocol types - Phase 2 BDD Remediation.
 type JSONRPCRequest = protocol.JSONRPCRequest
 type JSONRPCResponse = protocol.JSONRPCResponse
 type JSONRPCError = protocol.JSONRPCError
 
-// MCP Protocol Types - using shared library
+// MCP Protocol Types - using shared library.
 type InitializeRequest = protocol.InitializeRequest
 type ClientCapabilities = protocol.ClientCapabilities
 type ClientInfo = protocol.ClientInfo
@@ -20,7 +20,7 @@ type ResourcesCapability = protocol.ResourcesCapability
 type PromptsCapability = protocol.PromptsCapability
 type ServerInfo = protocol.ServerInfo
 
-// Tool and related types - using shared library
+// Tool and related types - using shared library.
 type Tool = protocol.Tool
 type InputSchema = protocol.InputSchema
 type SchemaProperty = protocol.SchemaProperty
@@ -37,7 +37,7 @@ type ResourceReadRequest = protocol.ResourceReadRequest
 type ResourceReadResponse = protocol.ResourceReadResponse
 type ResourceContent = protocol.ResourceContent
 
-// Prompt and related types - using shared library
+// Prompt and related types - using shared library.
 type Prompt = protocol.Prompt
 type PromptArgument = protocol.PromptArgument
 type PromptsListResponse = protocol.PromptsListResponse
@@ -46,8 +46,8 @@ type PromptGetResponse = protocol.PromptGetResponse
 type PromptMessage = protocol.PromptMessage
 type PromptMessageContent = protocol.PromptMessageContent
 
-// Note: ResourceTemplate not yet in shared library - keep local definition
-// ResourceTemplate represents an MCP resource template
+// Note: ResourceTemplate not yet in shared library - keep local definition.
+// ResourceTemplate represents an MCP resource template.
 type ResourceTemplate struct {
 	URITemplate string `json:"uriTemplate"`
 	Name        string `json:"name"`
@@ -55,12 +55,12 @@ type ResourceTemplate struct {
 	MimeType    string `json:"mimeType,omitempty"`
 }
 
-// ResourceTemplatesListResponse represents the response for resources/templates/list
+// ResourceTemplatesListResponse represents the response for resources/templates/list.
 type ResourceTemplatesListResponse struct {
 	ResourceTemplates []ResourceTemplate `json:"resourceTemplates"`
 }
 
-// Error codes - using shared library constants
+// Error codes - using shared library constants.
 const (
 	ParseError     = protocol.ParseError
 	InvalidRequest = protocol.InvalidRequest
@@ -69,7 +69,7 @@ const (
 	InternalError  = protocol.InternalError
 )
 
-// NewJSONRPCError creates a new JSON-RPC error
+// NewJSONRPCError creates a new JSON-RPC error.
 func NewJSONRPCError(code int, message string, data interface{}) *JSONRPCError {
 	return &JSONRPCError{
 		Code:    code,
@@ -78,7 +78,7 @@ func NewJSONRPCError(code int, message string, data interface{}) *JSONRPCError {
 	}
 }
 
-// NewJSONRPCResponse creates a new JSON-RPC response
+// NewJSONRPCResponse creates a new JSON-RPC response.
 func NewJSONRPCResponse(id interface{}, result interface{}, err *JSONRPCError) JSONRPCResponse {
 	return JSONRPCResponse{
 		JSONRPC: protocol.JSONRPC2Version,

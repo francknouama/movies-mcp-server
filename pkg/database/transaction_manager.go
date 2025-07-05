@@ -51,7 +51,10 @@ func (tm *TransactionManager) WithTransaction(ctx context.Context, fn func(*sql.
 // WithTransactionResult executes a function within a transaction and returns a result
 // The transaction is automatically committed on success or rolled back on error
 // Note: Using interface{} for broader compatibility - caller should type assert result
-func (tm *TransactionManager) WithTransactionResult(ctx context.Context, fn func(*sql.Tx) (interface{}, error)) (interface{}, error) {
+func (tm *TransactionManager) WithTransactionResult(
+	ctx context.Context,
+	fn func(*sql.Tx) (interface{}, error),
+) (interface{}, error) {
 	var result interface{}
 	var err error
 

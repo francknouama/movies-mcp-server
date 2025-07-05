@@ -1,6 +1,6 @@
 package dto
 
-// CreateMovieRequest represents the MCP request to create a movie
+// CreateMovieRequest represents the MCP request to create a movie.
 type CreateMovieRequest struct {
 	Title     string   `json:"title"`
 	Director  string   `json:"director"`
@@ -10,7 +10,7 @@ type CreateMovieRequest struct {
 	PosterURL string   `json:"poster_url,omitempty"`
 }
 
-// UpdateMovieRequest represents the MCP request to update a movie
+// UpdateMovieRequest represents the MCP request to update a movie.
 type UpdateMovieRequest struct {
 	ID        int      `json:"id"`
 	Title     string   `json:"title"`
@@ -21,7 +21,7 @@ type UpdateMovieRequest struct {
 	PosterURL string   `json:"poster_url,omitempty"`
 }
 
-// SearchMoviesRequest represents the MCP request to search movies
+// SearchMoviesRequest represents the MCP request to search movies.
 type SearchMoviesRequest struct {
 	Query     string  `json:"query,omitempty"`
 	Title     string  `json:"title,omitempty"`
@@ -37,24 +37,24 @@ type SearchMoviesRequest struct {
 	OrderDir  string  `json:"order_dir,omitempty"`
 }
 
-// SearchByDecadeRequest represents the MCP request to search movies by decade
+// SearchByDecadeRequest represents the MCP request to search movies by decade.
 type SearchByDecadeRequest struct {
 	Decade string `json:"decade"`
 }
 
-// SearchByRatingRangeRequest represents the MCP request to search movies by rating range
+// SearchByRatingRangeRequest represents the MCP request to search movies by rating range.
 type SearchByRatingRangeRequest struct {
 	MinRating float64 `json:"min_rating,omitempty"`
 	MaxRating float64 `json:"max_rating,omitempty"`
 }
 
-// SearchSimilarMoviesRequest represents the MCP request to find similar movies
+// SearchSimilarMoviesRequest represents the MCP request to find similar movies.
 type SearchSimilarMoviesRequest struct {
 	MovieID int `json:"movie_id"`
 	Limit   int `json:"limit,omitempty"`
 }
 
-// MovieResponse represents the MCP response for a movie
+// MovieResponse represents the MCP response for a movie.
 type MovieResponse struct {
 	ID        int      `json:"id"`
 	Title     string   `json:"title"`
@@ -67,7 +67,7 @@ type MovieResponse struct {
 	UpdatedAt string   `json:"updated_at"`
 }
 
-// MoviesListResponse represents the MCP response for a list of movies
+// MoviesListResponse represents the MCP response for a list of movies.
 type MoviesListResponse struct {
 	Movies      []*MovieResponse `json:"movies"`
 	Total       int              `json:"total,omitempty"`
