@@ -44,7 +44,9 @@
       "Bash(./main --help)",
       "Bash(./main:*)",
       "Bash(gh issue create:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(rg:*)",
+      "Bash(errcheck:*)"
     ],
     "deny": []
   }

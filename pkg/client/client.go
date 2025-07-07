@@ -229,7 +229,11 @@ func (c *MCPClient) nextRequestID() interface{} {
 }
 
 func (c *MCPClient) marshalParams(params interface{}) json.RawMessage {
-	data, _ := json.Marshal(params)
+	data, err := json.Marshal(params)
+	if err != nil {
+		// Return empty JSON object if marshaling fails
+		return []byte("{}")
+	}
 	return data
 }
 

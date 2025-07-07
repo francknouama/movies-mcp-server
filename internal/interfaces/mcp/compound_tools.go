@@ -50,12 +50,46 @@ func (h *CompoundToolHandlers) HandleBulkMovieImport(
 		}
 
 		// Extract movie fields
-		title, _ := movie["title"].(string)
-		director, _ := movie["director"].(string)
-		year, _ := movie["year"].(float64)
-		rating, _ := movie["rating"].(float64)
-		genres, _ := movie["genres"].([]interface{})
-		posterURL, _ := movie["poster_url"].(string)
+		title, ok := movie["title"].(string)
+		if !ok {
+			errors = append(errors, map[string]interface{}{
+				"index": i,
+				"error": "Invalid title field",
+			})
+			continue
+		}
+		director, ok := movie["director"].(string)
+		if !ok {
+			errors = append(errors, map[string]interface{}{
+				"index": i,
+				"error": "Invalid director field",
+			})
+			continue
+		}
+		year, ok := movie["year"].(float64)
+		if !ok {
+			errors = append(errors, map[string]interface{}{
+				"index": i,
+				"error": "Invalid year field",
+			})
+			continue
+		}
+		rating, ok := movie["rating"].(float64)
+		if !ok {
+			errors = append(errors, map[string]interface{}{
+				"index": i,
+				"error": "Invalid rating field",
+			})
+			continue
+		}
+		genres, ok := movie["genres"].([]interface{})
+		if !ok {
+			genres = []interface{}{} // Default to empty if not provided
+		}
+		posterURL, ok := movie["poster_url"].(string)
+		if !ok {
+			posterURL = "" // Default to empty if not provided
+		}
 
 		// Convert genres
 		genreStrings := make([]string, 0, len(genres))
@@ -113,7 +147,10 @@ func (h *CompoundToolHandlers) HandleMovieRecommendationEngine(
 	ctx := context.Background()
 
 	// Parse parameters
-	userPreferences, _ := arguments["preferences"].(map[string]interface{})
+	userPreferences, ok := arguments["preferences"].(map[string]interface{})
+	if !ok {
+		userPreferences = make(map[string]interface{}) // Default to empty if not provided
+	}
 	limit := 10
 	if l, ok := arguments["limit"].(float64); ok {
 		limit = int(l)
@@ -121,9 +158,18 @@ func (h *CompoundToolHandlers) HandleMovieRecommendationEngine(
 
 	// Extract preferences
 	genres := extractStringArray(userPreferences["genres"])
-	minRating, _ := userPreferences["min_rating"].(float64)
-	yearFrom, _ := userPreferences["year_from"].(float64)
-	yearTo, _ := userPreferences["year_to"].(float64)
+	minRating, ok := userPreferences["min_rating"].(float64)
+	if !ok {
+		minRating = 0.0 // Default to 0.0 if not provided
+	}
+	yearFrom, ok := userPreferences["year_from"].(float64)
+	if !ok {
+		yearFrom = 0.0 // Default to 0.0 if not provided
+	}
+	yearTo, ok := userPreferences["year_to"].(float64)
+	if !ok {
+		yearTo = 0.0 // Default to 0.0 if not provided
+	}
 	excludeMovies := extractStringArray(userPreferences["exclude_movies"])
 
 	// Build recommendation query

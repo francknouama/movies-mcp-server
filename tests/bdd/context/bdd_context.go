@@ -368,7 +368,9 @@ func (ctx *BDDContext) Cleanup() error {
 		if err := ctx.serverProcess.Process.Kill(); err != nil {
 			errors = append(errors, err)
 		}
-		_ = ctx.serverProcess.Wait()
+		if err := ctx.serverProcess.Wait(); err != nil {
+			errors = append(errors, err)
+		}
 	}
 
 	// Clear test data
