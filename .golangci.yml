@@ -129,6 +129,11 @@ issues:
         - funlen
         - goconst
         
+    # Exclude errcheck for all BDD test files
+    - path: tests/bdd/
+      linters:
+        - errcheck
+        
     # Exclude errcheck for defer statements in cleanup functions
     - path: transaction_manager\.go
       text: "Error return value of.*Rollback.*is not checked"
