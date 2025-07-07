@@ -480,7 +480,7 @@ func generateRecommendationReason(movie *movieApp.MovieDTO, preferences map[stri
 	if genres, ok := preferences["genres"].([]interface{}); ok && len(genres) > 0 {
 		for _, genre := range movie.Genres {
 			for _, prefGenre := range genres {
-				if strings.EqualFold(genre, prefGenre.(string)) {
+				if prefGenreStr, ok := prefGenre.(string); ok && strings.EqualFold(genre, prefGenreStr) {
 					reasons = append(reasons, fmt.Sprintf("Matches your interest in %s", genre))
 					break
 				}

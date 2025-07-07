@@ -294,12 +294,15 @@ func (cm *ContextManager) HandleCreateContext(
 	sendError func(interface{}, int, string, interface{}),
 ) {
 	// Parse query parameters
-	queryType, _ := arguments["type"].(string)
-	if queryType == "" {
+	queryType, ok := arguments["type"].(string)
+	if !ok || queryType == "" {
 		queryType = "title"
 	}
 
-	query, _ := arguments["query"].(string)
+	query, ok := arguments["query"].(string)
+	if !ok {
+		query = ""
+	}
 	if query == "" {
 		sendError(id, dto.InvalidParams, "Query is required", nil)
 		return

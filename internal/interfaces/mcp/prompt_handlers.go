@@ -146,7 +146,10 @@ func (h *PromptHandlers) HandlePromptGet(
 		return
 	}
 
-	args, _ := arguments["arguments"].(map[string]interface{})
+	args, ok := arguments["arguments"].(map[string]interface{})
+	if !ok {
+		args = make(map[string]interface{}) // Default to empty if not provided
+	}
 
 	// Find the prompt template
 	var promptTemplate *dto.Prompt
@@ -201,9 +204,18 @@ func (h *PromptHandlers) generatePromptResponse(name string, args map[string]int
 
 // generateMovieRecommendationPrompt generates a movie recommendation prompt
 func (h *PromptHandlers) generateMovieRecommendationPrompt(args map[string]interface{}) dto.PromptGetResponse {
-	genre, _ := args["genre"].(string)
-	minRating, _ := args["min_rating"].(float64)
-	yearRange, _ := args["year_range"].(string)
+	genre, ok := args["genre"].(string)
+	if !ok {
+		genre = "any"
+	}
+	minRating, ok := args["min_rating"].(float64)
+	if !ok {
+		minRating = 0.0
+	}
+	yearRange, ok := args["year_range"].(string)
+	if !ok {
+		yearRange = ""
+	}
 
 	var promptText strings.Builder
 	promptText.WriteString(fmt.Sprintf("I need movie recommendations in the %s genre", genre))
@@ -236,8 +248,14 @@ func (h *PromptHandlers) generateMovieRecommendationPrompt(args map[string]inter
 
 // generateMovieAnalysisPrompt generates a movie analysis prompt
 func (h *PromptHandlers) generateMovieAnalysisPrompt(args map[string]interface{}) dto.PromptGetResponse {
-	movieTitle, _ := args["movie_title"].(string)
-	aspects, _ := args["aspects"].(string)
+	movieTitle, ok := args["movie_title"].(string)
+	if !ok {
+		movieTitle = ""
+	}
+	aspects, ok := args["aspects"].(string)
+	if !ok {
+		aspects = ""
+	}
 
 	var promptText strings.Builder
 	promptText.WriteString(fmt.Sprintf("Please analyze the movie '%s'", movieTitle))
@@ -268,8 +286,14 @@ func (h *PromptHandlers) generateMovieAnalysisPrompt(args map[string]interface{}
 
 // generateDirectorFilmographyPrompt generates a director filmography prompt
 func (h *PromptHandlers) generateDirectorFilmographyPrompt(args map[string]interface{}) dto.PromptGetResponse {
-	directorName, _ := args["director_name"].(string)
-	focusPeriod, _ := args["focus_period"].(string)
+	directorName, ok := args["director_name"].(string)
+	if !ok {
+		directorName = ""
+	}
+	focusPeriod, ok := args["focus_period"].(string)
+	if !ok {
+		focusPeriod = ""
+	}
 
 	var promptText strings.Builder
 	promptText.WriteString(fmt.Sprintf("Explore the filmography of director %s", directorName))
@@ -298,8 +322,14 @@ func (h *PromptHandlers) generateDirectorFilmographyPrompt(args map[string]inter
 
 // generateGenreExplorationPrompt generates a genre exploration prompt
 func (h *PromptHandlers) generateGenreExplorationPrompt(args map[string]interface{}) dto.PromptGetResponse {
-	genre, _ := args["genre"].(string)
-	subGenre, _ := args["sub_genre"].(string)
+	genre, ok := args["genre"].(string)
+	if !ok {
+		genre = ""
+	}
+	subGenre, ok := args["sub_genre"].(string)
+	if !ok {
+		subGenre = ""
+	}
 
 	var promptText strings.Builder
 	promptText.WriteString(fmt.Sprintf("Provide a comprehensive exploration of the %s genre", genre))
@@ -328,9 +358,18 @@ func (h *PromptHandlers) generateGenreExplorationPrompt(args map[string]interfac
 
 // generateMovieComparisonPrompt generates a movie comparison prompt
 func (h *PromptHandlers) generateMovieComparisonPrompt(args map[string]interface{}) dto.PromptGetResponse {
-	movie1, _ := args["movie1"].(string)
-	movie2, _ := args["movie2"].(string)
-	aspects, _ := args["comparison_aspects"].(string)
+	movie1, ok := args["movie1"].(string)
+	if !ok {
+		movie1 = ""
+	}
+	movie2, ok := args["movie2"].(string)
+	if !ok {
+		movie2 = ""
+	}
+	aspects, ok := args["comparison_aspects"].(string)
+	if !ok {
+		aspects = ""
+	}
 
 	var promptText strings.Builder
 	promptText.WriteString(fmt.Sprintf("Compare and contrast the movies '%s' and '%s'", movie1, movie2))
