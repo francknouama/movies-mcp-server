@@ -25,29 +25,12 @@ func NewMovieHandlers(movieService *movieApp.Service) *MovieHandlers {
 
 // HandleGetMovie handles the get_movie tool call
 func (h *MovieHandlers) HandleGetMovie(id any, arguments map[string]any, sendResult func(any, any), sendError func(any, int, string, any)) {
-	// Parse movie ID
-	movieIDFloat, ok := arguments["movie_id"].(float64)
-	if !ok {
-		sendError(id, dto.InvalidParams, "movie_id is required and must be a number", nil)
-		return
-	}
-	movieID := int(movieIDFloat)
-
-	// Get movie from service
-	ctx := context.Background()
-	movieDTO, err := h.movieService.GetMovie(ctx, movieID)
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			sendError(id, dto.InvalidParams, "Movie not found", nil)
-		} else {
-			sendError(id, dto.InternalError, "Failed to get movie", err.Error())
-		}
-		return
-	}
-
-	// Convert to response format
-	response := h.toMovieResponse(movieDTO)
-	sendResult(id, response)
+	handleGetOperation(
+		id, arguments, "movie_id", "Movie",
+		h.movieService.GetMovie,
+		h.toMovieResponse,
+		sendResult, sendError,
+	)
 }
 
 // HandleAddMovie handles the add_movie tool call
@@ -121,27 +104,11 @@ func (h *MovieHandlers) HandleUpdateMovie(id any, arguments map[string]any, send
 
 // HandleDeleteMovie handles the delete_movie tool call
 func (h *MovieHandlers) HandleDeleteMovie(id any, arguments map[string]any, sendResult func(any, any), sendError func(any, int, string, any)) {
-	// Parse movie ID
-	movieIDFloat, ok := arguments["movie_id"].(float64)
-	if !ok {
-		sendError(id, dto.InvalidParams, "movie_id is required and must be a number", nil)
-		return
-	}
-	movieID := int(movieIDFloat)
-
-	// Delete movie
-	ctx := context.Background()
-	err := h.movieService.DeleteMovie(ctx, movieID)
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			sendError(id, dto.InvalidParams, "Movie not found", nil)
-		} else {
-			sendError(id, dto.InternalError, "Failed to delete movie", err.Error())
-		}
-		return
-	}
-
-	sendResult(id, map[string]string{"message": "Movie deleted successfully"})
+	handleDeleteOperation(
+		id, arguments, "movie_id", "Movie",
+		h.movieService.DeleteMovie,
+		sendResult, sendError,
+	)
 }
 
 // HandleSearchMovies handles the search_movies tool call

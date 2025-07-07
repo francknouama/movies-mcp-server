@@ -53,29 +53,12 @@ func (h *ActorHandlers) HandleAddActor(id any, arguments map[string]any, sendRes
 
 // HandleGetActor handles getting an actor by ID
 func (h *ActorHandlers) HandleGetActor(id any, arguments map[string]any, sendResult func(any, any), sendError func(any, int, string, any)) {
-	// Parse actor ID
-	actorIDFloat, ok := arguments["actor_id"].(float64)
-	if !ok {
-		sendError(id, dto.InvalidParams, "actor_id is required and must be a number", nil)
-		return
-	}
-	actorID := int(actorIDFloat)
-
-	// Get actor from service
-	ctx := context.Background()
-	actorDTO, err := h.actorService.GetActor(ctx, actorID)
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			sendError(id, dto.InvalidParams, "Actor not found", nil)
-		} else {
-			sendError(id, dto.InternalError, "Failed to get actor", err.Error())
-		}
-		return
-	}
-
-	// Convert to response format
-	response := h.toActorResponse(actorDTO)
-	sendResult(id, response)
+	handleGetOperation(
+		id, arguments, "actor_id", "Actor",
+		h.actorService.GetActor,
+		h.toActorResponse,
+		sendResult, sendError,
+	)
 }
 
 // HandleUpdateActor handles updating an actor
@@ -114,27 +97,11 @@ func (h *ActorHandlers) HandleUpdateActor(id any, arguments map[string]any, send
 
 // HandleDeleteActor handles deleting an actor
 func (h *ActorHandlers) HandleDeleteActor(id any, arguments map[string]any, sendResult func(any, any), sendError func(any, int, string, any)) {
-	// Parse actor ID
-	actorIDFloat, ok := arguments["actor_id"].(float64)
-	if !ok {
-		sendError(id, dto.InvalidParams, "actor_id is required and must be a number", nil)
-		return
-	}
-	actorID := int(actorIDFloat)
-
-	// Delete actor
-	ctx := context.Background()
-	err := h.actorService.DeleteActor(ctx, actorID)
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			sendError(id, dto.InvalidParams, "Actor not found", nil)
-		} else {
-			sendError(id, dto.InternalError, "Failed to delete actor", err.Error())
-		}
-		return
-	}
-
-	sendResult(id, map[string]string{"message": "Actor deleted successfully"})
+	handleDeleteOperation(
+		id, arguments, "actor_id", "Actor",
+		h.actorService.DeleteActor,
+		sendResult, sendError,
+	)
 }
 
 // HandleLinkActorToMovie handles linking an actor to a movie
