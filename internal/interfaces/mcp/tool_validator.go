@@ -585,5 +585,14 @@ func (tv *ToolValidator) HandleValidateToolCall(
 	}
 
 	result := tv.ValidateToolCall(toolName, toolArgs)
-	sendResult(id, result)
+	
+	// Convert ValidationResult to map for consistent JSON response
+	response := map[string]interface{}{
+		"valid": result.Valid,
+	}
+	if len(result.Errors) > 0 {
+		response["errors"] = result.Errors
+	}
+	
+	sendResult(id, response)
 }

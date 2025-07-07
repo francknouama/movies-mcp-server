@@ -704,3 +704,185 @@ func TestActorHandlers_HandleSearchActors(t *testing.T) {
 		})
 	}
 }
+
+func TestActorHandlers_HandleUpdateActor(t *testing.T) {
+	tests := []struct {
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockActorService
+		expectError bool
+		errorCode   int
+		checkResult func(t *testing.T, result interface{})
+	}{
+		{
+			name: "successful actor update",
+			arguments: map[string]interface{}{
+				"actor_id":   float64(1),
+				"name":       "Updated Actor",
+				"birth_year": float64(1985),
+				"bio":        "Updated bio",
+			},
+			mockService: func() *MockActorService {
+				return &MockActorService{
+					UpdateFunc: func(ctx context.Context, cmd actorApp.UpdateActorCommand) (*actorApp.ActorDTO, error) {
+						return &actorApp.ActorDTO{
+							ID:        cmd.ID,
+							Name:      cmd.Name,
+							BirthYear: cmd.BirthYear,
+							Bio:       cmd.Bio,
+						}, nil
+					},
+				}
+			},
+			expectError: false,
+			checkResult: func(t *testing.T, result interface{}) {
+				resultMap, ok := result.(map[string]interface{})
+				if !ok {
+					t.Fatalf("Expected result to be a map")
+				}
+				if resultMap["name"] != "Updated Actor" {
+					t.Errorf("Expected name 'Updated Actor', got %v", resultMap["name"])
+				}
+			},
+		},
+		{
+			name:        "missing actor_id parameter",
+			arguments:   map[string]interface{}{"name": "Updated Actor"},
+			mockService: func() *MockActorService { return &MockActorService{} },
+			expectError: true,
+			errorCode:   dto.InvalidParams,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handlers := NewActorHandlersTestable(tt.mockService())
+
+			var gotResult interface{}
+			var gotError *dto.JSONRPCError
+
+			handlers.HandleUpdateActor(
+				1,
+				tt.arguments,
+				func(id interface{}, result interface{}) {
+					gotResult = result
+				},
+				func(id interface{}, code int, message string, data interface{}) {
+					gotError = &dto.JSONRPCError{
+						Code:    code,
+						Message: message,
+						Data:    data,
+					}
+				},
+			)
+
+			if tt.expectError {
+				if gotError == nil {
+					t.Fatal("Expected error but got none")
+				}
+				if gotError.Code != tt.errorCode {
+					t.Errorf("Expected error code %d, got %d", tt.errorCode, gotError.Code)
+				}
+			} else {
+				if gotError != nil {
+					t.Fatalf("Unexpected error: %v", gotError)
+				}
+				if tt.checkResult != nil {
+					tt.checkResult(t, gotResult)
+				}
+			}
+		})
+	}
+}
+
+func TestActorHandlers_HandleLinkActorToMovie(t *testing.T) {
+	tests := []struct {
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockActorService
+		expectError bool
+		errorCode   int
+	}{
+		{
+			name: "successful link",
+			arguments: map[string]interface{}{
+				"actor_id": float64(1),
+				"movie_id": float64(2),
+			},
+			mockService: func() *MockActorService {
+				return &MockActorService{
+					LinkToMovieFunc: func(ctx context.Context, actorID, movieID int) error {
+						return nil
+					},
+				}
+			},
+			expectError: false,
+		},
+		{
+			name:        "missing actor_id",
+			arguments:   map[string]interface{}{"movie_id": float64(2)},
+			mockService: func() *MockActorService { return &MockActorService{} },
+			expectError: true,
+			errorCode:   dto.InvalidParams,
+		},
+		{
+			name: "service error",
+			arguments: map[string]interface{}{
+				"actor_id": float64(1),
+				"movie_id": float64(2),
+			},
+			mockService: func() *MockActorService {
+				return &MockActorService{
+					LinkToMovieFunc: func(ctx context.Context, actorID, movieID int) error {
+						return errors.New("link failed")
+					},
+				}
+			},
+			expectError: true,
+			errorCode:   dto.InvalidParams,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handlers := NewActorHandlersTestable(tt.mockService())
+
+			var gotResult interface{}
+			var gotError *dto.JSONRPCError
+
+			handlers.HandleLinkActorToMovie(
+				1,
+				tt.arguments,
+				func(id interface{}, result interface{}) {
+					gotResult = result
+				},
+				func(id interface{}, code int, message string, data interface{}) {
+					gotError = &dto.JSONRPCError{
+						Code:    code,
+						Message: message,
+						Data:    data,
+					}
+				},
+			)
+
+			if tt.expectError {
+				if gotError == nil {
+					t.Fatal("Expected error but got none")
+				}
+				if gotError.Code != tt.errorCode {
+					t.Errorf("Expected error code %d, got %d", tt.errorCode, gotError.Code)
+				}
+			} else {
+				if gotError != nil {
+					t.Fatalf("Unexpected error: %v", gotError)
+				}
+				// Check for success message
+				if resultMap, ok := gotResult.(map[string]interface{}); ok {
+					if resultMap["message"] != "Actor linked to movie successfully" {
+						t.Errorf("Unexpected success message: %v", resultMap["message"])
+					}
+				}
+			}
+		})
+	}
+}

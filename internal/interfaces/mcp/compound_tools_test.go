@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	movieApp "github.com/francknouama/movies-mcp-server/internal/application/movie"
@@ -599,6 +600,504 @@ func TestCompoundToolHandlers_HandleDirectorCareerAnalysis(t *testing.T) {
 				}
 				if tt.checkResult != nil {
 					tt.checkResult(t, gotResult)
+				}
+			}
+		})
+	}
+}
+
+func TestNewCompoundToolHandlers(t *testing.T) {
+	mockService := &movieApp.Service{}
+	handlers := NewCompoundToolHandlers(mockService)
+	
+	if handlers == nil {
+		t.Fatal("NewCompoundToolHandlers returned nil")
+	}
+	
+	if handlers.movieService != mockService {
+		t.Error("NewCompoundToolHandlers did not set movieService correctly")
+	}
+}
+
+func TestExtractStringArray(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected []string
+	}{
+		{
+			name:     "valid string array",
+			input:    []interface{}{"action", "drama", "comedy"},
+			expected: []string{"action", "drama", "comedy"},
+		},
+		{
+			name:     "empty array",
+			input:    []interface{}{},
+			expected: []string{},
+		},
+		{
+			name:     "array with non-string values",
+			input:    []interface{}{"action", 123, "drama", true},
+			expected: []string{"action", "drama"},
+		},
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: []string{},
+		},
+		{
+			name:     "non-array input",
+			input:    "not an array",
+			expected: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractStringArray(tt.input)
+			if len(result) != len(tt.expected) {
+				t.Errorf("extractStringArray() returned %d items, expected %d", len(result), len(tt.expected))
+				return
+			}
+			for i, v := range result {
+				if v != tt.expected[i] {
+					t.Errorf("extractStringArray()[%d] = %s, expected %s", i, v, tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
+func TestCalculateGenreScore(t *testing.T) {
+	tests := []struct {
+		name         string
+		movieGenres  []string
+		userGenres   []string
+		expected     float64
+	}{
+		{
+			name:         "perfect match",
+			movieGenres:  []string{"Action", "Drama"},
+			userGenres:   []string{"Action", "Drama"},
+			expected:     1.0,
+		},
+		{
+			name:         "partial match",
+			movieGenres:  []string{"Action", "Drama", "Comedy"},
+			userGenres:   []string{"Action", "Horror"},
+			expected:     0.5,
+		},
+		{
+			name:         "no match",
+			movieGenres:  []string{"Romance", "Comedy"},
+			userGenres:   []string{"Action", "Horror"},
+			expected:     0.0,
+		},
+		{
+			name:         "empty user genres",
+			movieGenres:  []string{"Action", "Drama"},
+			userGenres:   []string{},
+			expected:     0.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			score := calculateGenreScore(tt.movieGenres, tt.userGenres)
+			if score != tt.expected {
+				t.Errorf("calculateGenreScore() = %.1f, expected %.1f", score, tt.expected)
+			}
+		})
+	}
+}
+
+func TestCalculateYearScore(t *testing.T) {
+	tests := []struct {
+		name           string
+		movieYear      float64
+		yearFrom       float64
+		yearTo         float64
+		expectedMin    float64
+		expectedMax    float64
+	}{
+		{
+			name:           "within range",
+			movieYear:      2020,
+			yearFrom:       2010,
+			yearTo:         2025,
+			expectedMin:    1.0,
+			expectedMax:    1.0,
+		},
+		{
+			name:           "before range",
+			movieYear:      2000,
+			yearFrom:       2010,
+			yearTo:         2025,
+			expectedMin:    0.7,
+			expectedMax:    0.9,
+		},
+		{
+			name:           "after range",
+			movieYear:      2030,
+			yearFrom:       2010,
+			yearTo:         2025,
+			expectedMin:    0.7,
+			expectedMax:    0.9,
+		},
+		{
+			name:           "default range",
+			movieYear:      2020,
+			yearFrom:       0,
+			yearTo:         0,
+			expectedMin:    1.0,
+			expectedMax:    1.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			score := calculateYearScore(tt.movieYear, tt.yearFrom, tt.yearTo)
+			if score < tt.expectedMin || score > tt.expectedMax {
+				t.Errorf("calculateYearScore() = %.2f, expected between %.2f and %.2f", score, tt.expectedMin, tt.expectedMax)
+			}
+		})
+	}
+}
+
+func TestGenerateRecommendationReason(t *testing.T) {
+	tests := []struct {
+		name          string
+		movie         *movieApp.MovieDTO
+		preferences   map[string]interface{}
+		score         float64
+		expectedWords []string
+	}{
+		{
+			name: "excellent match with high rating",
+			movie: &movieApp.MovieDTO{
+				Genres: []string{"Action", "Drama"},
+				Rating: 8.5,
+				Year:   2020,
+			},
+			preferences: map[string]interface{}{
+				"genres": []interface{}{"Action", "Comedy"},
+			},
+			score:         0.9,
+			expectedWords: []string{"Excellent match", "Highly rated", "Matches your interest in Action"},
+		},
+		{
+			name: "good match",
+			movie: &movieApp.MovieDTO{
+				Genres: []string{"Comedy"},
+				Rating: 7.0,
+				Year:   2023,
+			},
+			preferences: map[string]interface{}{},
+			score:         0.7,
+			expectedWords: []string{"Good match"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reason := generateRecommendationReason(tt.movie, tt.preferences, tt.score)
+			for _, word := range tt.expectedWords {
+				if !strings.Contains(reason, word) {
+					t.Errorf("generateRecommendationReason() missing expected word '%s' in: %s", word, reason)
+				}
+			}
+		})
+	}
+}
+
+func TestCalculateAverageRating(t *testing.T) {
+	tests := []struct {
+		name     string
+		movies   []*movieApp.MovieDTO
+		expected float64
+	}{
+		{
+			name: "multiple movies",
+			movies: []*movieApp.MovieDTO{
+				{Rating: 8.0},
+				{Rating: 7.5},
+				{Rating: 9.0},
+			},
+			expected: 8.17,
+		},
+		{
+			name: "single movie",
+			movies: []*movieApp.MovieDTO{
+				{Rating: 7.5},
+			},
+			expected: 7.5,
+		},
+		{
+			name: "movies with zero ratings",
+			movies: []*movieApp.MovieDTO{
+				{Rating: 8.0},
+				{Rating: 0},
+				{Rating: 9.0},
+			},
+			expected: 8.5,
+		},
+		{
+			name:     "empty movie list",
+			movies:   []*movieApp.MovieDTO{},
+			expected: 0.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			avg := calculateAverageRating(tt.movies)
+			if fmt.Sprintf("%.2f", avg) != fmt.Sprintf("%.2f", tt.expected) {
+				t.Errorf("calculateAverageRating() = %.2f, expected %.2f", avg, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFindBestMovie(t *testing.T) {
+	tests := []struct {
+		name         string
+		movies       []*movieApp.MovieDTO
+		expectedID   int
+		expectedNil  bool
+	}{
+		{
+			name: "multiple movies",
+			movies: []*movieApp.MovieDTO{
+				{ID: 1, Title: "Good Movie", Rating: 7.5},
+				{ID: 2, Title: "Best Movie", Rating: 9.0},
+				{ID: 3, Title: "Average Movie", Rating: 6.0},
+			},
+			expectedID: 2,
+		},
+		{
+			name: "single movie",
+			movies: []*movieApp.MovieDTO{
+				{ID: 1, Title: "Only Movie", Rating: 8.0},
+			},
+			expectedID: 1,
+		},
+		{
+			name:        "empty list",
+			movies:      []*movieApp.MovieDTO{},
+			expectedNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := findBestMovie(tt.movies)
+			if tt.expectedNil {
+				if result != nil {
+					t.Errorf("findBestMovie() expected nil, got %v", result)
+				}
+			} else {
+				if result == nil {
+					t.Fatal("findBestMovie() returned nil, expected a movie")
+				}
+				if result.ID != tt.expectedID {
+					t.Errorf("findBestMovie() returned ID %d, expected %d", result.ID, tt.expectedID)
+				}
+			}
+		})
+	}
+}
+
+func TestFindWorstMovie(t *testing.T) {
+	tests := []struct {
+		name         string
+		movies       []*movieApp.MovieDTO
+		expectedID   int
+		expectedNil  bool
+	}{
+		{
+			name: "multiple movies",
+			movies: []*movieApp.MovieDTO{
+				{ID: 1, Title: "Good Movie", Rating: 7.5},
+				{ID: 2, Title: "Best Movie", Rating: 9.0},
+				{ID: 3, Title: "Worst Movie", Rating: 4.0},
+			},
+			expectedID: 3,
+		},
+		{
+			name: "movies with zero rating",
+			movies: []*movieApp.MovieDTO{
+				{ID: 1, Title: "Good Movie", Rating: 7.5},
+				{ID: 2, Title: "Unrated Movie", Rating: 0},
+				{ID: 3, Title: "Bad Movie", Rating: 3.0},
+			},
+			expectedID: 3,
+		},
+		{
+			name:        "empty list",
+			movies:      []*movieApp.MovieDTO{},
+			expectedNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := findWorstMovie(tt.movies)
+			if tt.expectedNil {
+				if result != nil {
+					t.Errorf("findWorstMovie() expected nil, got %v", result)
+				}
+			} else {
+				if result == nil {
+					t.Fatal("findWorstMovie() returned nil, expected a movie")
+				}
+				if result.ID != tt.expectedID {
+					t.Errorf("findWorstMovie() returned ID %d, expected %d", result.ID, tt.expectedID)
+				}
+			}
+		})
+	}
+}
+
+func TestFindTopGenres(t *testing.T) {
+	tests := []struct {
+		name       string
+		genreCount map[string]int
+		limit      int
+		expected   []map[string]interface{}
+	}{
+		{
+			name: "multiple genres",
+			genreCount: map[string]int{
+				"Action": 3,
+				"Drama":  2,
+				"Comedy": 1,
+			},
+			limit: 2,
+			expected: []map[string]interface{}{
+				{"genre": "Action", "count": 3},
+				{"genre": "Drama", "count": 2},
+			},
+		},
+		{
+			name:       "empty genre count",
+			genreCount: map[string]int{},
+			limit:      3,
+			expected:   []map[string]interface{}{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := findTopGenres(tt.genreCount, tt.limit)
+			if len(result) != len(tt.expected) {
+				t.Errorf("findTopGenres() returned %d genres, expected %d", len(result), len(tt.expected))
+				return
+			}
+			for i, genre := range result {
+				if genre["genre"] != tt.expected[i]["genre"] || genre["count"] != tt.expected[i]["count"] {
+					t.Errorf("findTopGenres()[%d] = %v, expected %v", i, genre, tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
+func TestDetermineTrajectory(t *testing.T) {
+	tests := []struct {
+		name        string
+		earlyAvg    float64
+		midAvg      float64
+		lateAvg     float64
+		expected    string
+	}{
+		{
+			name:     "ascending trajectory",
+			earlyAvg: 6.0,
+			midAvg:   7.0,
+			lateAvg:  8.0,
+			expected: "Ascending - Consistent improvement over career",
+		},
+		{
+			name:     "descending trajectory",
+			earlyAvg: 8.0,
+			midAvg:   7.0,
+			lateAvg:  6.0,
+			expected: "Descending - Ratings declined over time",
+		},
+		{
+			name:     "peak trajectory",
+			earlyAvg: 7.0,
+			midAvg:   7.6,
+			lateAvg:  7.0,
+			expected: "Peak in mid-career",
+		},
+		{
+			name:     "peak in mid-career",
+			earlyAvg: 6.0,
+			midAvg:   8.0,
+			lateAvg:  6.5,
+			expected: "Peak in mid-career",
+		},
+		{
+			name:     "consistent trajectory",
+			earlyAvg: 7.0,
+			midAvg:   7.0,
+			lateAvg:  7.0,
+			expected: "Consistent quality throughout career",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := determineTrajectory(tt.earlyAvg, tt.midAvg, tt.lateAvg)
+			if result != tt.expected {
+				t.Errorf("determineTrajectory() = %s, expected %s", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFormatFilmography(t *testing.T) {
+	tests := []struct {
+		name     string
+		movies   []*movieApp.MovieDTO
+		expected int // expected number of entries
+	}{
+		{
+			name: "multiple movies",
+			movies: []*movieApp.MovieDTO{
+				{Year: 2020, Title: "Movie A", Rating: 8.0, Genres: []string{"Action"}},
+				{Year: 2021, Title: "Movie B", Rating: 7.5, Genres: []string{"Drama"}},
+				{Year: 2019, Title: "Movie C", Rating: 9.0, Genres: []string{"Comedy"}},
+			},
+			expected: 3,
+		},
+		{
+			name:     "empty list",
+			movies:   []*movieApp.MovieDTO{},
+			expected: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := formatFilmography(tt.movies)
+			if len(result) != tt.expected {
+				t.Errorf("formatFilmography() returned %d entries, expected %d", len(result), tt.expected)
+			}
+			// Check that all expected fields are present
+			for i, entry := range result {
+				if _, ok := entry["year"]; !ok {
+					t.Errorf("formatFilmography()[%d] missing 'year' field", i)
+				}
+				if _, ok := entry["title"]; !ok {
+					t.Errorf("formatFilmography()[%d] missing 'title' field", i)
+				}
+				if _, ok := entry["rating"]; !ok {
+					t.Errorf("formatFilmography()[%d] missing 'rating' field", i)
+				}
+				if _, ok := entry["genres"]; !ok {
+					t.Errorf("formatFilmography()[%d] missing 'genres' field", i)
 				}
 			}
 		})

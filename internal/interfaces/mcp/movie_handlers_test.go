@@ -675,3 +675,218 @@ func TestMovieHandlers_HandleDeleteMovie(t *testing.T) {
 		})
 	}
 }
+
+// HandleUpdateMovie handles the update_movie tool call
+func (h *MovieHandlersTestable) HandleUpdateMovie(
+	id interface{},
+	arguments map[string]interface{},
+	sendResult func(interface{}, interface{}),
+	sendError func(interface{}, int, string, interface{}),
+) {
+	// Parse movie ID
+	movieID, ok := arguments["movie_id"].(float64)
+	if !ok {
+		sendError(id, dto.InvalidParams, "Invalid movie_id parameter", nil)
+		return
+	}
+
+	// Parse required parameters
+	title, ok := arguments["title"].(string)
+	if !ok || title == "" {
+		sendError(id, dto.InvalidParams, "Invalid title parameter", nil)
+		return
+	}
+
+	director, ok := arguments["director"].(string)
+	if !ok || director == "" {
+		sendError(id, dto.InvalidParams, "Invalid director parameter", nil)
+		return
+	}
+
+	year, ok := arguments["year"].(float64)
+	if !ok {
+		sendError(id, dto.InvalidParams, "Invalid year parameter", nil)
+		return
+	}
+
+	rating, _ := arguments["rating"].(float64)
+	genres, _ := arguments["genres"].([]interface{})
+	posterURL, _ := arguments["poster_url"].(string)
+
+	// Convert genres
+	genreStrings := make([]string, 0, len(genres))
+	for _, g := range genres {
+		if genreStr, ok := g.(string); ok {
+			genreStrings = append(genreStrings, genreStr)
+		}
+	}
+
+	// Convert to application command
+	cmd := movieApp.UpdateMovieCommand{
+		ID:        int(movieID),
+		Title:     title,
+		Director:  director,
+		Year:      int(year),
+		Rating:    rating,
+		Genres:    genreStrings,
+		PosterURL: posterURL,
+	}
+
+	// Update movie
+	ctx := context.Background()
+	movieDTO, err := h.movieService.UpdateMovie(ctx, cmd)
+	if err != nil {
+		sendError(id, dto.InvalidParams, "Failed to update movie", err.Error())
+		return
+	}
+
+	// Convert to response format
+	response := map[string]interface{}{
+		"id":         movieDTO.ID,
+		"title":      movieDTO.Title,
+		"director":   movieDTO.Director,
+		"year":       movieDTO.Year,
+		"rating":     movieDTO.Rating,
+		"genres":     movieDTO.Genres,
+		"poster_url": movieDTO.PosterURL,
+	}
+
+	sendResult(id, response)
+}
+
+func TestMovieHandlers_HandleUpdateMovie(t *testing.T) {
+	tests := []struct {
+		name        string
+		arguments   map[string]interface{}
+		mockService func() *MockMovieServiceForMovieHandlers
+		expectError bool
+		errorCode   int
+		checkResult func(t *testing.T, result interface{})
+	}{
+		{
+			name: "successful movie update",
+			arguments: map[string]interface{}{
+				"movie_id":   float64(1),
+				"title":      "Updated Movie",
+				"director":   "Updated Director",
+				"year":       float64(2024),
+				"rating":     float64(9.0),
+				"genres":     []interface{}{"Action", "Sci-Fi"},
+				"poster_url": "https://example.com/updated-poster.jpg",
+			},
+			mockService: func() *MockMovieServiceForMovieHandlers {
+				return &MockMovieServiceForMovieHandlers{
+					UpdateFunc: func(ctx context.Context, cmd movieApp.UpdateMovieCommand) (*movieApp.MovieDTO, error) {
+						return &movieApp.MovieDTO{
+							ID:        cmd.ID,
+							Title:     cmd.Title,
+							Director:  cmd.Director,
+							Year:      cmd.Year,
+							Rating:    cmd.Rating,
+							Genres:    cmd.Genres,
+							PosterURL: cmd.PosterURL,
+						}, nil
+					},
+				}
+			},
+			expectError: false,
+			checkResult: func(t *testing.T, result interface{}) {
+				resultMap, ok := result.(map[string]interface{})
+				if !ok {
+					t.Fatalf("Expected result to be a map")
+				}
+				if resultMap["id"] != 1 {
+					t.Errorf("Expected id 1, got %v", resultMap["id"])
+				}
+				if resultMap["title"] != "Updated Movie" {
+					t.Errorf("Expected title 'Updated Movie', got %v", resultMap["title"])
+				}
+			},
+		},
+		{
+			name:        "missing movie_id parameter",
+			arguments:   map[string]interface{}{"title": "Updated Movie", "director": "Updated Director", "year": float64(2024)},
+			mockService: func() *MockMovieServiceForMovieHandlers { return &MockMovieServiceForMovieHandlers{} },
+			expectError: true,
+			errorCode:   dto.InvalidParams,
+		},
+		{
+			name:        "missing title parameter",
+			arguments:   map[string]interface{}{"movie_id": float64(1), "director": "Updated Director", "year": float64(2024)},
+			mockService: func() *MockMovieServiceForMovieHandlers { return &MockMovieServiceForMovieHandlers{} },
+			expectError: true,
+			errorCode:   dto.InvalidParams,
+		},
+		{
+			name: "service error",
+			arguments: map[string]interface{}{
+				"movie_id": float64(1),
+				"title":    "Updated Movie",
+				"director": "Updated Director",
+				"year":     float64(2024),
+			},
+			mockService: func() *MockMovieServiceForMovieHandlers {
+				return &MockMovieServiceForMovieHandlers{
+					UpdateFunc: func(ctx context.Context, cmd movieApp.UpdateMovieCommand) (*movieApp.MovieDTO, error) {
+						return nil, errors.New("update failed")
+					},
+				}
+			},
+			expectError: true,
+			errorCode:   dto.InvalidParams,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handlers := NewMovieHandlersTestable(tt.mockService())
+
+			var gotResult interface{}
+			var gotError *dto.JSONRPCError
+
+			handlers.HandleUpdateMovie(
+				1,
+				tt.arguments,
+				func(id interface{}, result interface{}) {
+					gotResult = result
+				},
+				func(id interface{}, code int, message string, data interface{}) {
+					gotError = &dto.JSONRPCError{
+						Code:    code,
+						Message: message,
+						Data:    data,
+					}
+				},
+			)
+
+			if tt.expectError {
+				if gotError == nil {
+					t.Fatal("Expected error but got none")
+				}
+				if gotError.Code != tt.errorCode {
+					t.Errorf("Expected error code %d, got %d", tt.errorCode, gotError.Code)
+				}
+			} else {
+				if gotError != nil {
+					t.Fatalf("Unexpected error: %v", gotError)
+				}
+				if tt.checkResult != nil {
+					tt.checkResult(t, gotResult)
+				}
+			}
+		})
+	}
+}
+
+func TestNewMovieHandlersTestable(t *testing.T) {
+	mockService := &MockMovieServiceForMovieHandlers{}
+	handlers := NewMovieHandlersTestable(mockService)
+	
+	if handlers == nil {
+		t.Fatal("NewMovieHandlersTestable returned nil")
+	}
+	
+	if handlers.movieService != mockService {
+		t.Error("NewMovieHandlersTestable did not set movieService correctly")
+	}
+}
