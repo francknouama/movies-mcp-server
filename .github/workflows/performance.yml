@@ -75,6 +75,7 @@ jobs:
           
       - name: Build MCP server for performance testing
         run: |
+          rm -rf build
           mkdir -p build
           CGO_ENABLED=0 go build -ldflags="-w -s" -o build/movies-server ./cmd/server/main.go
           

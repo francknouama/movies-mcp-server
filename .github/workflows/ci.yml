@@ -49,15 +49,16 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-mcp-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-mcp-v2-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-mcp-
+            ${{ runner.os }}-go-mcp-v2-
             
       - name: Install dependencies
         run: go mod download
         
       - name: Build application
         run: |
+          rm -rf build
           mkdir -p build
           go build -o build/movies-server ./cmd/server/main.go
         
@@ -65,7 +66,9 @@ jobs:
         run: ./build/movies-server -migrate-only
           
       - name: Run unit tests
-        run: go test -v -race -coverprofile=coverage.out $(go list ./... | grep -v tests/bdd)
+        run: |
+          rm -f coverage.out coverage.html
+          go test -v -race -coverprofile=coverage.out $(go list ./... | grep -v tests/bdd)
         
       - name: Run integration tests
         run: go test -v -tags=integration ./tests/integration/...
@@ -76,14 +79,16 @@ jobs:
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
-          name: mcp-server-coverage
+          name: mcp-server-coverage-${{ github.run_id }}
           path: coverage.html
+          retention-days: 7
           
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: mcp-server-binary
+          name: mcp-server-binary-${{ github.run_id }}
           path: build/movies-server
+          retention-days: 7
 
 
   lint:
