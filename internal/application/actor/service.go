@@ -155,27 +155,32 @@ func (s *Service) DeleteActor(ctx context.Context, id int) error {
 	return nil
 }
 
-// LinkActorToMovie links an actor to a movie
-func (s *Service) LinkActorToMovie(ctx context.Context, actorID, movieID int) error {
+// validateActorMovieIDs validates and converts actor and movie IDs to domain types
+func (s *Service) validateActorMovieIDs(actorID, movieID int) (shared.ActorID, shared.MovieID, error) {
 	actorDomainID, err := shared.NewActorID(actorID)
 	if err != nil {
-		return fmt.Errorf("invalid actor ID: %w", err)
+		return shared.ActorID{}, shared.MovieID{}, fmt.Errorf("invalid actor ID: %w", err)
 	}
 
 	movieDomainID, err := shared.NewMovieID(movieID)
 	if err != nil {
-		return fmt.Errorf("invalid movie ID: %w", err)
+		return shared.ActorID{}, shared.MovieID{}, fmt.Errorf("invalid movie ID: %w", err)
 	}
 
+	return actorDomainID, movieDomainID, nil
+}
+
+// updateActorMovieLink performs the actor-movie link operation and saves the result
+func (s *Service) updateActorMovieLink(ctx context.Context, actorDomainID shared.ActorID, movieDomainID shared.MovieID, operation func(*actor.Actor, shared.MovieID) error, operationName string) error {
 	// Get existing actor
 	domainActor, err := s.actorRepo.FindByID(ctx, actorDomainID)
 	if err != nil {
 		return fmt.Errorf("actor not found: %w", err)
 	}
 
-	// Add movie to actor's filmography
-	if err := domainActor.AddMovie(movieDomainID); err != nil {
-		return fmt.Errorf("failed to link actor to movie: %w", err)
+	// Perform the operation (add or remove movie)
+	if err := operation(domainActor, movieDomainID); err != nil {
+		return fmt.Errorf("failed to %s: %w", operationName, err)
 	}
 
 	// Save updated actor
@@ -186,35 +191,28 @@ func (s *Service) LinkActorToMovie(ctx context.Context, actorID, movieID int) er
 	return nil
 }
 
+// LinkActorToMovie links an actor to a movie
+func (s *Service) LinkActorToMovie(ctx context.Context, actorID, movieID int) error {
+	actorDomainID, movieDomainID, err := s.validateActorMovieIDs(actorID, movieID)
+	if err != nil {
+		return err
+	}
+
+	return s.updateActorMovieLink(ctx, actorDomainID, movieDomainID, 
+		func(a *actor.Actor, m shared.MovieID) error { return a.AddMovie(m) },
+		"link actor to movie")
+}
+
 // UnlinkActorFromMovie removes the link between an actor and a movie
 func (s *Service) UnlinkActorFromMovie(ctx context.Context, actorID, movieID int) error {
-	actorDomainID, err := shared.NewActorID(actorID)
+	actorDomainID, movieDomainID, err := s.validateActorMovieIDs(actorID, movieID)
 	if err != nil {
-		return fmt.Errorf("invalid actor ID: %w", err)
+		return err
 	}
 
-	movieDomainID, err := shared.NewMovieID(movieID)
-	if err != nil {
-		return fmt.Errorf("invalid movie ID: %w", err)
-	}
-
-	// Get existing actor
-	domainActor, err := s.actorRepo.FindByID(ctx, actorDomainID)
-	if err != nil {
-		return fmt.Errorf("actor not found: %w", err)
-	}
-
-	// Remove movie from actor's filmography
-	if err := domainActor.RemoveMovie(movieDomainID); err != nil {
-		return fmt.Errorf("failed to unlink actor from movie: %w", err)
-	}
-
-	// Save updated actor
-	if err := s.actorRepo.Save(ctx, domainActor); err != nil {
-		return fmt.Errorf("failed to save actor: %w", err)
-	}
-
-	return nil
+	return s.updateActorMovieLink(ctx, actorDomainID, movieDomainID,
+		func(a *actor.Actor, m shared.MovieID) error { return a.RemoveMovie(m) },
+		"unlink actor from movie")
 }
 
 // SearchActors searches for actors based on criteria
