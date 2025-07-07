@@ -244,64 +244,16 @@ func (tdb *TestContainerDatabase) LoadFixtures(fixtureName string) error {
 	return LoadFixturesFromFile(fixtureName, inserter)
 }
 
-// insertMovie inserts a movie fixture into the database (same as original)
+// insertMovie inserts a movie fixture into the database
 func (tdb *TestContainerDatabase) insertMovie(movie Movie) error {
-	query := `
-		INSERT INTO movies (id, title, director, year, genre, rating, genres, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-		ON CONFLICT (id) DO UPDATE SET
-			title = EXCLUDED.title,
-			director = EXCLUDED.director,
-			year = EXCLUDED.year,
-			genre = EXCLUDED.genre,
-			rating = EXCLUDED.rating,
-			genres = EXCLUDED.genres,
-			updated_at = NOW()
-	`
-
-	genres := "{}"
-	if len(movie.Genres) > 0 {
-		genres = fmt.Sprintf("{\"%s\"}", movie.Genres[0])
-		for i := 1; i < len(movie.Genres); i++ {
-			genres = genres[:len(genres)-1] + fmt.Sprintf(",\"%s\"}", movie.Genres[i])
-		}
-	}
-
-	_, err := tdb.db.Exec(query, movie.ID, movie.Title, movie.Director, movie.Year, movie.Genre, movie.Rating, genres)
-	return err
+	inserter := NewDatabaseFixtureInserter(tdb.db)
+	return inserter.insertMovie(movie)
 }
 
-// insertActor inserts an actor fixture into the database (same as original)
+// insertActor inserts an actor fixture into the database
 func (tdb *TestContainerDatabase) insertActor(actor Actor) error {
-	query := `
-		INSERT INTO actors (id, name, birth_year, bio, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, NOW(), NOW())
-		ON CONFLICT (id) DO UPDATE SET
-			name = EXCLUDED.name,
-			birth_year = EXCLUDED.birth_year,
-			bio = EXCLUDED.bio,
-			updated_at = NOW()
-	`
-
-	_, err := tdb.db.Exec(query, actor.ID, actor.Name, actor.BirthYear, actor.Bio)
-	if err != nil {
-		return err
-	}
-
-	// Insert movie-actor relationships
-	for _, movieID := range actor.MovieIDs {
-		relationQuery := `
-			INSERT INTO movie_actors (movie_id, actor_id)
-			VALUES ($1, $2)
-			ON CONFLICT (movie_id, actor_id) DO NOTHING
-		`
-		_, err = tdb.db.Exec(relationQuery, movieID, actor.ID)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	inserter := NewDatabaseFixtureInserter(tdb.db)
+	return inserter.insertActor(actor)
 }
 
 // CleanupAfterScenario cleans up test data after each scenario
