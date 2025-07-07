@@ -37,6 +37,8 @@ jobs:
       
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -58,6 +60,21 @@ jobs:
         
       - name: Build application
         run: |
+          # Debug info
+          echo "Current directory: $(pwd)"
+          echo "Go version: $(go version)"
+          echo "Checking for main.go..."
+          if [ -f "./cmd/server/main.go" ]; then
+            echo "main.go found"
+          else
+            echo "main.go NOT found!"
+            echo "Directory contents:"
+            ls -la
+            echo "cmd directory contents:"
+            ls -la cmd/ || echo "cmd directory not found"
+          fi
+          
+          # Build
           rm -rf build
           mkdir -p build
           go build -o build/movies-server ./cmd/server/main.go
