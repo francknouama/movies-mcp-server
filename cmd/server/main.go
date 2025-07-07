@@ -90,7 +90,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to connect to database: %v\n", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("Error closing database connection: %v", err)
+		}
+	}()
 
 	// Run database migrations
 	if !*skipMigrations {
@@ -159,7 +163,9 @@ func connectToDatabase(cfg *config.DatabaseConfig) (*sql.DB, error) {
 			break
 		}
 
-		_ = db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			log.Printf("Error closing database connection: %v", closeErr)
+		}
 
 		if i == maxRetries-1 {
 			return nil, fmt.Errorf("failed to connect after %d attempts: %w", maxRetries, err)
@@ -237,7 +243,9 @@ func runMigrations(migrationsPath string) error {
 	}
 
 	// Clean up the built binary
-	_ = os.Remove("./migrate")
+	if err := os.Remove("./migrate"); err != nil {
+		log.Printf("Warning: failed to remove migrate binary: %v", err)
+	}
 
 	return nil
 }

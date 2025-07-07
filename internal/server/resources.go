@@ -88,7 +88,11 @@ func (rm *ResourceManager) handleDatabaseStats(uri string, sender ResponseSender
 		},
 	}
 
-	statsJSON, _ := json.Marshal(stats)
+	statsJSON, err := json.Marshal(stats)
+	if err != nil {
+		sender.SendError(nil, dto.InternalError, "Failed to marshal stats", err.Error())
+		return
+	}
 	content := dto.ResourceContent{
 		URI:      uri,
 		MimeType: "application/json",
@@ -109,7 +113,11 @@ func (rm *ResourceManager) handlePosterCollection(uri string, sender ResponseSen
 		"total":   0,
 	}
 
-	collectionJSON, _ := json.Marshal(collection)
+	collectionJSON, err := json.Marshal(collection)
+	if err != nil {
+		sender.SendError(nil, dto.InternalError, "Failed to marshal collection", err.Error())
+		return
+	}
 	content := dto.ResourceContent{
 		URI:      uri,
 		MimeType: "application/json",
