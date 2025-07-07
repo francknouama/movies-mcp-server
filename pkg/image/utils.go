@@ -19,6 +19,7 @@ import (
 const (
 	MimeTypeJPEG = "image/jpeg"
 	MimeTypePNG  = "image/png"
+	MimeTypeWebP = "image/webp"
 )
 
 // ImageProcessor handles image operations for the MCP server
@@ -82,7 +83,7 @@ func (p *ImageProcessor) validateImageFormat(data []byte, mimeType string) bool 
 			return false
 		}
 		return bytes.Equal(data[:len(pngHeader)], pngHeader)
-	case "image/webp":
+	case MimeTypeWebP:
 		// WebP files start with "RIFF" and contain "WEBP"
 		return len(data) >= 12 &&
 			string(data[0:4]) == "RIFF" &&
@@ -172,7 +173,7 @@ func (p *ImageProcessor) detectMimeType(data []byte) string {
 	}
 
 	if len(data) >= 12 && string(data[0:4]) == "RIFF" && string(data[8:12]) == "WEBP" {
-		return "image/webp"
+		return MimeTypeWebP
 	}
 
 	return "application/octet-stream"
@@ -310,7 +311,7 @@ func (p *ImageProcessor) getFormatFromMimeType(mimeType string) string {
 		return "JPEG"
 	case MimeTypePNG:
 		return "PNG"
-	case "image/webp":
+	case MimeTypeWebP:
 		return "WebP"
 	default:
 		return "Unknown"

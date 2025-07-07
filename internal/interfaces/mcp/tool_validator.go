@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -176,28 +177,48 @@ func (tv *ToolValidator) validateString(fieldName string, value interface{}, sch
 		}}
 	}
 
-	// Enum validation
+	// Use helper functions to reduce complexity
+	errors = append(errors, tv.validateStringEnum(fieldName, str, schema)...)
+	errors = append(errors, tv.validateStringLength(fieldName, str, schema)...)
+	errors = append(errors, tv.validateStringPattern(fieldName, str, schema)...)
+	errors = append(errors, tv.validateStringFormat(fieldName, str, schema)...)
+
+	return errors
+}
+
+// validateStringEnum validates enum constraints
+func (tv *ToolValidator) validateStringEnum(fieldName, str string, schema map[string]interface{}) []ValidationError {
+	var errors []ValidationError
+	
 	if enum, exists := schema["enum"]; exists {
-		if enumSlice, ok := enum.([]string); ok {
+		if enumSlice, ok := enum.([]interface{}); ok {
 			valid := false
+			var enumStrings []string
 			for _, enumValue := range enumSlice {
-				if str == enumValue {
+				enumStr := fmt.Sprintf("%v", enumValue)
+				enumStrings = append(enumStrings, enumStr)
+				if str == enumStr {
 					valid = true
-					break
 				}
 			}
 			if !valid {
 				errors = append(errors, ValidationError{
 					Field:   fieldName,
 					Value:   str,
-					Message: fmt.Sprintf("Value must be one of: %s", strings.Join(enumSlice, ", ")),
+					Message: fmt.Sprintf("Value must be one of: %s", strings.Join(enumStrings, ", ")),
 					Code:    "INVALID_ENUM_VALUE",
 				})
 			}
 		}
 	}
+	
+	return errors
+}
 
-	// Length validation
+// validateStringLength validates length constraints
+func (tv *ToolValidator) validateStringLength(fieldName, str string, schema map[string]interface{}) []ValidationError {
+	var errors []ValidationError
+	
 	if minLength, exists := schema["minLength"]; exists {
 		if min, ok := minLength.(float64); ok && len(str) < int(min) {
 			errors = append(errors, ValidationError{
@@ -219,13 +240,55 @@ func (tv *ToolValidator) validateString(fieldName string, value interface{}, sch
 			})
 		}
 	}
+	
+	return errors
+}
 
-	// Pattern validation (basic)
+// validateStringPattern validates pattern constraints
+func (tv *ToolValidator) validateStringPattern(fieldName, str string, schema map[string]interface{}) []ValidationError {
+	var errors []ValidationError
+	
 	if pattern, exists := schema["pattern"]; exists {
 		if patternStr, ok := pattern.(string); ok {
-			// For this implementation, we'll just check some common patterns
-			switch patternStr {
-			case "^\\d{4}-\\d{2}-\\d{2}$": // Date format YYYY-MM-DD
+			regex, err := regexp.Compile(patternStr)
+			if err != nil {
+				errors = append(errors, ValidationError{
+					Field:   fieldName,
+					Value:   str,
+					Message: fmt.Sprintf("Invalid regex pattern: %s", patternStr),
+					Code:    "INVALID_PATTERN",
+				})
+			} else if !regex.MatchString(str) {
+				errors = append(errors, ValidationError{
+					Field:   fieldName,
+					Value:   str,
+					Message: fmt.Sprintf("Value does not match pattern: %s", patternStr),
+					Code:    "PATTERN_MISMATCH",
+				})
+			}
+		}
+	}
+	
+	return errors
+}
+
+// validateStringFormat validates format constraints
+func (tv *ToolValidator) validateStringFormat(fieldName, str string, schema map[string]interface{}) []ValidationError {
+	var errors []ValidationError
+	
+	if format, exists := schema["format"]; exists {
+		if formatStr, ok := format.(string); ok {
+			switch formatStr {
+			case "email":
+				if !isValidEmail(str) {
+					errors = append(errors, ValidationError{
+						Field:   fieldName,
+						Value:   str,
+						Message: "Invalid email format",
+						Code:    "INVALID_EMAIL_FORMAT",
+					})
+				}
+			case "date":
 				if !isValidDateFormat(str) {
 					errors = append(errors, ValidationError{
 						Field:   fieldName,
@@ -234,21 +297,13 @@ func (tv *ToolValidator) validateString(fieldName string, value interface{}, sch
 						Code:    "INVALID_DATE_FORMAT",
 					})
 				}
-			}
-		}
-	}
-
-	// Format validation
-	if format, exists := schema["format"]; exists {
-		if formatStr, ok := format.(string); ok {
-			switch formatStr {
-			case "date":
-				if !isValidDateFormat(str) {
+			case "date-time":
+				if !isValidDateTime(str) {
 					errors = append(errors, ValidationError{
 						Field:   fieldName,
 						Value:   str,
-						Message: "Invalid date format, expected YYYY-MM-DD",
-						Code:    "INVALID_DATE_FORMAT",
+						Message: "Invalid date-time format, expected ISO 8601",
+						Code:    "INVALID_DATETIME_FORMAT",
 					})
 				}
 			case "uri":
@@ -263,7 +318,7 @@ func (tv *ToolValidator) validateString(fieldName string, value interface{}, sch
 			}
 		}
 	}
-
+	
 	return errors
 }
 
@@ -563,6 +618,19 @@ func isValidURI(uri string) bool {
 
 	// Check for common URI patterns
 	return strings.Contains(uri, "://") || strings.HasPrefix(uri, "/") || strings.HasPrefix(uri, "mailto:")
+}
+
+func isValidEmail(email string) bool {
+	// Basic email validation using regex
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return emailRegex.MatchString(email)
+}
+
+func isValidDateTime(datetime string) bool {
+	// Basic ISO 8601 datetime validation
+	// Supports formats like: 2023-12-25T10:30:00Z, 2023-12-25T10:30:00+00:00
+	datetimeRegex := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$`)
+	return datetimeRegex.MatchString(datetime)
 }
 
 // HandleValidateToolCall handles MCP tool call for validating other tool calls

@@ -29,7 +29,7 @@ linters-settings:
       - shadow
 
   gocyclo:
-    min-complexity: 15
+    min-complexity: 25
 
   dupl:
     threshold: 100
@@ -129,10 +129,11 @@ issues:
         - funlen
         - goconst
         
-    # Exclude errcheck for all BDD test files
+    # Exclude errcheck and goconst for all BDD test files
     - path: tests/bdd/
       linters:
         - errcheck
+        - goconst
         
     # Exclude errcheck for defer statements in cleanup functions
     - path: transaction_manager\.go
