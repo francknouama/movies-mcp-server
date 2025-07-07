@@ -127,28 +127,15 @@ func (c *CommonStepContext) theDatabaseContainsPlusMovies(minCount int) error {
 
 // allReturnedMoviesShouldHaveRatingBetween verifies rating range
 func (c *CommonStepContext) allReturnedMoviesShouldHaveRatingBetween(minRating, maxRating float64) error {
-	var response MoviesResponse
-	if err := c.bddContext.ParseJSONResponse(&response); err != nil {
-		// Try parsing as a simple movies array
-		var movies []MovieResponse
-		if err2 := c.bddContext.ParseJSONResponse(&movies); err2 != nil {
-			return fmt.Errorf("failed to parse movies response: %w", err)
-		}
-		response.Movies = movies
+	response, err := parseMoviesResponse(c)
+	if err != nil {
+		return err
 	}
 
-	if len(response.Movies) == 0 {
-		return fmt.Errorf("no movies found in response")
-	}
-
-	for _, movie := range response.Movies {
-		if movie.Rating < minRating || movie.Rating > maxRating {
-			return fmt.Errorf("movie '%s' has rating %.1f, expected between %.1f and %.1f",
-				movie.Title, movie.Rating, minRating, maxRating)
-		}
-	}
-
-	return nil
+	return validateMovieRange(response.Movies, 
+		func(m MovieResponse) float64 { return m.Rating },
+		func(rating, min, max float64) bool { return rating >= min && rating <= max },
+		minRating, maxRating, "rating")
 }
 
 // theResponseShouldContainMoviesWithSimilarCharacteristics verifies similar movies

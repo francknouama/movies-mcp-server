@@ -519,28 +519,15 @@ func (c *CommonStepContext) iCallToolWithDecade(toolName, decade string) error {
 
 // allMoviesShouldBeFromYearsTo verifies all movies are within year range
 func (c *CommonStepContext) allMoviesShouldBeFromYearsTo(minYear, maxYear int) error {
-	var response MoviesResponse
-	if err := c.bddContext.ParseJSONResponse(&response); err != nil {
-		// Try parsing as a simple movies array
-		var movies []MovieResponse
-		if err2 := c.bddContext.ParseJSONResponse(&movies); err2 != nil {
-			return fmt.Errorf("failed to parse movies response: %w", err)
-		}
-		response.Movies = movies
+	response, err := parseMoviesResponse(c)
+	if err != nil {
+		return err
 	}
 
-	if len(response.Movies) == 0 {
-		return fmt.Errorf("no movies found in response")
-	}
-
-	for _, movie := range response.Movies {
-		if movie.Year < minYear || movie.Year > maxYear {
-			return fmt.Errorf("movie '%s' has year %d, expected between %d and %d",
-				movie.Title, movie.Year, minYear, maxYear)
-		}
-	}
-
-	return nil
+	return validateMovieRange(response.Movies,
+		func(m MovieResponse) int { return m.Year },
+		func(year, min, max int) bool { return year >= min && year <= max },
+		minYear, maxYear, "year")
 }
 
 // theResponseShouldContainTheMovieDetails verifies movie details in response

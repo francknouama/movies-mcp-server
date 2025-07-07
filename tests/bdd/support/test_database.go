@@ -4,11 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	_ "github.com/lib/pq" // PostgreSQL driver
-	"gopkg.in/yaml.v2"
 )
 
 // TestDatabase provides database operations for BDD tests with fixture management
@@ -134,42 +132,8 @@ func verifyDatabaseSchema(db *sql.DB) error {
 
 // LoadFixtures loads test data from a YAML fixture file
 func (tdb *TestDatabase) LoadFixtures(fixtureName string) error {
-	// Validate fixture name to prevent path traversal
-	if !isValidFixtureName(fixtureName) {
-		return fmt.Errorf("invalid fixture name: %s", fixtureName)
-	}
-
-	fixturesDir := "fixtures"
-	fixturePath := filepath.Join(fixturesDir, fixtureName+".yaml")
-
-	data, err := os.ReadFile(filepath.Clean(fixturePath))
-	if err != nil {
-		return fmt.Errorf("failed to read fixture file %s: %w", fixturePath, err)
-	}
-
-	var fixtures Fixtures
-	err = yaml.Unmarshal(data, &fixtures)
-	if err != nil {
-		return fmt.Errorf("failed to parse fixture file %s: %w", fixturePath, err)
-	}
-
-	// Load movies
-	for _, movie := range fixtures.Movies {
-		err = tdb.insertMovie(movie)
-		if err != nil {
-			return fmt.Errorf("failed to insert movie fixture: %w", err)
-		}
-	}
-
-	// Load actors
-	for _, actor := range fixtures.Actors {
-		err = tdb.insertActor(actor)
-		if err != nil {
-			return fmt.Errorf("failed to insert actor fixture: %w", err)
-		}
-	}
-
-	return nil
+	inserter := NewDatabaseFixtureInserter(tdb.db)
+	return LoadFixturesFromFile(fixtureName, inserter)
 }
 
 // insertMovie inserts a movie fixture into the database

@@ -284,6 +284,24 @@ func (h *PromptHandlers) generateMovieAnalysisPrompt(args map[string]interface{}
 	}
 }
 
+// generatePromptResponse creates a standardized prompt response structure
+func generatePromptResponse(description, promptText string) dto.PromptGetResponse {
+	return dto.PromptGetResponse{
+		Description: description,
+		Messages: []dto.PromptMessage{
+			{
+				Role: "user",
+				Content: []dto.ContentBlock{
+					{
+						Type: "text",
+						Text: promptText,
+					},
+				},
+			},
+		},
+	}
+}
+
 // generateDirectorFilmographyPrompt generates a director filmography prompt
 func (h *PromptHandlers) generateDirectorFilmographyPrompt(args map[string]interface{}) dto.PromptGetResponse {
 	directorName, ok := args["director_name"].(string)
@@ -304,20 +322,7 @@ func (h *PromptHandlers) generateDirectorFilmographyPrompt(args map[string]inter
 
 	promptText.WriteString(". Search for all movies by this director, analyze their stylistic evolution, recurring themes, and significant contributions to cinema.")
 
-	return dto.PromptGetResponse{
-		Description: "Director filmography exploration prompt",
-		Messages: []dto.PromptMessage{
-			{
-				Role: "user",
-				Content: []dto.ContentBlock{
-					{
-						Type: "text",
-						Text: promptText.String(),
-					},
-				},
-			},
-		},
-	}
+	return generatePromptResponse("Director filmography exploration prompt", promptText.String())
 }
 
 // generateGenreExplorationPrompt generates a genre exploration prompt
@@ -340,20 +345,7 @@ func (h *PromptHandlers) generateGenreExplorationPrompt(args map[string]interfac
 
 	promptText.WriteString(". Search for representative movies in this genre, discuss its evolution, key characteristics, influential films, and notable directors who shaped it.")
 
-	return dto.PromptGetResponse{
-		Description: "Genre exploration prompt",
-		Messages: []dto.PromptMessage{
-			{
-				Role: "user",
-				Content: []dto.ContentBlock{
-					{
-						Type: "text",
-						Text: promptText.String(),
-					},
-				},
-			},
-		},
-	}
+	return generatePromptResponse("Genre exploration prompt", promptText.String())
 }
 
 // generateMovieComparisonPrompt generates a movie comparison prompt

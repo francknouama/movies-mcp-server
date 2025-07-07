@@ -13,7 +13,6 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"gopkg.in/yaml.v2"
 )
 
 // Singleton pattern for shared test database
@@ -241,42 +240,8 @@ func (tdb *TestContainerDatabase) runMigrations() error {
 
 // LoadFixtures loads test data from a YAML fixture file (same as original implementation)
 func (tdb *TestContainerDatabase) LoadFixtures(fixtureName string) error {
-	// Validate fixture name to prevent path traversal
-	if !isValidFixtureName(fixtureName) {
-		return fmt.Errorf("invalid fixture name: %s", fixtureName)
-	}
-
-	fixturesDir := "fixtures"
-	fixturePath := filepath.Join(fixturesDir, fixtureName+".yaml")
-
-	data, err := os.ReadFile(filepath.Clean(fixturePath))
-	if err != nil {
-		return fmt.Errorf("failed to read fixture file %s: %w", fixturePath, err)
-	}
-
-	var fixtures Fixtures
-	err = yaml.Unmarshal(data, &fixtures)
-	if err != nil {
-		return fmt.Errorf("failed to parse fixture file %s: %w", fixturePath, err)
-	}
-
-	// Load movies
-	for _, movie := range fixtures.Movies {
-		err = tdb.insertMovie(movie)
-		if err != nil {
-			return fmt.Errorf("failed to insert movie fixture: %w", err)
-		}
-	}
-
-	// Load actors
-	for _, actor := range fixtures.Actors {
-		err = tdb.insertActor(actor)
-		if err != nil {
-			return fmt.Errorf("failed to insert actor fixture: %w", err)
-		}
-	}
-
-	return nil
+	inserter := NewDatabaseFixtureInserter(tdb.db)
+	return LoadFixturesFromFile(fixtureName, inserter)
 }
 
 // insertMovie inserts a movie fixture into the database (same as original)
