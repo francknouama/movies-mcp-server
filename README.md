@@ -1,6 +1,6 @@
 # Movies MCP Server
 
-A Model Context Protocol (MCP) server that provides a comprehensive movie database with advanced search, CRUD operations, and image support. Built with Go and PostgreSQL, this server enables AI assistants to manage and query movie information through a standardized protocol.
+A Model Context Protocol (MCP) server that provides a comprehensive movie database with advanced search, CRUD operations, and image support. Built with Go and PostgreSQL, this server enables AI-assisted movie management.
 
 ## Features
 
@@ -225,6 +225,32 @@ The server follows clean architecture principles:
 ├── migrations/       # Database migrations
 └── scripts/          # Utility scripts
 ```
+
+## Integration with Claude UI
+
+To use the Movies MCP Server with Claude UI:
+
+1. **Add the Server to Claude's Configuration**:
+   ```json
+   {
+     "mcpServers": {
+       "movies-mcp-server": {
+         "command": "/path/to/movies-server",
+         "env": {
+           "DATABASE_URL": "postgres://movies_user:movies_password@localhost:5432/movies_db"
+         }
+       }
+     }
+   }
+   ```
+
+2. **Restart Claude UI** to apply the new configuration.
+
+3. **Access Server Features**:
+   - Use Claude's UI to make requests to `movies-mcp-server`.
+   - All MCP tools, such as `search_movies` and `add_movie`, are supported.
+
+For more details, refer to the [Integration Guide](docs/getting-started/claude-desktop.md).
 
 ## Contributing
 
