@@ -43,6 +43,11 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+*.bak
+*~
+
+# PR description files (temporary)
+.pr-description*.md
 
 # Build artifacts
 build/
