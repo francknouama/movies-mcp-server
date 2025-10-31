@@ -10,12 +10,52 @@ import (
 
 // MockMovieService is a mock implementation for testing
 type MockMovieService struct {
-	GetMovieFunc func(ctx context.Context, id int) (*movieApp.MovieDTO, error)
+	GetMovieFunc          func(ctx context.Context, id int) (*movieApp.MovieDTO, error)
+	CreateMovieFunc       func(ctx context.Context, cmd movieApp.CreateMovieCommand) (*movieApp.MovieDTO, error)
+	UpdateMovieFunc       func(ctx context.Context, cmd movieApp.UpdateMovieCommand) (*movieApp.MovieDTO, error)
+	DeleteMovieFunc       func(ctx context.Context, id int) error
+	SearchMoviesFunc      func(ctx context.Context, query movieApp.SearchMoviesQuery) ([]*movieApp.MovieDTO, error)
+	GetTopRatedMoviesFunc func(ctx context.Context, limit int) ([]*movieApp.MovieDTO, error)
 }
 
 func (m *MockMovieService) GetMovie(ctx context.Context, id int) (*movieApp.MovieDTO, error) {
 	if m.GetMovieFunc != nil {
 		return m.GetMovieFunc(ctx, id)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockMovieService) CreateMovie(ctx context.Context, cmd movieApp.CreateMovieCommand) (*movieApp.MovieDTO, error) {
+	if m.CreateMovieFunc != nil {
+		return m.CreateMovieFunc(ctx, cmd)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockMovieService) UpdateMovie(ctx context.Context, cmd movieApp.UpdateMovieCommand) (*movieApp.MovieDTO, error) {
+	if m.UpdateMovieFunc != nil {
+		return m.UpdateMovieFunc(ctx, cmd)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockMovieService) DeleteMovie(ctx context.Context, id int) error {
+	if m.DeleteMovieFunc != nil {
+		return m.DeleteMovieFunc(ctx, id)
+	}
+	return errors.New("not implemented")
+}
+
+func (m *MockMovieService) SearchMovies(ctx context.Context, query movieApp.SearchMoviesQuery) ([]*movieApp.MovieDTO, error) {
+	if m.SearchMoviesFunc != nil {
+		return m.SearchMoviesFunc(ctx, query)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockMovieService) GetTopRatedMovies(ctx context.Context, limit int) ([]*movieApp.MovieDTO, error) {
+	if m.GetTopRatedMoviesFunc != nil {
+		return m.GetTopRatedMoviesFunc(ctx, limit)
 	}
 	return nil, errors.New("not implemented")
 }
