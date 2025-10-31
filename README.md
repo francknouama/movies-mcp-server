@@ -5,6 +5,9 @@ A production-ready **Model Context Protocol (MCP) server** for intelligent movie
 > **🎉 Now powered by the Official Golang MCP SDK v1.1.0!**
 > This project has been fully migrated to use the official MCP SDK maintained by Anthropic and Google, providing better type safety, automatic schema generation, and improved maintainability. See [SDK Migration](#sdk-migration) for details.
 
+> **⚠️ IMPORTANT: Legacy Server Deprecated**
+> The custom server at `cmd/server/` has been **deprecated**. Use the SDK-based server at `cmd/server-sdk/` for all deployments. See [Server Status](#️-server-status-legacy-server-deprecated) for details.
+
 ## What is Movies MCP Server?
 
 Movies MCP Server is a sophisticated movie database management system that communicates via the **Model Context Protocol**—designed specifically for integration with AI assistants like Claude. Unlike traditional HTTP APIs, it uses JSON-RPC over stdin/stdout to provide seamless, intelligent movie and actor data operations.
@@ -293,14 +296,23 @@ This project has been **fully migrated** from a custom MCP protocol implementati
 - [Testing Comparison](docs/TESTING_COMPARISON.md) - Testing improvements
 - [Migration Complete](docs/SDK_MIGRATION_COMPLETE.md) - Full migration summary
 
-### Two Server Options
+### ⚠️ Server Status: Legacy Server Deprecated
 
 | Server | Status | When to Use |
 |--------|--------|-------------|
-| **SDK Server** (`cmd/server-sdk/`) | ✅ **Recommended** | Production use, better maintainability |
-| **Custom Server** (`cmd/server/`) | ⚠️ Legacy | Backwards compatibility only |
+| **SDK Server** (`cmd/server-sdk/`) | ✅ **Active & Recommended** | All deployments (production & development) |
+| **Legacy Server** (`cmd/server/`) | ⚠️ **DEPRECATED** | Backwards compatibility testing only |
 
-**Recommendation:** Use the SDK server for all new deployments.
+**IMPORTANT:** The legacy custom server at `cmd/server/` has been **deprecated** as of the SDK migration completion. All users should migrate to the SDK-based server.
+
+**Why SDK Server?**
+- Official Golang MCP SDK v1.1.0 maintained by Anthropic and Google
+- 26% less code with better type safety
+- Automatic schema generation
+- Improved maintainability and testing
+- 100% feature parity validated via CI/CD
+
+**Migration:** See [`cmd/server/DEPRECATED.md`](cmd/server/DEPRECATED.md) for detailed migration instructions.
 
 ---
 
@@ -497,19 +509,19 @@ Comprehensive documentation available in the `/docs` directory:
 ```
 movies-mcp-server/
 ├── cmd/
-│   ├── server-sdk/          # SDK-based server (recommended)
-│   └── server/              # Legacy custom server
+│   ├── server-sdk/          # ✅ SDK-based server (RECOMMENDED)
+│   └── server/              # ⚠️ Legacy custom server (DEPRECATED)
 ├── internal/
 │   ├── domain/              # Business logic (entities, value objects)
 │   ├── application/         # Use cases and services
 │   ├── infrastructure/      # Database and integrations
-│   ├── mcp/                # MCP SDK tools and handlers
-│   ├── interfaces/          # Legacy MCP protocol handlers
-│   ├── schemas/             # Legacy tool definitions
-│   └── server/              # Legacy MCP server core
+│   ├── mcp/                # ✅ MCP SDK tools and handlers (ACTIVE)
+│   ├── interfaces/          # ⚠️ Legacy MCP protocol handlers (DEPRECATED)
+│   ├── schemas/             # ⚠️ Legacy tool definitions (DEPRECATED)
+│   └── server/              # ⚠️ Legacy MCP server core (DEPRECATED)
 ├── migrations/              # Database migrations
 ├── tests/                   # Comprehensive test suites
-│   └── bdd/                # BDD feature files
+│   └── bdd/                # BDD feature files (tests both servers)
 ├── docs/                    # Documentation
 ├── monitoring/              # Prometheus and Grafana configs
 └── docker/                  # Docker configurations
