@@ -17,6 +17,7 @@ import (
 	movieApp "github.com/francknouama/movies-mcp-server/internal/application/movie"
 	"github.com/francknouama/movies-mcp-server/internal/config"
 	"github.com/francknouama/movies-mcp-server/internal/infrastructure/postgres"
+	"github.com/francknouama/movies-mcp-server/internal/mcp/resources"
 	"github.com/francknouama/movies-mcp-server/internal/mcp/tools"
 )
 
@@ -59,6 +60,7 @@ func main() {
 		fmt.Printf("  - Official MCP SDK integration\n")
 		fmt.Printf("  - Type-safe tool handlers with automatic schema generation\n")
 		fmt.Printf("  - 23 tools across movie/actor management, search, and analysis\n")
+		fmt.Printf("  - 3 database resources for movie data and statistics\n")
 		fmt.Printf("  - Clean Architecture with Domain-Driven Design\n")
 		fmt.Printf("  - PostgreSQL with automatic migrations\n")
 		os.Exit(0)
@@ -114,6 +116,9 @@ func main() {
 	actorTools := tools.NewActorTools(actorService)
 	compoundTools := tools.NewCompoundTools(movieService)
 	contextTools := tools.NewContextTools(movieService)
+
+	// Initialize resource handlers
+	dbResources := resources.NewDatabaseResources(movieService)
 
 	// Create MCP server with SDK
 	server := mcp.NewServer(
@@ -250,6 +255,19 @@ func main() {
 	fmt.Fprintf(os.Stderr, "  - Actor tools: 9\n")
 	fmt.Fprintf(os.Stderr, "  - Compound tools: 3\n")
 	fmt.Fprintf(os.Stderr, "  - Context tools: 3\n")
+
+	fmt.Fprintf(os.Stderr, "Registering resources with SDK...\n")
+
+	// Register Database Resources (3 resources)
+	server.AddResource(dbResources.AllMoviesResource(), dbResources.HandleAllMovies)
+	server.AddResource(dbResources.DatabaseStatsResource(), dbResources.HandleDatabaseStats)
+	server.AddResource(dbResources.PosterCollectionResource(), dbResources.HandlePosterCollection)
+
+	fmt.Fprintf(os.Stderr, "✓ Registered 3 resources successfully\n")
+	fmt.Fprintf(os.Stderr, "  - movies://database/all\n")
+	fmt.Fprintf(os.Stderr, "  - movies://database/stats\n")
+	fmt.Fprintf(os.Stderr, "  - movies://posters/collection\n")
+
 	fmt.Fprintf(os.Stderr, "\nServer ready - listening on stdin/stdout\n")
 	fmt.Fprintf(os.Stderr, "Using official MCP SDK v1.1.0\n\n")
 
