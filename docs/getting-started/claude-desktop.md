@@ -1,34 +1,44 @@
 # 🧠 Claude Desktop Integration
 
-Connect your Movies MCP Server to Claude Desktop for seamless AI-powered movie management.
+Connect your Movies MCP Server to Claude Desktop for seamless AI-powered movie and actor management.
+
+> **🎉 Using the Official Golang MCP SDK!**
+> This guide uses the SDK-based server (`movies-mcp-server-sdk`) which provides 23 type-safe tools with automatic schema generation.
 
 ## Prerequisites
 
-✅ **Movies MCP Server installed** - Complete [Installation Guide](./installation.md) first  
-✅ **Claude Desktop app** - [Download here](https://claude.ai/download)  
-✅ **Server binary built** - You'll need the full path to your executable
+✅ **Movies MCP Server installed** - Complete [Installation Guide](./installation.md) first
+✅ **Claude Desktop app** - [Download here](https://claude.ai/download)
+✅ **SDK server built** - You'll need the full path to `movies-mcp-server-sdk` executable
 
-## Step 1: Locate Your Server Binary
+## Step 1: Build and Locate Your SDK Server Binary
 
-### If you used Docker:
+### Build the SDK Server:
 ```bash
-# Find the container path (you'll use the binary path inside container)
-docker ps | grep movies-mcp-server-clean
+# Navigate to project root
+cd /path/to/movies-mcp-server
 
-# The binary is at: /usr/local/bin/movies-server-clean (inside container)
-# But for Claude Desktop, you need the host machine binary
+# Build the SDK server
+go build -o movies-mcp-server-sdk ./cmd/server-sdk/
+
+# Get the absolute path
+pwd
+# Example: /home/user/movies-mcp-server
+
+# Your binary is at: /home/user/movies-mcp-server/movies-mcp-server-sdk
 ```
 
-### If you built from source:
+### Make it Executable (if needed):
 ```bash
-# From your mcp-server directory
-cd path/to/your/movies-mcp-server/mcp-server
+chmod +x movies-mcp-server-sdk
+```
 
-# Get the absolute path to your binary
-pwd
-ls build/movies-server-clean
+### Test the Binary:
+```bash
+# Test with --help flag
+./movies-mcp-server-sdk --help
 
-# Example result: /home/user/movies-mcp-server/mcp-server/build/movies-server-clean
+# Should show usage information
 ```
 
 ## Step 2: Configure Claude Desktop
@@ -48,48 +58,80 @@ Edit your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "movies-mcp-server": {
-      "command": "/FULL/PATH/TO/YOUR/movies-server-clean",
+    "movies": {
+      "command": "/absolute/path/to/movies-mcp-server-sdk",
       "args": [],
       "env": {
-        "DATABASE_URL": "postgres://movies_user:movies_password@localhost:5433/movies_mcp"
+        "DB_HOST": "localhost",
+        "DB_PORT": "5432",
+        "DB_USER": "movies_user",
+        "DB_PASSWORD": "movies_password",
+        "DB_NAME": "movies_mcp",
+        "DB_SSLMODE": "disable"
       }
     }
   }
 }
 ```
 
-**🔧 Replace `/FULL/PATH/TO/YOUR/` with your actual path!**
+**🔧 Replace `/absolute/path/to/` with your actual path!**
 
-### Environment Setup
+### Environment Setup Examples
 
-Choose your database configuration:
-
-#### Docker Setup (Clean Architecture):
+#### Local PostgreSQL:
 ```json
 {
   "mcpServers": {
-    "movies-mcp-server": {
-      "command": "/home/user/movies-mcp-server/mcp-server/build/movies-server-clean",
+    "movies": {
+      "command": "/home/user/movies-mcp-server/movies-mcp-server-sdk",
       "args": [],
       "env": {
-        "DATABASE_URL": "postgres://movies_user:movies_password@localhost:5433/movies_mcp"
+        "DB_HOST": "localhost",
+        "DB_PORT": "5432",
+        "DB_USER": "movies_user",
+        "DB_PASSWORD": "movies_password",
+        "DB_NAME": "movies_mcp",
+        "DB_SSLMODE": "disable"
       }
     }
   }
 }
 ```
 
-#### Development Setup:
+#### Docker PostgreSQL (Custom Port):
 ```json
 {
   "mcpServers": {
-    "movies-mcp-server": {
-      "command": "/home/user/movies-mcp-server/mcp-server/build/movies-server-clean",
+    "movies": {
+      "command": "/home/user/movies-mcp-server/movies-mcp-server-sdk",
       "args": [],
       "env": {
-        "DATABASE_URL": "postgres://dev_user:dev_password@localhost:5434/movies_mcp_dev",
-        "LOG_LEVEL": "info"
+        "DB_HOST": "localhost",
+        "DB_PORT": "5433",
+        "DB_USER": "movies_user",
+        "DB_PASSWORD": "movies_password",
+        "DB_NAME": "movies_mcp",
+        "DB_SSLMODE": "disable"
+      }
+    }
+  }
+}
+```
+
+#### With Skip Migrations:
+```json
+{
+  "mcpServers": {
+    "movies": {
+      "command": "/home/user/movies-mcp-server/movies-mcp-server-sdk",
+      "args": ["--skip-migrations"],
+      "env": {
+        "DB_HOST": "localhost",
+        "DB_PORT": "5432",
+        "DB_USER": "movies_user",
+        "DB_PASSWORD": "movies_password",
+        "DB_NAME": "movies_mcp",
+        "DB_SSLMODE": "disable"
       }
     }
   }
@@ -100,32 +142,45 @@ Choose your database configuration:
 
 ### Start Your Database
 ```bash
-# For Docker setup
-cd movies-mcp-server/mcp-server
-make docker-compose-up-clean
+# If using Docker
+cd movies-mcp-server
+make docker-up
 
-# For development setup  
-make docker-compose-up-dev
+# Or start PostgreSQL locally
+# PostgreSQL should be running on port 5432 (or your configured port)
 ```
 
 ### Test Binary Directly
 ```bash
 # Test that your binary works
-echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}},"id":1}' | \
-/FULL/PATH/TO/YOUR/movies-server-clean
+./movies-mcp-server-sdk --version
 
-# Should return MCP initialization response
+# Test help
+./movies-mcp-server-sdk --help
+
+# Test MCP protocol (should output initialization response)
+echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}},"id":1}' | \
+./movies-mcp-server-sdk
 ```
 
 ### Restart Claude Desktop
 1. **Quit Claude Desktop completely**
 2. **Restart Claude Desktop**
-3. **Look for connection confirmation**
+3. **Look for the Movies server** in available tools
 
 ## Step 4: Test Integration
 
-### In Claude Desktop, try these commands:
+### Verify All 23 Tools Are Available
 
+In Claude Desktop, you should see:
+- **8 Movie Tools**: get_movie, add_movie, update_movie, delete_movie, list_top_movies, search_movies, search_by_decade, search_by_rating_range
+- **9 Actor Tools**: get_actor, add_actor, update_actor, delete_actor, link_actor_to_movie, unlink_actor_from_movie, get_movie_cast, get_actor_movies, search_actors
+- **3 Compound Tools**: bulk_movie_import, movie_recommendation_engine, director_career_analysis
+- **3 Context Tools**: create_search_context, get_context_page, get_context_info
+
+### Try These Commands:
+
+**Movies:**
 ```
 Can you help me search for movies in my database?
 ```
@@ -135,7 +190,29 @@ Add a new movie: "The Matrix" directed by "The Wachowskis" from 1999, rated 8.7
 ```
 
 ```
-Show me all the movies in my database
+Show me all movies from the 1990s
+```
+
+**Actors:**
+```
+Add Leonardo DiCaprio as an actor born in 1974
+```
+
+```
+Link Leonardo DiCaprio to Inception
+```
+
+```
+Show me all movies that Tom Hanks appears in
+```
+
+**Smart Features:**
+```
+Give me movie recommendations based on sci-fi and action genres
+```
+
+```
+Analyze Christopher Nolan's career
 ```
 
 ## Troubleshooting
@@ -145,10 +222,10 @@ Show me all the movies in my database
 #### ❌ "Command not found" or "Permission denied"
 ```bash
 # Make binary executable
-chmod +x /path/to/your/movies-server-clean
+chmod +x ./movies-mcp-server-sdk
 
 # Test the exact path from your config
-/FULL/PATH/TO/YOUR/movies-server-clean --help
+/absolute/path/to/movies-mcp-server-sdk --help
 ```
 
 #### ❌ "Database connection failed"
@@ -156,21 +233,27 @@ chmod +x /path/to/your/movies-server-clean
 # Check database is running
 docker ps | grep postgres
 
-# Test database connection
-psql "postgres://movies_user:movies_password@localhost:5433/movies_mcp" -c "SELECT 1;"
+# Test database connection with your settings
+psql -h localhost -p 5432 -U movies_user -d movies_mcp -c "SELECT 1;"
 
 # Check port conflicts
-lsof -i :5433
+lsof -i :5432
+
+# Verify environment variables are set correctly in Claude config
 ```
 
 #### ❌ "MCP server not responding"
 ```bash
 # Check server starts correctly
 echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}},"id":1}' | \
-/path/to/your/movies-server-clean
+./movies-mcp-server-sdk
 
-# Check Claude Desktop logs (macOS)
-tail -f ~/Library/Logs/Claude/claude_desktop.log
+# Check Claude Desktop logs
+# macOS:
+tail -f ~/Library/Logs/Claude/mcp*.log
+
+# Linux:
+tail -f ~/.config/Claude/logs/mcp*.log
 ```
 
 ### Performance Issues
@@ -178,10 +261,10 @@ tail -f ~/Library/Logs/Claude/claude_desktop.log
 #### ❌ "Server is slow"
 ```bash
 # Check database performance
-psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM movies;"
+psql -h localhost -p 5432 -U movies_user -d movies_mcp -c "SELECT COUNT(*) FROM movies;"
 
 # Monitor resource usage
-top -p $(pgrep movies-server-clean)
+ps aux | grep movies-mcp-server-sdk
 ```
 
 ### Configuration Issues
@@ -196,31 +279,20 @@ cat ~/Library/Application\ Support/Claude/claude_desktop_config.json | jq .
 
 ## Advanced Configuration
 
-### Custom Log Level
-```json
-{
-  "mcpServers": {
-    "movies-mcp-server": {
-      "command": "/path/to/movies-server-clean",
-      "args": [],
-      "env": {
-        "DATABASE_URL": "postgres://...",
-        "LOG_LEVEL": "debug"
-      }
-    }
-  }
-}
-```
-
 ### Skip Migrations (if database is already setup)
 ```json
 {
   "mcpServers": {
-    "movies-mcp-server": {
-      "command": "/path/to/movies-server-clean",
+    "movies": {
+      "command": "/path/to/movies-mcp-server-sdk",
       "args": ["--skip-migrations"],
       "env": {
-        "DATABASE_URL": "postgres://..."
+        "DB_HOST": "localhost",
+        "DB_PORT": "5432",
+        "DB_USER": "movies_user",
+        "DB_PASSWORD": "movies_password",
+        "DB_NAME": "movies_mcp",
+        "DB_SSLMODE": "disable"
       }
     }
   }
@@ -232,17 +304,47 @@ cat ~/Library/Application\ Support/Claude/claude_desktop_config.json | jq .
 {
   "mcpServers": {
     "movies-dev": {
-      "command": "/path/to/movies-server-clean",
+      "command": "/path/to/movies-mcp-server-sdk",
       "args": [],
       "env": {
-        "DATABASE_URL": "postgres://dev_user:dev_password@localhost:5434/movies_mcp_dev"
+        "DB_HOST": "localhost",
+        "DB_PORT": "5434",
+        "DB_USER": "dev_user",
+        "DB_PASSWORD": "dev_password",
+        "DB_NAME": "movies_mcp_dev",
+        "DB_SSLMODE": "disable"
       }
     },
     "movies-prod": {
-      "command": "/path/to/movies-server-clean", 
+      "command": "/path/to/movies-mcp-server-sdk",
       "args": [],
       "env": {
-        "DATABASE_URL": "postgres://movies_user:movies_password@localhost:5433/movies_mcp"
+        "DB_HOST": "localhost",
+        "DB_PORT": "5432",
+        "DB_USER": "movies_user",
+        "DB_PASSWORD": "movies_password",
+        "DB_NAME": "movies_mcp",
+        "DB_SSLMODE": "require"
+      }
+    }
+  }
+}
+```
+
+### SSL/TLS Connection
+```json
+{
+  "mcpServers": {
+    "movies": {
+      "command": "/path/to/movies-mcp-server-sdk",
+      "args": [],
+      "env": {
+        "DB_HOST": "production-db.example.com",
+        "DB_PORT": "5432",
+        "DB_USER": "movies_user",
+        "DB_PASSWORD": "secure_password",
+        "DB_NAME": "movies_mcp",
+        "DB_SSLMODE": "require"
       }
     }
   }
@@ -251,14 +353,33 @@ cat ~/Library/Application\ Support/Claude/claude_desktop_config.json | jq .
 
 ## What You Can Do Now
 
-With Claude Desktop connected, you can:
+With Claude Desktop connected, you can leverage all 23 tools:
 
-- 🔍 **Search movies**: "Find all sci-fi movies from the 1990s"
-- ➕ **Add movies**: "Add Inception to my database" 
-- 📊 **Get statistics**: "How many movies do I have?"
-- 🎭 **Manage actors**: "Add Leonardo DiCaprio to Inception"
-- 🖼️ **Handle posters**: "Show me the poster for The Matrix"
-- 📈 **Get insights**: "What are my top-rated comedies?"
+### 🎬 Movie Management (8 tools)
+- 🔍 **Search & filter**: "Find all sci-fi movies from the 1990s"
+- ➕ **Add movies**: "Add Inception to my database"
+- ✏️ **Update movies**: "Update The Matrix rating to 8.7"
+- 🗑️ **Delete movies**: "Remove movie ID 42"
+- 📊 **Top movies**: "Show me the top 10 highest-rated movies"
+- 📅 **Search by decade**: "Find movies from the 80s"
+- ⭐ **Rating ranges**: "Show movies rated between 7.0 and 8.0"
+
+### 🎭 Actor Management (9 tools)
+- 👤 **Manage actors**: "Add Leonardo DiCaprio born in 1974"
+- 🔗 **Link relationships**: "Link Tom Hanks to Forrest Gump"
+- 📋 **Get cast**: "Show me all actors in The Matrix"
+- 🎬 **Actor filmography**: "What movies has Brad Pitt appeared in?"
+- 🔍 **Search actors**: "Find all actors born in the 1960s"
+
+### 🧠 Smart Features (3 compound tools)
+- 📥 **Bulk import**: "Import 10 movies at once"
+- 💡 **Recommendations**: "Recommend movies based on sci-fi and thriller genres with min rating 7.5"
+- 📊 **Career analysis**: "Analyze Christopher Nolan's career trajectory"
+
+### 📑 Pagination (3 context tools)
+- **Large result sets**: Automatically handles pagination for 100+ results
+- **Context management**: Navigate through pages of search results
+- **Performance**: Efficient handling of large datasets
 
 ## Next Steps
 
@@ -276,20 +397,60 @@ With Claude Desktop connected, you can:
 ```json
 {
   "mcpServers": {
-    "movies-mcp-server": {
-      "command": "/ABSOLUTE/PATH/TO/movies-server-clean",
+    "movies": {
+      "command": "/ABSOLUTE/PATH/TO/movies-mcp-server-sdk",
       "args": [],
       "env": {
-        "DATABASE_URL": "postgres://USER:PASS@HOST:PORT/DATABASE"
+        "DB_HOST": "localhost",
+        "DB_PORT": "5432",
+        "DB_USER": "USER",
+        "DB_PASSWORD": "PASSWORD",
+        "DB_NAME": "DATABASE",
+        "DB_SSLMODE": "disable"
       }
     }
   }
 }
 ```
 
+### Environment Variables Reference
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DB_HOST` | PostgreSQL host | `localhost` |
+| `DB_PORT` | PostgreSQL port | `5432` |
+| `DB_USER` | Database user | `movies_user` |
+| `DB_PASSWORD` | Database password | `movies_password` |
+| `DB_NAME` | Database name | `movies_mcp` |
+| `DB_SSLMODE` | SSL mode | `disable`, `require`, `verify-full` |
+
+### Command Line Flags
+| Flag | Description |
+|------|-------------|
+| `--version` | Show version information |
+| `--help` | Show help message |
+| `--skip-migrations` | Skip database migrations on startup |
+
 ### Port Reference
 | Environment | PostgreSQL Port | Use Case |
 |-------------|----------------|----------|
-| Clean Architecture | 5433 | Production-like |
-| Development | 5434 | Development |
+| Default | 5432 | Standard PostgreSQL |
+| Docker (custom) | 5433 | Docker mapped port |
+| Development | 5434 | Development environment |
 | Test | 5435 | Testing only |
+
+---
+
+## SDK Migration Notes
+
+This guide uses the **SDK-based server** (`movies-mcp-server-sdk`) which is built with the official Golang MCP SDK v1.1.0.
+
+**Benefits over the legacy server:**
+- ✅ Type-safe tool handlers
+- ✅ Automatic JSON schema generation
+- ✅ Better error handling
+- ✅ Official support from Anthropic & Google
+- ✅ 26% less code
+
+**Legacy server:** If you need the old custom server (`movies-server-clean`), it's still available but not recommended for new deployments.
+
+For more details, see [SDK Migration Complete](../SDK_MIGRATION_COMPLETE.md).
