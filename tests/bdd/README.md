@@ -43,7 +43,7 @@ tests/bdd/
 ### Run BDD Tests
 
 ```bash
-# Run all BDD tests
+# Run all BDD tests (uses legacy server by default)
 go test ./tests/bdd/
 
 # Run with verbose output
@@ -55,6 +55,32 @@ go test ./tests/bdd/ -godog.tags=@movies
 # Run with custom format
 go test ./tests/bdd/ -godog.format=pretty
 ```
+
+### Testing SDK vs Legacy Server
+
+The BDD tests support testing both the legacy and SDK-based MCP servers via the `TEST_MCP_SERVER` environment variable:
+
+```bash
+# Test with legacy server (default)
+go test ./tests/bdd/
+
+# Explicitly test with legacy server
+TEST_MCP_SERVER=legacy go test ./tests/bdd/
+
+# Test with SDK server
+TEST_MCP_SERVER=sdk go test ./tests/bdd/
+
+# Test both implementations to ensure compatibility
+TEST_MCP_SERVER=legacy go test ./tests/bdd/ && \
+TEST_MCP_SERVER=sdk go test ./tests/bdd/
+```
+
+**Server Selection Details:**
+- **Legacy Server**: `cmd/server/main.go` → binary: `movies-mcp-server`
+- **SDK Server**: `cmd/server-sdk/main.go` → binary: `movies-mcp-server-sdk`
+- **Default**: Legacy server (for backwards compatibility)
+
+This allows you to verify that both implementations produce identical behavior and pass all BDD scenarios.
 
 ## 📋 Test Data Management
 

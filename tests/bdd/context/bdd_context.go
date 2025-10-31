@@ -164,9 +164,32 @@ func getProjectRoot() (string, error) {
 	return "", fmt.Errorf("project root with go.mod file not found")
 }
 
-// buildServerBinary builds the MCP server binary if it doesn't exist
-func buildServerBinary(projectRoot string) (string, error) {
-	serverBinary := filepath.Join(projectRoot, "movies-mcp-server")
+// getServerType determines which server implementation to test
+// Returns "sdk" or "legacy" based on TEST_MCP_SERVER environment variable
+// Defaults to "legacy" for backwards compatibility
+func getServerType() string {
+	serverType := os.Getenv("TEST_MCP_SERVER")
+	if serverType == "sdk" {
+		return "sdk"
+	}
+	// Default to legacy for backwards compatibility
+	return "legacy"
+}
+
+// buildServerBinary builds the MCP server binary based on the specified server type
+func buildServerBinary(projectRoot, serverType string) (string, error) {
+	var serverBinary, serverMainPath string
+
+	switch serverType {
+	case "sdk":
+		serverBinary = filepath.Join(projectRoot, "movies-mcp-server-sdk")
+		serverMainPath = filepath.Join(projectRoot, "cmd", "server-sdk", "main.go")
+	case "legacy":
+		serverBinary = filepath.Join(projectRoot, "movies-mcp-server")
+		serverMainPath = filepath.Join(projectRoot, "cmd", "server", "main.go")
+	default:
+		return "", fmt.Errorf("unknown server type: %s (expected 'sdk' or 'legacy')", serverType)
+	}
 
 	// Check if binary already exists
 	if _, err := os.Stat(serverBinary); err == nil {
@@ -174,14 +197,13 @@ func buildServerBinary(projectRoot string) (string, error) {
 	}
 
 	// Build the server binary
-	serverMainPath := filepath.Join(projectRoot, "cmd", "server", "main.go")
 	// #nosec G204 - Safe: building our own Go binary in test environment
 	buildCmd := exec.Command("go", "build", "-o", serverBinary, serverMainPath)
 	buildCmd.Dir = projectRoot // Set working directory to project root
 
 	output, err := buildCmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to build server binary: %w\nOutput: %s", err, string(output))
+		return "", fmt.Errorf("failed to build %s server binary: %w\nOutput: %s", serverType, err, string(output))
 	}
 
 	return serverBinary, nil
@@ -195,7 +217,10 @@ func (ctx *BDDContext) StartMCPServer() error {
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
 
-	serverBinary, err := buildServerBinary(projectRoot)
+	// Determine which server to test (sdk or legacy)
+	serverType := getServerType()
+
+	serverBinary, err := buildServerBinary(projectRoot, serverType)
 	if err != nil {
 		return fmt.Errorf("failed to build server binary: %w", err)
 	}
