@@ -10,13 +10,18 @@ import (
 	movieApp "github.com/francknouama/movies-mcp-server/internal/application/movie"
 )
 
+// MovieService defines the interface for movie operations
+type MovieService interface {
+	GetMovie(ctx context.Context, id int) (*movieApp.MovieDTO, error)
+}
+
 // MovieTools provides SDK-based MCP handlers for movie operations
 type MovieTools struct {
-	movieService *movieApp.Service
+	movieService MovieService
 }
 
 // NewMovieTools creates a new movie tools instance
-func NewMovieTools(movieService *movieApp.Service) *MovieTools {
+func NewMovieTools(movieService MovieService) *MovieTools {
 	return &MovieTools{
 		movieService: movieService,
 	}
