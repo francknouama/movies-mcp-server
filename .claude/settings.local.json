@@ -46,7 +46,11 @@
       "Bash(gh issue create:*)",
       "Bash(cp:*)",
       "Bash(rg:*)",
-      "Bash(errcheck:*)"
+      "Bash(errcheck:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(git merge:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }
