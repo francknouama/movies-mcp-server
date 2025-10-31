@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - CHANGELOG.md to track project changes
+- LEGACY_ARCHIVAL_PLAN.md documenting Q1 2025 archival strategy
+- GitHub Issue #26 to track legacy code archival
+
+### Planned
+- **Q1 2025:** Archive legacy server code to `legacy/` directory
+  - Condition: SDK server proven in production for 30+ days
+  - See [LEGACY_ARCHIVAL_PLAN.md](LEGACY_ARCHIVAL_PLAN.md) for details
+  - Tracking: [Issue #26](https://github.com/francknouama/movies-mcp-server/issues/26)
 
 ## [2.0.0] - 2024-10-31
 
