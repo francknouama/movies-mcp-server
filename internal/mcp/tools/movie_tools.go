@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -384,4 +385,178 @@ func (t *MovieTools) SearchMovies(
 	}
 
 	return nil, output, nil
+}
+
+// ===== search_by_decade Tool =====
+
+// SearchByDecadeInput defines the input schema for search_by_decade tool
+type SearchByDecadeInput struct {
+	Decade string `json:"decade" jsonschema:"required,description=Decade to search (e.g. '1990s' or '90s' or '1990')"`
+}
+
+// SearchByDecade handles the search_by_decade tool call
+func (t *MovieTools) SearchByDecade(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input SearchByDecadeInput,
+) (*mcp.CallToolResult, SearchMoviesOutput, error) {
+	// Parse decade to year range
+	minYear, maxYear, err := parseDecade(input.Decade)
+	if err != nil {
+		return nil, SearchMoviesOutput{}, fmt.Errorf("invalid decade format: %w", err)
+	}
+
+	// Create search query
+	query := movieApp.SearchMoviesQuery{
+		MinYear:  minYear,
+		MaxYear:  maxYear,
+		Limit:    50,
+		OrderBy:  "year",
+		OrderDir: "asc",
+	}
+
+	// Search movies
+	movieDTOs, err := t.movieService.SearchMovies(ctx, query)
+	if err != nil {
+		return nil, SearchMoviesOutput{}, fmt.Errorf("failed to search movies by decade: %w", err)
+	}
+
+	// Convert to output format
+	movies := make([]GetMovieOutput, len(movieDTOs))
+	for i, movieDTO := range movieDTOs {
+		movies[i] = GetMovieOutput{
+			ID:        movieDTO.ID,
+			Title:     movieDTO.Title,
+			Director:  movieDTO.Director,
+			Year:      movieDTO.Year,
+			Rating:    movieDTO.Rating,
+			Genres:    movieDTO.Genres,
+			PosterURL: movieDTO.PosterURL,
+			CreatedAt: movieDTO.CreatedAt,
+			UpdatedAt: movieDTO.UpdatedAt,
+		}
+	}
+
+	output := SearchMoviesOutput{
+		Movies:      movies,
+		Total:       len(movies),
+		Description: fmt.Sprintf("Movies from the %s", input.Decade),
+	}
+
+	return nil, output, nil
+}
+
+// ===== search_by_rating_range Tool =====
+
+// SearchByRatingRangeInput defines the input schema for search_by_rating_range tool
+type SearchByRatingRangeInput struct {
+	MinRating float64 `json:"min_rating,omitempty" jsonschema:"description=Minimum rating (0-10)"`
+	MaxRating float64 `json:"max_rating,omitempty" jsonschema:"description=Maximum rating (0-10)"`
+}
+
+// SearchByRatingRange handles the search_by_rating_range tool call
+func (t *MovieTools) SearchByRatingRange(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input SearchByRatingRangeInput,
+) (*mcp.CallToolResult, SearchMoviesOutput, error) {
+	// Validate that at least one rating is provided
+	if input.MinRating == 0 && input.MaxRating == 0 {
+		return nil, SearchMoviesOutput{}, fmt.Errorf("at least one of min_rating or max_rating is required")
+	}
+
+	// Validate rating ranges
+	if input.MinRating < 0 || input.MinRating > 10 {
+		return nil, SearchMoviesOutput{}, fmt.Errorf("min_rating must be between 0 and 10")
+	}
+	if input.MaxRating < 0 || input.MaxRating > 10 {
+		return nil, SearchMoviesOutput{}, fmt.Errorf("max_rating must be between 0 and 10")
+	}
+	if input.MinRating > 0 && input.MaxRating > 0 && input.MinRating > input.MaxRating {
+		return nil, SearchMoviesOutput{}, fmt.Errorf("min_rating cannot be greater than max_rating")
+	}
+
+	// Create search query
+	query := movieApp.SearchMoviesQuery{
+		MinRating: input.MinRating,
+		MaxRating: input.MaxRating,
+		Limit:     50,
+		OrderBy:   "rating",
+		OrderDir:  "desc",
+	}
+
+	// Search movies
+	movieDTOs, err := t.movieService.SearchMovies(ctx, query)
+	if err != nil {
+		return nil, SearchMoviesOutput{}, fmt.Errorf("failed to search movies by rating: %w", err)
+	}
+
+	// Convert to output format
+	movies := make([]GetMovieOutput, len(movieDTOs))
+	for i, movieDTO := range movieDTOs {
+		movies[i] = GetMovieOutput{
+			ID:        movieDTO.ID,
+			Title:     movieDTO.Title,
+			Director:  movieDTO.Director,
+			Year:      movieDTO.Year,
+			Rating:    movieDTO.Rating,
+			Genres:    movieDTO.Genres,
+			PosterURL: movieDTO.PosterURL,
+			CreatedAt: movieDTO.CreatedAt,
+			UpdatedAt: movieDTO.UpdatedAt,
+		}
+	}
+
+	// Create description
+	var description string
+	if input.MinRating > 0 && input.MaxRating > 0 {
+		description = fmt.Sprintf("Movies with rating between %.1f and %.1f", input.MinRating, input.MaxRating)
+	} else if input.MinRating > 0 {
+		description = fmt.Sprintf("Movies with rating >= %.1f", input.MinRating)
+	} else {
+		description = fmt.Sprintf("Movies with rating <= %.1f", input.MaxRating)
+	}
+
+	output := SearchMoviesOutput{
+		Movies:      movies,
+		Total:       len(movies),
+		Description: description,
+	}
+
+	return nil, output, nil
+}
+
+// Helper function to parse decade string
+func parseDecade(decade string) (int, int, error) {
+	decade = strings.TrimSpace(decade)
+	decade = strings.TrimSuffix(decade, "s")
+
+	var baseYear int
+	if len(decade) == 2 {
+		// Handle "90" -> 1990
+		year, err := strconv.Atoi(decade)
+		if err != nil {
+			return 0, 0, fmt.Errorf("invalid decade format")
+		}
+		if year >= 0 && year <= 30 {
+			baseYear = 2000 + year
+		} else {
+			baseYear = 1900 + year
+		}
+	} else if len(decade) == 4 {
+		// Handle "1990" -> 1990
+		year, err := strconv.Atoi(decade)
+		if err != nil {
+			return 0, 0, fmt.Errorf("invalid decade format")
+		}
+		baseYear = year
+	} else {
+		return 0, 0, fmt.Errorf("invalid decade format")
+	}
+
+	// Convert to decade boundaries
+	decadeStart := (baseYear / 10) * 10
+	decadeEnd := decadeStart + 9
+
+	return decadeStart, decadeEnd, nil
 }
