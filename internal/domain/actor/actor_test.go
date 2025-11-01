@@ -313,3 +313,88 @@ func TestActor_MovieCount(t *testing.T) {
 		t.Errorf("Expected 2 movies, got %d", actor.MovieCount())
 	}
 }
+
+func TestActor_CreatedAt(t *testing.T) {
+	actor, err := NewActor("Test Actor", 1980)
+	if err != nil {
+		t.Fatalf("Failed to create test actor: %v", err)
+	}
+
+	createdAt := actor.CreatedAt()
+	if createdAt.IsZero() {
+		t.Error("Expected non-zero CreatedAt timestamp")
+	}
+
+	// CreatedAt should be around current time
+	now := time.Now()
+	diff := now.Sub(createdAt)
+	if diff < 0 || diff > time.Second {
+		t.Errorf("CreatedAt timestamp seems incorrect: %v (now: %v, diff: %v)", createdAt, now, diff)
+	}
+}
+
+func TestActor_Validate_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name      string
+		setup     func() *Actor
+		wantErr   bool
+		errString string
+	}{
+		{
+			name: "valid actor with bio",
+			setup: func() *Actor {
+				actor, _ := NewActor("Test Actor", 1980)
+				actor.SetBio("Test biography")
+				return actor
+			},
+			wantErr: false,
+		},
+		{
+			name: "actor with empty bio is valid",
+			setup: func() *Actor {
+				actor, _ := NewActor("Test Actor", 1980)
+				return actor
+			},
+			wantErr: false,
+		},
+		{
+			name: "actor with movies is valid",
+			setup: func() *Actor {
+				actor, _ := NewActor("Test Actor", 1980)
+				movieID, _ := shared.NewMovieID(123)
+				actor.AddMovie(movieID)
+				return actor
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actor := tt.setup()
+			err := actor.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestNewSearchCriteria(t *testing.T) {
+	// Test creating search criteria with default values
+	criteria := NewSearchCriteria()
+
+	// Should have default values
+	if criteria.Limit != 50 {
+		t.Errorf("Expected default Limit=50, got %d", criteria.Limit)
+	}
+	if criteria.Offset != 0 {
+		t.Errorf("Expected default Offset=0, got %d", criteria.Offset)
+	}
+	if criteria.OrderBy != OrderByName {
+		t.Errorf("Expected default OrderBy=OrderByName, got %v", criteria.OrderBy)
+	}
+	if criteria.OrderDir != OrderAsc {
+		t.Errorf("Expected default OrderDir=OrderAsc, got %v", criteria.OrderDir)
+	}
+}

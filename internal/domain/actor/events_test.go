@@ -162,4 +162,16 @@ func TestActorEventTypes(t *testing.T) {
 	if deletedEvent.Name != "Test Actor" {
 		t.Errorf("Expected name 'Test Actor', got %s", deletedEvent.Name)
 	}
+
+	// Test ActorUpdatedEvent
+	updatedEvent := NewActorUpdatedEvent(actor, 6)
+	if updatedEvent.EventType() != "ActorUpdated" {
+		t.Errorf("Expected ActorUpdated event type, got %s", updatedEvent.EventType())
+	}
+	if updatedEvent.ActorID.Value() != 42 {
+		t.Errorf("Expected actor ID 42, got %d", updatedEvent.ActorID.Value())
+	}
+	if updatedEvent.Name != "Test Actor" {
+		t.Errorf("Expected name 'Test Actor', got %s", updatedEvent.Name)
+	}
 }
