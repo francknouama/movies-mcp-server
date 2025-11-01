@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	actorApp "github.com/francknouama/movies-mcp-server/internal/application/actor"
@@ -313,6 +314,50 @@ func TestLinkActorToMovie_ServiceError(t *testing.T) {
 
 	if err == nil {
 		t.Fatal("Expected error, got nil")
+	}
+}
+
+func TestLinkActorToMovie_NotFound(t *testing.T) {
+	mockService := &MockActorService{
+		LinkActorToMovieFunc: func(ctx context.Context, actorID, movieID int) error {
+			return errors.New("actor not found")
+		},
+	}
+
+	tools := NewActorTools(mockService)
+	_, _, err := tools.LinkActorToMovie(context.Background(), nil, LinkActorToMovieInput{
+		ActorID: 999,
+		MovieID: 1,
+	})
+
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "actor or movie not found") {
+		t.Errorf("Expected 'actor or movie not found' error, got: %v", err)
+	}
+}
+
+func TestLinkActorToMovie_AlreadyLinked(t *testing.T) {
+	mockService := &MockActorService{
+		LinkActorToMovieFunc: func(ctx context.Context, actorID, movieID int) error {
+			return errors.New("link already exists")
+		},
+	}
+
+	tools := NewActorTools(mockService)
+	_, _, err := tools.LinkActorToMovie(context.Background(), nil, LinkActorToMovieInput{
+		ActorID: 1,
+		MovieID: 42,
+	})
+
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "already linked") {
+		t.Errorf("Expected 'already linked' error, got: %v", err)
 	}
 }
 

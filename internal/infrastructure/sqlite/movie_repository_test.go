@@ -1322,3 +1322,328 @@ func TestMovieRepository_Update_WithChangedFields(t *testing.T) {
 		t.Error("Expected genres to be saved")
 	}
 }
+
+func TestMovieRepository_FindByCriteria_OrderByDirector(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create movies with different directors
+	movie1, _ := movie.NewMovie("Movie A", "Zemeckis", 1990)
+	repo.Save(ctx, movie1)
+
+	movie2, _ := movie.NewMovie("Movie B", "Anderson", 1995)
+	repo.Save(ctx, movie2)
+
+	movie3, _ := movie.NewMovie("Movie C", "Nolan", 2000)
+	repo.Save(ctx, movie3)
+
+	// Search ordered by director ascending
+	criteria := movie.SearchCriteria{
+		OrderBy:  movie.OrderByDirector,
+		OrderDir: movie.OrderAsc,
+	}
+
+	results, err := repo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	if len(results) != 3 {
+		t.Fatalf("Expected 3 movies, got %d", len(results))
+	}
+
+	// Verify alphabetical ordering by director: Anderson, Nolan, Zemeckis
+	if results[0].Director() != "Anderson" {
+		t.Errorf("Expected 'Anderson' first, got '%s'", results[0].Director())
+	}
+	if results[1].Director() != "Nolan" {
+		t.Errorf("Expected 'Nolan' second, got '%s'", results[1].Director())
+	}
+	if results[2].Director() != "Zemeckis" {
+		t.Errorf("Expected 'Zemeckis' third, got '%s'", results[2].Director())
+	}
+}
+
+func TestMovieRepository_FindByCriteria_OrderByCreatedAt(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create movies with time delays
+	movie1, _ := movie.NewMovie("First Movie", "Director A", 1990)
+	repo.Save(ctx, movie1)
+
+	movie2, _ := movie.NewMovie("Second Movie", "Director B", 1995)
+	repo.Save(ctx, movie2)
+
+	movie3, _ := movie.NewMovie("Third Movie", "Director C", 2000)
+	repo.Save(ctx, movie3)
+
+	// Search ordered by created_at ascending
+	criteria := movie.SearchCriteria{
+		OrderBy:  movie.OrderByCreatedAt,
+		OrderDir: movie.OrderAsc,
+	}
+
+	results, err := repo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	if len(results) != 3 {
+		t.Fatalf("Expected 3 movies, got %d", len(results))
+	}
+
+	// Verify ordering by creation time
+	if results[0].Title() != "First Movie" {
+		t.Errorf("Expected 'First Movie' first, got '%s'", results[0].Title())
+	}
+	if results[2].Title() != "Third Movie" {
+		t.Errorf("Expected 'Third Movie' last, got '%s'", results[2].Title())
+	}
+}
+
+func TestMovieRepository_FindByCriteria_OrderByUpdatedAt(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create movies
+	movie1, _ := movie.NewMovie("Movie One", "Director A", 1990)
+	repo.Save(ctx, movie1)
+
+	movie2, _ := movie.NewMovie("Movie Two", "Director B", 1995)
+	repo.Save(ctx, movie2)
+
+	// Update movie1 to change its updated_at timestamp
+	movie1.SetRating(9.5)
+	repo.Save(ctx, movie1)
+
+	// Search ordered by updated_at descending (most recently updated first)
+	criteria := movie.SearchCriteria{
+		OrderBy:  movie.OrderByUpdatedAt,
+		OrderDir: movie.OrderDesc,
+	}
+
+	results, err := repo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	if len(results) != 2 {
+		t.Fatalf("Expected 2 movies, got %d", len(results))
+	}
+
+	// Movie One should be first because it was updated most recently
+	if results[0].Title() != "Movie One" {
+		t.Errorf("Expected 'Movie One' first (most recently updated), got '%s'", results[0].Title())
+	}
+}
+
+func TestMovieRepository_DeleteAll_Comprehensive(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create multiple movies with various data
+	movie1, _ := movie.NewMovie("Movie 1", "Director 1", 1990)
+	movie1.SetRating(8.5)
+	movie1.AddGenre("Action")
+	repo.Save(ctx, movie1)
+
+	movie2, _ := movie.NewMovie("Movie 2", "Director 2", 1995)
+	movie2.SetRating(7.0)
+	movie2.AddGenre("Drama")
+	repo.Save(ctx, movie2)
+
+	movie3, _ := movie.NewMovie("Movie 3", "Director 3", 2000)
+	repo.Save(ctx, movie3)
+
+	// Verify movies exist
+	count, err := repo.CountAll(ctx)
+	if err != nil {
+		t.Fatalf("CountAll() error = %v", err)
+	}
+	if count != 3 {
+		t.Errorf("Expected 3 movies before DeleteAll, got %d", count)
+	}
+
+	// Delete all movies
+	err = repo.DeleteAll(ctx)
+	if err != nil {
+		t.Fatalf("DeleteAll() error = %v", err)
+	}
+
+	// Verify all movies are deleted
+	count, err = repo.CountAll(ctx)
+	if err != nil {
+		t.Fatalf("CountAll() after DeleteAll error = %v", err)
+	}
+	if count != 0 {
+		t.Errorf("Expected 0 movies after DeleteAll, got %d", count)
+	}
+
+	// Verify we can still query (empty results)
+	results, err := repo.FindByCriteria(ctx, movie.SearchCriteria{})
+	if err != nil {
+		t.Fatalf("FindByCriteria() after DeleteAll error = %v", err)
+	}
+	if len(results) != 0 {
+		t.Errorf("Expected 0 results after DeleteAll, got %d", len(results))
+	}
+}
+
+func TestMovieRepository_ComplexSearchScenarios(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create movies with various attributes
+	movie1, _ := movie.NewMovie("The Shawshank Redemption", "Frank Darabont", 1994)
+	movie1.SetRating(9.3)
+	movie1.AddGenre("Drama")
+	movie1.SetPosterURL("http://example.com/poster1.jpg")
+	repo.Save(ctx, movie1)
+
+	movie2, _ := movie.NewMovie("The Godfather", "Francis Ford Coppola", 1972)
+	movie2.SetRating(9.2)
+	movie2.AddGenre("Crime")
+	movie2.AddGenre("Drama")
+	repo.Save(ctx, movie2)
+
+	movie3, _ := movie.NewMovie("The Dark Knight", "Christopher Nolan", 2008)
+	movie3.SetRating(9.0)
+	movie3.AddGenre("Action")
+	movie3.AddGenre("Crime")
+	repo.Save(ctx, movie3)
+
+	movie4, _ := movie.NewMovie("Pulp Fiction", "Quentin Tarantino", 1994)
+	movie4.SetRating(8.9)
+	movie4.AddGenre("Crime")
+	repo.Save(ctx, movie4)
+
+	// Test 1: Find movies by year and rating range
+	criteria1 := movie.SearchCriteria{
+		MinYear:   1990,
+		MaxYear:   2000,
+		MinRating: 9.0,
+		OrderBy:   movie.OrderByRating,
+		OrderDir:  movie.OrderDesc,
+	}
+
+	results1, err := repo.FindByCriteria(ctx, criteria1)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	if len(results1) != 1 {
+		t.Errorf("Expected 1 movie (Shawshank), got %d", len(results1))
+	}
+
+	// Test 2: Find movies with Crime genre, ordered by year
+	criteria2 := movie.SearchCriteria{
+		Genre:    "Crime",
+		OrderBy:  movie.OrderByYear,
+		OrderDir: movie.OrderAsc,
+	}
+
+	results2, err := repo.FindByCriteria(ctx, criteria2)
+	if err != nil {
+		t.Fatalf("FindByCriteria() by genre error = %v", err)
+	}
+
+	if len(results2) != 3 {
+		t.Errorf("Expected 3 movies with Crime genre, got %d", len(results2))
+	}
+
+	// Verify ordering by year: Godfather (1972), Pulp Fiction (1994), Dark Knight (2008)
+	if results2[0].Year().Value() != 1972 {
+		t.Errorf("Expected first movie year 1972, got %d", results2[0].Year().Value())
+	}
+
+	// Test 3: Find movies by director
+	criteria3 := movie.SearchCriteria{
+		Director: "Christopher Nolan",
+	}
+
+	results3, err := repo.FindByCriteria(ctx, criteria3)
+	if err != nil {
+		t.Fatalf("FindByCriteria() by director error = %v", err)
+	}
+
+	if len(results3) != 1 {
+		t.Errorf("Expected 1 Nolan movie, got %d", len(results3))
+	}
+
+	// Test 4: Find movies with limit and offset
+	criteria4 := movie.SearchCriteria{
+		Limit:    2,
+		Offset:   1,
+		OrderBy:  movie.OrderByTitle,
+		OrderDir: movie.OrderAsc,
+	}
+
+	results4, err := repo.FindByCriteria(ctx, criteria4)
+	if err != nil {
+		t.Fatalf("FindByCriteria() with limit/offset error = %v", err)
+	}
+
+	if len(results4) != 2 {
+		t.Errorf("Expected 2 movies with limit=2, got %d", len(results4))
+	}
+
+	// Test 5: Update movie and verify changes persist
+	movie1.SetRating(9.5)
+	movie1.AddGenre("Prison")
+	err = repo.Save(ctx, movie1)
+	if err != nil {
+		t.Fatalf("Save() after update error = %v", err)
+	}
+
+	updated, err := repo.FindByID(ctx, movie1.ID())
+	if err != nil {
+		t.Fatalf("FindByID() error = %v", err)
+	}
+
+	if updated.Rating().Value() != 9.5 {
+		t.Errorf("Expected updated rating 9.5, got %v", updated.Rating().Value())
+	}
+
+	genres := updated.Genres()
+	hasPrison := false
+	for _, g := range genres {
+		if g == "Prison" {
+			hasPrison = true
+			break
+		}
+	}
+	if !hasPrison {
+		t.Error("Expected 'Prison' genre to be added")
+	}
+
+	// Test 6: Find top rated movies
+	topRated, err := repo.FindTopRated(ctx, 2)
+	if err != nil {
+		t.Fatalf("FindTopRated() error = %v", err)
+	}
+
+	if len(topRated) != 2 {
+		t.Errorf("Expected 2 top rated movies, got %d", len(topRated))
+	}
+
+	// First should be the updated Shawshank with 9.5 rating
+	if topRated[0].Title() != "The Shawshank Redemption" {
+		t.Errorf("Expected 'The Shawshank Redemption' as top rated, got '%s'", topRated[0].Title())
+	}
+}
