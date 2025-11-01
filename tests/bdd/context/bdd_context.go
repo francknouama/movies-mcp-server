@@ -33,111 +33,19 @@ func NewBDDContext() *BDDContext {
 	}
 }
 
-// SetDatabaseEnvironment sets the database connection string for the MCP server
-func (ctx *BDDContext) SetDatabaseEnvironment(connectionString string) error {
-	// Parse the connection string to extract individual components
-	// Expected format: postgresql://user:password@host:port/dbname?sslmode=disable
-	parsed, err := parseConnectionString(connectionString)
-	if err != nil {
-		return fmt.Errorf("failed to parse connection string: %w", err)
-	}
-
-	// Store the parsed components to be used when starting the server
-	ctx.SetTestData("db_host", parsed.host)
-	ctx.SetTestData("db_port", parsed.port)
-	ctx.SetTestData("db_name", parsed.dbname)
-	ctx.SetTestData("db_user", parsed.user)
-	ctx.SetTestData("db_password", parsed.password)
-	ctx.SetTestData("db_sslmode", parsed.sslmode)
-
+// SetDatabaseEnvironment sets the database path for the MCP server (SQLite)
+func (ctx *BDDContext) SetDatabaseEnvironment(dbPath string) error {
+	// Store the SQLite database path
+	ctx.SetTestData("db_path", dbPath)
 	return nil
 }
 
-// dbConfig holds parsed database connection components
-type dbConfig struct {
-	host     string
-	port     string
-	dbname   string
-	user     string
-	password string
-	sslmode  string
+// SetDatabasePath sets the SQLite database path for the MCP server
+func (ctx *BDDContext) SetDatabasePath(dbPath string) error {
+	ctx.SetTestData("db_path", dbPath)
+	return nil
 }
 
-// parseConnectionString parses a PostgreSQL connection string
-func parseConnectionString(connStr string) (*dbConfig, error) {
-	// Simple parsing for PostgreSQL connection strings
-	// Format: postgresql://user:password@host:port/dbname?sslmode=disable
-
-	if !strings.HasPrefix(connStr, "postgresql://") && !strings.HasPrefix(connStr, "postgres://") {
-		return nil, fmt.Errorf("invalid PostgreSQL connection string format")
-	}
-
-	// Remove protocol prefix
-	connStr = strings.TrimPrefix(connStr, "postgresql://")
-	connStr = strings.TrimPrefix(connStr, "postgres://")
-
-	// Split on '@' to separate user:pass from host:port/db
-	parts := strings.Split(connStr, "@")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid connection string format")
-	}
-
-	userPass := parts[0]
-	hostDbQuery := parts[1]
-
-	// Parse user:password
-	userParts := strings.Split(userPass, ":")
-	if len(userParts) != 2 {
-		return nil, fmt.Errorf("invalid user:password format")
-	}
-	user := userParts[0]
-	password := userParts[1]
-
-	// Split query parameters
-	hostDbParts := strings.Split(hostDbQuery, "?")
-	hostDb := hostDbParts[0]
-	sslmode := "disable" // default
-
-	if len(hostDbParts) == 2 {
-		// Parse query parameters for sslmode
-		queryParams := hostDbParts[1]
-		if strings.Contains(queryParams, "sslmode=") {
-			for _, param := range strings.Split(queryParams, "&") {
-				if strings.HasPrefix(param, "sslmode=") {
-					sslmode = strings.TrimPrefix(param, "sslmode=")
-					break
-				}
-			}
-		}
-	}
-
-	// Parse host:port/dbname
-	hostPortDb := strings.Split(hostDb, "/")
-	if len(hostPortDb) != 2 {
-		return nil, fmt.Errorf("invalid host:port/dbname format")
-	}
-
-	hostPort := hostPortDb[0]
-	dbname := hostPortDb[1]
-
-	// Parse host:port
-	hostPortParts := strings.Split(hostPort, ":")
-	if len(hostPortParts) != 2 {
-		return nil, fmt.Errorf("invalid host:port format")
-	}
-
-	host := hostPortParts[0]
-	port := hostPortParts[1]
-
-	return &dbConfig{
-		host:     host,
-		port:     port,
-		dbname:   dbname,
-		user:     user,
-		password: password,
-		sslmode:  sslmode,
-	}, nil
-}
 
 // getProjectRoot finds the project root directory by looking for go.mod file
 func getProjectRoot() (string, error) {
@@ -166,14 +74,14 @@ func getProjectRoot() (string, error) {
 
 // getServerType determines which server implementation to test
 // Returns "sdk" or "legacy" based on TEST_MCP_SERVER environment variable
-// Defaults to "legacy" for backwards compatibility
+// Defaults to "sdk" since legacy server has been archived
 func getServerType() string {
 	serverType := os.Getenv("TEST_MCP_SERVER")
-	if serverType == "sdk" {
-		return "sdk"
+	if serverType == "legacy" {
+		return "legacy"
 	}
-	// Default to legacy for backwards compatibility
-	return "legacy"
+	// Default to SDK server (official implementation)
+	return "sdk"
 }
 
 // buildServerBinary builds the MCP server binary based on the specified server type
@@ -229,36 +137,11 @@ func (ctx *BDDContext) StartMCPServer() error {
 	// #nosec G204 - Safe: executing our own built binary in test environment
 	ctx.serverProcess = exec.Command(serverBinary)
 
-	// Set database environment if database configuration was provided
+	// Set database environment if database path was provided (SQLite)
 	env := os.Environ()
-	if host, exists := ctx.GetTestData("db_host"); exists {
-		if hostStr, ok := host.(string); ok {
-			env = append(env, "DB_HOST="+hostStr)
-		}
-	}
-	if port, exists := ctx.GetTestData("db_port"); exists {
-		if portStr, ok := port.(string); ok {
-			env = append(env, "DB_PORT="+portStr)
-		}
-	}
-	if name, exists := ctx.GetTestData("db_name"); exists {
-		if nameStr, ok := name.(string); ok {
-			env = append(env, "DB_NAME="+nameStr)
-		}
-	}
-	if user, exists := ctx.GetTestData("db_user"); exists {
-		if userStr, ok := user.(string); ok {
-			env = append(env, "DB_USER="+userStr)
-		}
-	}
-	if password, exists := ctx.GetTestData("db_password"); exists {
-		if passwordStr, ok := password.(string); ok {
-			env = append(env, "DB_PASSWORD="+passwordStr)
-		}
-	}
-	if sslmode, exists := ctx.GetTestData("db_sslmode"); exists {
-		if sslmodeStr, ok := sslmode.(string); ok {
-			env = append(env, "DB_SSLMODE="+sslmodeStr)
+	if dbPath, exists := ctx.GetTestData("db_path"); exists {
+		if dbPathStr, ok := dbPath.(string); ok {
+			env = append(env, "DB_PATH="+dbPathStr)
 		}
 	}
 

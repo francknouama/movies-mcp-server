@@ -22,11 +22,11 @@ type DatabaseInterface interface {
 
 // CommonStepContext provides shared step context for all BDD scenarios
 type CommonStepContext struct {
-	bddContext      *bddContext.BDDContext
-	testDB          DatabaseInterface
-	testContainerDB *support.TestContainerDatabase
-	dataManager     *support.TestDataManager
-	ctx             context.Context
+	bddContext   *bddContext.BDDContext
+	testDB       DatabaseInterface
+	sqliteDB     *support.SQLiteTestDatabase
+	dataManager  *support.TestDataManager
+	ctx          context.Context
 }
 
 // NewCommonStepContext creates a new common step context
@@ -64,46 +64,26 @@ func InitializeMCPSteps(ctx *godog.ScenarioContext) {
 func (c *CommonStepContext) setupScenario() error {
 	var err error
 
-	// Use shared Testcontainer database, fallback to regular database
-	c.testContainerDB, err = support.GetSharedTestDatabase(c.ctx)
+	// Create a new SQLite test database (temporary)
+	c.sqliteDB, err = support.NewSQLiteTestDatabase("")
 	if err != nil {
-		fmt.Printf("Warning: Could not initialize shared Testcontainer database (%v), falling back to regular database\n", err)
-
-		// Fallback to regular test database
-		regularDB, fallbackErr := support.NewTestDatabase()
-		if fallbackErr != nil {
-			return fmt.Errorf("failed to initialize any test database - Testcontainer: %v, Regular: %w", err, fallbackErr)
-		}
-		c.testDB = regularDB
-	} else {
-		// Use shared Testcontainer database
-		c.testDB = c.testContainerDB
+		return fmt.Errorf("failed to initialize SQLite test database: %w", err)
 	}
 
-	// Clean database data before each scenario (but keep schema)
-	if c.testContainerDB != nil {
-		err = c.testContainerDB.ClearData()
-		if err != nil {
-			return fmt.Errorf("failed to clear database data before scenario: %w", err)
-		}
-	} else {
-		err = c.testDB.CleanupAfterScenario()
-		if err != nil {
-			return fmt.Errorf("failed to clean database before scenario: %w", err)
-		}
+	// Use SQLite database for tests
+	c.testDB = c.sqliteDB
+
+	// Clean database data before each scenario
+	err = c.testDB.CleanupAfterScenario()
+	if err != nil {
+		return fmt.Errorf("failed to clean database before scenario: %w", err)
 	}
 
-	// Configure database environment for MCP server if using Testcontainer
-	if c.testContainerDB != nil {
-		connStr, err := c.testContainerDB.GetConnectionString()
-		if err != nil {
-			return fmt.Errorf("failed to get container connection string: %w", err)
-		}
-
-		// Set database environment for the MCP server
-		err = c.bddContext.SetDatabaseEnvironment(connStr)
-		if err != nil {
-			return fmt.Errorf("failed to set database environment: %w", err)
+	// Configure database environment for MCP server with SQLite path
+	if c.sqliteDB != nil {
+		dbPath := c.sqliteDB.GetDBPath()
+		if err := c.bddContext.SetDatabasePath(dbPath); err != nil {
+			return fmt.Errorf("failed to set database path: %w", err)
 		}
 	}
 
@@ -133,17 +113,10 @@ func (c *CommonStepContext) teardownScenario() error {
 		}
 	}
 
-	// Clean up test database (only for regular test database)
-	if c.testDB != nil && c.testContainerDB == nil {
-		if err := c.testDB.CleanupAfterScenario(); err != nil {
-			errors = append(errors, fmt.Errorf("database cleanup failed: %w", err))
-		}
-	}
-
-	// For shared Testcontainer database, only clear data, don't terminate container
-	if c.testContainerDB != nil {
-		if err := c.testContainerDB.ClearData(); err != nil {
-			errors = append(errors, fmt.Errorf("testcontainer data cleanup failed: %w", err))
+	// Clean up SQLite test database
+	if c.sqliteDB != nil {
+		if err := c.sqliteDB.Cleanup(); err != nil {
+			errors = append(errors, fmt.Errorf("sqlite database cleanup failed: %w", err))
 		}
 	}
 
