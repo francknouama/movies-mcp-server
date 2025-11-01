@@ -1,0 +1,76 @@
+{
+  "description": "Movies organized by genre for testing genre-based search and filtering",
+  "genres": {
+    "sci_fi": [
+      {
+        "title": "Blade Runner",
+        "director": "Ridley Scott",
+        "year": 1982,
+        "rating": 8.1,
+        "genres": ["Sci-Fi", "Thriller"]
+      },
+      {
+        "title": "2001: A Space Odyssey",
+        "director": "Stanley Kubrick",
+        "year": 1968,
+        "rating": 8.3,
+        "genres": ["Sci-Fi", "Mystery"]
+      },
+      {
+        "title": "E.T. the Extra-Terrestrial",
+        "director": "Steven Spielberg",
+        "year": 1982,
+        "rating": 7.8,
+        "genres": ["Family", "Sci-Fi"]
+      }
+    ],
+    "thriller": [
+      {
+        "title": "Se7en",
+        "director": "David Fincher",
+        "year": 1995,
+        "rating": 8.6,
+        "genres": ["Crime", "Drama", "Thriller"]
+      },
+      {
+        "title": "The Usual Suspects",
+        "director": "Bryan Singer",
+        "year": 1995,
+        "rating": 8.5,
+        "genres": ["Crime", "Mystery", "Thriller"]
+      }
+    ],
+    "comedy": [
+      {
+        "title": "The Grand Budapest Hotel",
+        "director": "Wes Anderson",
+        "year": 2014,
+        "rating": 8.1,
+        "genres": ["Adventure", "Comedy", "Crime"]
+      },
+      {
+        "title": "Groundhog Day",
+        "director": "Harold Ramis",
+        "year": 1993,
+        "rating": 8.0,
+        "genres": ["Comedy", "Fantasy", "Romance"]
+      }
+    ],
+    "horror": [
+      {
+        "title": "The Shining",
+        "director": "Stanley Kubrick",
+        "year": 1980,
+        "rating": 8.4,
+        "genres": ["Drama", "Horror"]
+      },
+      {
+        "title": "Alien",
+        "director": "Ridley Scott",
+        "year": 1979,
+        "rating": 8.5,
+        "genres": ["Horror", "Sci-Fi"]
+      }
+    ]
+  }
+}

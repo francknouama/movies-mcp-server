@@ -1,0 +1,58 @@
+{
+  "description": "Complete scenario with movies and their cast for testing relationship features",
+  "scenario_name": "Interstellar Cast and Crew",
+  "movies": [
+    {
+      "title": "Interstellar",
+      "director": "Christopher Nolan",
+      "year": 2014,
+      "rating": 8.6,
+      "genres": ["Adventure", "Drama", "Sci-Fi"],
+      "poster_url": "https://example.com/posters/interstellar.jpg"
+    }
+  ],
+  "actors": [
+    {
+      "name": "Matthew McConaughey",
+      "birth_year": 1969,
+      "bio": "Matthew David McConaughey is an American actor known for his leading roles in romantic comedies and later dramatic films."
+    },
+    {
+      "name": "Anne Hathaway",
+      "birth_year": 1982,
+      "bio": "Anne Jacqueline Hathaway is an American actress known for her versatile roles in both blockbusters and independent films."
+    },
+    {
+      "name": "Jessica Chastain",
+      "birth_year": 1977,
+      "bio": "Jessica Michelle Chastain is an American actress and producer known for her feminist themes."
+    },
+    {
+      "name": "Michael Caine",
+      "birth_year": 1933,
+      "bio": "Sir Michael Caine CBE is an English actor, known for his distinctive Cockney accent."
+    }
+  ],
+  "cast_relationships": [
+    {
+      "actor": "Matthew McConaughey",
+      "movie": "Interstellar",
+      "role": "Cooper"
+    },
+    {
+      "actor": "Anne Hathaway",
+      "movie": "Interstellar",
+      "role": "Brand"
+    },
+    {
+      "actor": "Jessica Chastain",
+      "movie": "Interstellar",
+      "role": "Murph"
+    },
+    {
+      "actor": "Michael Caine",
+      "movie": "Interstellar",
+      "role": "Professor Brand"
+    }
+  ]
+}

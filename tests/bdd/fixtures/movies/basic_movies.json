@@ -1,0 +1,44 @@
+{
+  "movies": [
+    {
+      "title": "The Shawshank Redemption",
+      "director": "Frank Darabont",
+      "year": 1994,
+      "rating": 9.3,
+      "genres": ["Drama", "Crime"],
+      "poster_url": "https://example.com/posters/shawshank.jpg"
+    },
+    {
+      "title": "The Godfather",
+      "director": "Francis Ford Coppola",
+      "year": 1972,
+      "rating": 9.2,
+      "genres": ["Crime", "Drama"],
+      "poster_url": "https://example.com/posters/godfather.jpg"
+    },
+    {
+      "title": "The Dark Knight",
+      "director": "Christopher Nolan",
+      "year": 2008,
+      "rating": 9.0,
+      "genres": ["Action", "Crime", "Drama"],
+      "poster_url": "https://example.com/posters/dark-knight.jpg"
+    },
+    {
+      "title": "Pulp Fiction",
+      "director": "Quentin Tarantino",
+      "year": 1994,
+      "rating": 8.9,
+      "genres": ["Crime", "Drama"],
+      "poster_url": "https://example.com/posters/pulp-fiction.jpg"
+    },
+    {
+      "title": "Forrest Gump",
+      "director": "Robert Zemeckis",
+      "year": 1994,
+      "rating": 8.8,
+      "genres": ["Drama", "Romance"],
+      "poster_url": "https://example.com/posters/forrest-gump.jpg"
+    }
+  ]
+}

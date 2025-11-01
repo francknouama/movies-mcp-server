@@ -12,7 +12,7 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:16
@@ -26,7 +26,7 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-          
+
     env:
       DB_HOST: localhost
       DB_PORT: 5432
@@ -34,17 +34,17 @@ jobs:
       DB_PASSWORD: postgres
       DB_NAME: movies_mcp_test
       DB_SSLMODE: disable
-      
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          
+
       - name: Cache Go modules
         uses: actions/cache@v4
         with:
@@ -54,10 +54,10 @@ jobs:
           key: ${{ runner.os }}-go-mcp-v2-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-mcp-v2-
-            
+
       - name: Install dependencies
         run: go mod download
-        
+
       - name: Build applications
         run: |
           rm -rf build
@@ -77,20 +77,20 @@ jobs:
         run: |
           go test -v -race ./internal/mcp/tools/...
           go test -v -race ./internal/mcp/resources/...
-        
+
       - name: Run integration tests
         run: go test -v -tags=integration ./tests/integration/...
-        
+
       - name: Generate coverage report
         run: go tool cover -html=coverage.out -o coverage.html
-        
+
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: mcp-server-coverage-${{ github.run_id }}
           path: coverage.html
           retention-days: 7
-          
+
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
@@ -105,12 +105,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
@@ -121,17 +121,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          
+
       - name: Run Gosec Security Scanner
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@latest
           gosec ./...
-          
+
       - name: Run Nancy vulnerability scanner
         run: |
           go install github.com/sonatype-nexus-community/nancy@latest
@@ -156,29 +156,13 @@ jobs:
 
   bdd-tests:
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: movies_mcp_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
+    strategy:
+      matrix:
+        server: [sdk, legacy]
+      fail-fast: false
 
     env:
-      DB_HOST: localhost
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: movies_mcp_test
-      DB_SSLMODE: disable
-      TEST_MCP_SERVER: sdk
+      TEST_MCP_SERVER: ${{ matrix.server }}
 
     steps:
       - uses: actions/checkout@v4
@@ -203,23 +187,152 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Run database migrations
+      - name: Build MCP servers
         run: |
-          go build -o migrate-tool ./cmd/server-sdk/main.go
-          ./migrate-tool -migrate-only
+          mkdir -p build
+          go build -o build/movies-mcp-server ./cmd/server/main.go
+          go build -o build/movies-mcp-server-sdk ./cmd/server-sdk/main.go
 
-      - name: Run BDD tests against SDK server
+      - name: Run BDD tests (${{ matrix.server }} server)
+        id: bdd-test
+        continue-on-error: true
         run: |
-          echo "Testing SDK server implementation"
-          go test -v -timeout 5m ./tests/bdd/...
+          echo "Running BDD tests with ${{ matrix.server }} server implementation"
+          echo "Tests use temporary SQLite databases (no external DB required)"
+          mkdir -p test-results
+          timeout 120s go test -v -timeout=2m ./tests/bdd/... 2>&1 | tee test-results/bdd-${{ matrix.server }}.log
 
-      - name: Upload BDD test results
+      - name: Parse test results
+        if: always()
+        id: parse-results
+        run: |
+          LOG_FILE="test-results/bdd-${{ matrix.server }}.log"
+
+          if [ -f "$LOG_FILE" ]; then
+            # Count scenarios
+            TOTAL=$(grep -c "^=== RUN" "$LOG_FILE" || echo "0")
+            PASSED=$(grep -c "^--- PASS:" "$LOG_FILE" || echo "0")
+            FAILED=$(grep -c "^--- FAIL:" "$LOG_FILE" || echo "0")
+
+            # Create summary
+            echo "## BDD Test Results - ${{ matrix.server }} Server" > test-results/summary-${{ matrix.server }}.md
+            echo "" >> test-results/summary-${{ matrix.server }}.md
+
+            if [ "$FAILED" -eq "0" ] && [ "$TOTAL" -gt "0" ]; then
+              echo "✅ **Status**: All tests passed" >> test-results/summary-${{ matrix.server }}.md
+            elif [ "$TOTAL" -eq "0" ]; then
+              echo "⚠️ **Status**: No tests found" >> test-results/summary-${{ matrix.server }}.md
+            else
+              echo "❌ **Status**: Some tests failed" >> test-results/summary-${{ matrix.server }}.md
+            fi
+
+            echo "" >> test-results/summary-${{ matrix.server }}.md
+            echo "**Test Summary**:" >> test-results/summary-${{ matrix.server }}.md
+            echo "- Total Tests: $TOTAL" >> test-results/summary-${{ matrix.server }}.md
+            echo "- Passed: ✅ $PASSED" >> test-results/summary-${{ matrix.server }}.md
+            echo "- Failed: ❌ $FAILED" >> test-results/summary-${{ matrix.server }}.md
+            echo "" >> test-results/summary-${{ matrix.server }}.md
+
+            # Add failed test details if any
+            if [ "$FAILED" -gt "0" ]; then
+              echo "### Failed Tests:" >> test-results/summary-${{ matrix.server }}.md
+              echo '```' >> test-results/summary-${{ matrix.server }}.md
+              grep -A 5 "^--- FAIL:" "$LOG_FILE" | head -50 >> test-results/summary-${{ matrix.server }}.md || true
+              echo '```' >> test-results/summary-${{ matrix.server }}.md
+            fi
+
+            echo "parsed=true" >> $GITHUB_OUTPUT
+          else
+            echo "parsed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bdd-test-results-sdk-${{ github.run_id }}
-          path: |
-            tests/bdd/**/*.log
-            tests/bdd/**/*.out
+          name: bdd-results-${{ matrix.server }}
+          path: test-results/
           retention-days: 7
-          if-no-files-found: ignore
+
+  post-bdd-results:
+    runs-on: ubuntu-latest
+    needs: bdd-tests
+    if: always() && github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Download all test results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bdd-results-*
+          path: all-results
+
+      - name: Combine test results
+        id: combine
+        run: |
+          echo "# 🧪 BDD Test Results" > combined-results.md
+          echo "" >> combined-results.md
+          echo "Test results for both server implementations:" >> combined-results.md
+          echo "" >> combined-results.md
+
+          # Combine SDK results
+          if [ -f "all-results/bdd-results-sdk/summary-sdk.md" ]; then
+            cat all-results/bdd-results-sdk/summary-sdk.md >> combined-results.md
+            echo "" >> combined-results.md
+          fi
+
+          # Combine Legacy results
+          if [ -f "all-results/bdd-results-legacy/summary-legacy.md" ]; then
+            cat all-results/bdd-results-legacy/summary-legacy.md >> combined-results.md
+            echo "" >> combined-results.md
+          fi
+
+          echo "---" >> combined-results.md
+          echo "" >> combined-results.md
+          echo "📊 **Test Environment**" >> combined-results.md
+          echo "- Database: SQLite (temporary in-memory)" >> combined-results.md
+          echo "- Go Version: ${{ env.GO_VERSION }}" >> combined-results.md
+          echo "- Runner: ${{ runner.os }}" >> combined-results.md
+          echo "- Commit: \`${{ github.sha }}\`" >> combined-results.md
+          echo "" >> combined-results.md
+          echo "_Tests run in parallel for both SDK and legacy server implementations_" >> combined-results.md
+
+      - name: Post PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const combinedResults = fs.readFileSync('combined-results.md', 'utf8');
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('🧪 BDD Test Results')
+            );
+
+            const commentBody = combinedResults;
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+            }

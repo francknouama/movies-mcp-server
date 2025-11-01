@@ -1,0 +1,45 @@
+{
+  "description": "Actors for testing search and filtering functionality",
+  "actors": [
+    {
+      "name": "Robert De Niro",
+      "birth_year": 1943,
+      "bio": "Robert Anthony De Niro Jr. is an American actor known for his collaborations with Martin Scorsese."
+    },
+    {
+      "name": "Al Pacino",
+      "birth_year": 1940,
+      "bio": "Alfredo James Pacino is an American actor and filmmaker, known for playing mobsters and cops."
+    },
+    {
+      "name": "Morgan Freeman",
+      "birth_year": 1937,
+      "bio": "Morgan Freeman is an American actor, director, and narrator known for his distinctive deep voice."
+    },
+    {
+      "name": "Samuel L. Jackson",
+      "birth_year": 1948,
+      "bio": "Samuel Leroy Jackson is an American actor and producer, one of the most prolific actors of his generation."
+    },
+    {
+      "name": "Brad Pitt",
+      "birth_year": 1963,
+      "bio": "William Bradley Pitt is an American actor and film producer who has received numerous awards."
+    },
+    {
+      "name": "Angelina Jolie",
+      "birth_year": 1975,
+      "bio": "Angelina Jolie is an American actress, filmmaker, and humanitarian."
+    },
+    {
+      "name": "Scarlett Johansson",
+      "birth_year": 1984,
+      "bio": "Scarlett Ingrid Johansson is an American actress, the world's highest-grossing box office star in 2016 and 2019."
+    },
+    {
+      "name": "Christian Bale",
+      "birth_year": 1974,
+      "bio": "Christian Charles Philip Bale is an English actor known for his intense method acting and versatility."
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "description": "Actors with known movie relationships for testing cast/filmography features",
+  "actors": [
+    {
+      "name": "Christopher Nolan",
+      "birth_year": 1970,
+      "bio": "Christopher Edward Nolan is a British-American filmmaker known for his cerebral, non-linear narratives.",
+      "note": "Often works as both director and writer"
+    },
+    {
+      "name": "Matt Damon",
+      "birth_year": 1970,
+      "bio": "Matthew Paige Damon is an American actor, producer, and screenwriter."
+    },
+    {
+      "name": "Anne Hathaway",
+      "birth_year": 1982,
+      "bio": "Anne Jacqueline Hathaway is an American actress known for her versatile roles in both blockbusters and independent films."
+    },
+    {
+      "name": "Michael Caine",
+      "birth_year": 1933,
+      "bio": "Sir Michael Caine CBE is an English actor, known for his distinctive Cockney accent."
+    },
+    {
+      "name": "Jessica Chastain",
+      "birth_year": 1977,
+      "bio": "Jessica Michelle Chastain is an American actress and producer known for her feminist themes."
+    }
+  ]
+}
