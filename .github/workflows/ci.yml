@@ -171,11 +171,6 @@ jobs:
         ports:
           - 5432:5432
 
-    strategy:
-      matrix:
-        server: [legacy, sdk]
-      fail-fast: false
-
     env:
       DB_HOST: localhost
       DB_PORT: 5432
@@ -183,7 +178,7 @@ jobs:
       DB_PASSWORD: postgres
       DB_NAME: movies_mcp_test
       DB_SSLMODE: disable
-      TEST_MCP_SERVER: ${{ matrix.server }}
+      TEST_MCP_SERVER: sdk
 
     steps:
       - uses: actions/checkout@v4
@@ -210,24 +205,19 @@ jobs:
 
       - name: Run database migrations
         run: |
-          if [ "${{ matrix.server }}" = "sdk" ]; then
-            go build -o migrate-tool ./cmd/server-sdk/main.go
-            ./migrate-tool -migrate-only
-          else
-            go build -o migrate-tool ./cmd/server/main.go
-            ./migrate-tool -migrate-only
-          fi
+          go build -o migrate-tool ./cmd/server-sdk/main.go
+          ./migrate-tool -migrate-only
 
-      - name: Run BDD tests against ${{ matrix.server }} server
+      - name: Run BDD tests against SDK server
         run: |
-          echo "Testing ${{ matrix.server }} server implementation"
+          echo "Testing SDK server implementation"
           go test -v -timeout 5m ./tests/bdd/...
 
       - name: Upload BDD test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bdd-test-results-${{ matrix.server }}-${{ github.run_id }}
+          name: bdd-test-results-sdk-${{ github.run_id }}
           path: |
             tests/bdd/**/*.log
             tests/bdd/**/*.out

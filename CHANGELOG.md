@@ -7,16 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- CHANGELOG.md to track project changes
-- LEGACY_ARCHIVAL_PLAN.md documenting Q1 2025 archival strategy
-- GitHub Issue #26 to track legacy code archival
+### Changed
+- **BREAKING:** Archived legacy server code to `legacy/` directory
+- CI/CD now only tests SDK server (removed matrix strategy)
+- Project is now SDK-only implementation
 
-### Planned
-- **Q1 2025:** Archive legacy server code to `legacy/` directory
-  - Condition: SDK server proven in production for 30+ days
-  - See [LEGACY_ARCHIVAL_PLAN.md](LEGACY_ARCHIVAL_PLAN.md) for details
-  - Tracking: [Issue #26](https://github.com/francknouama/movies-mcp-server/issues/26)
+### Removed
+- Legacy custom MCP server from active codebase
+- Legacy protocol handlers (`internal/interfaces/`)
+- Manual schema definitions (`internal/schemas/`)
+- Legacy server core (`internal/server/`)
+- Dependency injection container for legacy server
+- Legacy integration tests
+
+### Added
+- `legacy/` directory containing all archived code
+- `legacy/README.md` with archival documentation
+- Updated CI/CD to test only SDK server
+- Cleaner project structure focused on SDK
+
+## [2.0.1] - 2024-10-31
+
+### Legacy Code Archival
+
+This release archives the deprecated legacy MCP server code ahead of the planned Q1 2025 timeline.
+
+### Changed
+- **Archived legacy server** to `legacy/` directory (~4,000 lines)
+- **SDK-only implementation** - Project now uses only official SDK
+- **Updated CI/CD** - Removed legacy server from matrix testing
+- **Simplified structure** - Cleaner codebase with single implementation
+
+### Moved to Archive
+- `cmd/server/` → `legacy/cmd/server/`
+- `internal/interfaces/` → `legacy/internal/interfaces/`
+- `internal/schemas/` → `legacy/internal/schemas/`
+- `internal/server/` → `legacy/internal/server/`
+- `internal/composition/` → `legacy/internal/composition/`
+- `tests/integration/` → `legacy/tests/integration/`
+
+### Documentation Updates
+- README updated to reflect SDK-only implementation
+- Project structure simplified in documentation
+- Added comprehensive `legacy/README.md`
+- Updated deprecation notices to archival notices
+
+### Why Archived Now
+- SDK server well-tested with 58 unit tests + BDD tests
+- CI/CD validated 100% feature parity
+- No production issues found
+- Cleaner codebase benefits development
+- Removes maintenance burden of dual testing
+
+### Impact
+- **Code Reduction:** ~4,000 lines archived
+- **CI/CD Simplification:** Single server testing
+- **Maintenance:** Focus on SDK server only
+- **Git History:** All legacy code preserved in archive
+- **Backwards Compatibility:** Legacy code still accessible in `legacy/`
+
+Closes #26
 
 ## [2.0.0] - 2024-10-31
 

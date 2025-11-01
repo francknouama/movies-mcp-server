@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	"github.com/francknouama/movies-mcp-server/internal/interfaces/dto"
+	"github.com/francknouama/movies-mcp-server/legacy/internal/interfaces/dto"
 )
 
 // MovieCastResponse represents the cast of a movie
