@@ -58,6 +58,16 @@ func setupActorTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("failed to create test schema: %v", err)
 	}
 
+	// Verify tables were created
+	var tableCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('actors', 'movies', 'movie_actors')").Scan(&tableCount)
+	if err != nil {
+		t.Fatalf("failed to verify tables: %v", err)
+	}
+	if tableCount != 3 {
+		t.Fatalf("expected 3 tables to be created, got %d", tableCount)
+	}
+
 	return db
 }
 
@@ -183,7 +193,6 @@ func TestActorRepository_FindByID_NotFound(t *testing.T) {
 }
 
 func TestActorRepository_FindByName(t *testing.T) {
-	t.Skip("TODO: Fix table setup issue with movie_actors junction table")
 	db := setupActorTestDB(t)
 	defer db.Close()
 
@@ -217,7 +226,6 @@ func TestActorRepository_FindByName(t *testing.T) {
 }
 
 func TestActorRepository_FindByMovieID(t *testing.T) {
-	t.Skip("TODO: Fix table setup issue with movie_actors junction table")
 	db := setupActorTestDB(t)
 	defer db.Close()
 
@@ -254,7 +262,6 @@ func TestActorRepository_FindByMovieID(t *testing.T) {
 }
 
 func TestActorRepository_FindByCriteria_ByBirthYearRange(t *testing.T) {
-	t.Skip("TODO: Fix table setup issue with movie_actors junction table")
 	db := setupActorTestDB(t)
 	defer db.Close()
 
@@ -465,7 +472,6 @@ func TestActorRepository_UpdateMovieRelationships(t *testing.T) {
 }
 
 func TestActorRepository_DeleteCascade(t *testing.T) {
-	t.Skip("TODO: Fix table setup issue with movie_actors junction table")
 	db := setupActorTestDB(t)
 	defer db.Close()
 
