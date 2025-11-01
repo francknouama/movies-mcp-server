@@ -25,6 +25,8 @@ env:
 jobs:
   smoke-tests:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -55,33 +57,119 @@ jobs:
           go build -o build/movies-mcp-server-sdk ./cmd/server-sdk/main.go
 
       - name: Run BDD smoke tests (SDK server)
+        id: smoke-test
+        continue-on-error: true
         run: |
           echo "Running smoke tests with SDK server"
           echo "Tests use temporary SQLite databases"
-          timeout 60s go test -v -timeout=1m -run TestBDDFeatures ./tests/bdd/... || true
+          mkdir -p test-results
+          timeout 60s go test -v -timeout=1m -run TestBDDFeatures ./tests/bdd/... 2>&1 | tee test-results/smoke-test.log
 
-      - name: Generate test summary
+      - name: Parse test results
         if: always()
+        id: parse-results
         run: |
-          echo "# BDD Smoke Test Results" > smoke-test-summary.md
-          echo "" >> smoke-test-summary.md
-          echo "## Quick Validation" >> smoke-test-summary.md
-          echo "" >> smoke-test-summary.md
-          echo "Smoke tests validate critical BDD scenarios quickly:" >> smoke-test-summary.md
-          echo "- MCP protocol initialization" >> smoke-test-summary.md
-          echo "- Basic CRUD operations" >> smoke-test-summary.md
-          echo "- Core tool functionality" >> smoke-test-summary.md
-          echo "" >> smoke-test-summary.md
-          echo "## Environment" >> smoke-test-summary.md
-          echo "- **Server**: SDK (SQLite-based)" >> smoke-test-summary.md
-          echo "- **Database**: Temporary in-memory SQLite" >> smoke-test-summary.md
-          echo "- **Duration**: < 1 minute" >> smoke-test-summary.md
-          echo "- **Timestamp**: $(date -u)" >> smoke-test-summary.md
+          LOG_FILE="test-results/smoke-test.log"
+
+          if [ -f "$LOG_FILE" ]; then
+            # Count scenarios
+            TOTAL=$(grep -c "^=== RUN" "$LOG_FILE" || echo "0")
+            PASSED=$(grep -c "^--- PASS:" "$LOG_FILE" || echo "0")
+            FAILED=$(grep -c "^--- FAIL:" "$LOG_FILE" || echo "0")
+
+            # Determine duration
+            DURATION=$(grep "PASS\|FAIL" "$LOG_FILE" | tail -1 | grep -oP '\d+\.\d+s' || echo "N/A")
+
+            # Create summary
+            echo "# 🚀 BDD Smoke Test Results" > smoke-test-summary.md
+            echo "" >> smoke-test-summary.md
+
+            if [ "$FAILED" -eq "0" ] && [ "$TOTAL" -gt "0" ]; then
+              echo "✅ **Status**: All smoke tests passed" >> smoke-test-summary.md
+            elif [ "$TOTAL" -eq "0" ]; then
+              echo "⚠️ **Status**: No tests found" >> smoke-test-summary.md
+            else
+              echo "❌ **Status**: Some smoke tests failed" >> smoke-test-summary.md
+            fi
+
+            echo "" >> smoke-test-summary.md
+            echo "**Quick Validation Summary**:" >> smoke-test-summary.md
+            echo "- Total Tests: $TOTAL" >> smoke-test-summary.md
+            echo "- Passed: ✅ $PASSED" >> smoke-test-summary.md
+            echo "- Failed: ❌ $FAILED" >> smoke-test-summary.md
+            echo "- Duration: ⏱️ $DURATION" >> smoke-test-summary.md
+            echo "" >> smoke-test-summary.md
+
+            # Add failed test details if any
+            if [ "$FAILED" -gt "0" ]; then
+              echo "### Failed Smoke Tests:" >> smoke-test-summary.md
+              echo '```' >> smoke-test-summary.md
+              grep -A 3 "^--- FAIL:" "$LOG_FILE" | head -30 >> smoke-test-summary.md || true
+              echo '```' >> smoke-test-summary.md
+              echo "" >> smoke-test-summary.md
+            fi
+
+            echo "---" >> smoke-test-summary.md
+            echo "" >> smoke-test-summary.md
+            echo "**Smoke Tests Validate**:" >> smoke-test-summary.md
+            echo "- MCP protocol initialization" >> smoke-test-summary.md
+            echo "- Basic CRUD operations" >> smoke-test-summary.md
+            echo "- Core tool functionality" >> smoke-test-summary.md
+            echo "" >> smoke-test-summary.md
+            echo "**Environment**:" >> smoke-test-summary.md
+            echo "- Server: SDK (SQLite-based)" >> smoke-test-summary.md
+            echo "- Database: Temporary in-memory SQLite" >> smoke-test-summary.md
+            echo "- Commit: \`${{ github.sha }}\`" >> smoke-test-summary.md
+
+            echo "parsed=true" >> $GITHUB_OUTPUT
+          else
+            echo "parsed=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Upload smoke test summary
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: smoke-test-summary-${{ github.run_id }}
-          path: smoke-test-summary.md
+          path: |
+            smoke-test-summary.md
+            test-results/
           retention-days: 3
+
+      - name: Post PR comment (smoke tests)
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const smokeResults = fs.readFileSync('smoke-test-summary.md', 'utf8');
+
+            // Find existing smoke test comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('🚀 BDD Smoke Test Results')
+            );
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: smokeResults
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: smokeResults
+              });
+            }
