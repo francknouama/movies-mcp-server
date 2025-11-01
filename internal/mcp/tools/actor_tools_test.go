@@ -10,14 +10,14 @@ import (
 
 // MockActorService implements ActorService for testing
 type MockActorService struct {
-	CreateActorFunc        func(ctx context.Context, cmd actorApp.CreateActorCommand) (*actorApp.ActorDTO, error)
-	GetActorFunc           func(ctx context.Context, id int) (*actorApp.ActorDTO, error)
-	UpdateActorFunc        func(ctx context.Context, cmd actorApp.UpdateActorCommand) (*actorApp.ActorDTO, error)
-	DeleteActorFunc        func(ctx context.Context, id int) error
-	LinkActorToMovieFunc   func(ctx context.Context, actorID, movieID int) error
+	CreateActorFunc          func(ctx context.Context, cmd actorApp.CreateActorCommand) (*actorApp.ActorDTO, error)
+	GetActorFunc             func(ctx context.Context, id int) (*actorApp.ActorDTO, error)
+	UpdateActorFunc          func(ctx context.Context, cmd actorApp.UpdateActorCommand) (*actorApp.ActorDTO, error)
+	DeleteActorFunc          func(ctx context.Context, id int) error
+	LinkActorToMovieFunc     func(ctx context.Context, actorID, movieID int) error
 	UnlinkActorFromMovieFunc func(ctx context.Context, actorID, movieID int) error
-	GetActorsByMovieFunc   func(ctx context.Context, movieID int) ([]*actorApp.ActorDTO, error)
-	SearchActorsFunc       func(ctx context.Context, query actorApp.SearchActorsQuery) ([]*actorApp.ActorDTO, error)
+	GetActorsByMovieFunc     func(ctx context.Context, movieID int) ([]*actorApp.ActorDTO, error)
+	SearchActorsFunc         func(ctx context.Context, query actorApp.SearchActorsQuery) ([]*actorApp.ActorDTO, error)
 }
 
 func (m *MockActorService) CreateActor(ctx context.Context, cmd actorApp.CreateActorCommand) (*actorApp.ActorDTO, error) {
