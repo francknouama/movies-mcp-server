@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 
 	"github.com/francknouama/movies-mcp-server/internal/domain/actor"
@@ -500,5 +501,333 @@ func TestActorRepository_DeleteCascade(t *testing.T) {
 	actorsInMovie, _ = actorRepo.FindByMovieID(ctx, domainMovie.ID())
 	if len(actorsInMovie) != 0 {
 		t.Errorf("Expected 0 actors in movie after cascade delete, got %d", len(actorsInMovie))
+	}
+}
+
+// Error scenario tests for better coverage
+
+func TestActorRepository_Save_Insert_InvalidData(t *testing.T) {
+	// Create actor with invalid data (empty name should fail domain validation)
+	_, err := actor.NewActor("", 1990)
+	if err == nil {
+		t.Error("Expected error for invalid actor data")
+	}
+}
+
+func TestActorRepository_FindByCriteria_NoResults(t *testing.T) {
+	db := setupActorTestDB(t)
+	defer db.Close()
+
+	actorRepo := NewActorRepository(db)
+	ctx := context.Background()
+
+	// Search with criteria that won't match any actors
+	criteria := actor.SearchCriteria{
+		Name: "NonExistent Actor Name That Should Not Match",
+	}
+
+	results, err := actorRepo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	if len(results) != 0 {
+		t.Errorf("Expected 0 actors for non-existent name, got %d", len(results))
+	}
+}
+
+func TestActorRepository_FindByCriteria_WithBirthYearOnly(t *testing.T) {
+	db := setupActorTestDB(t)
+	defer db.Close()
+
+	actorRepo := NewActorRepository(db)
+	ctx := context.Background()
+
+	// Insert test actors
+	actor1, _ := actor.NewActor("Actor 1990", 1990)
+	actor2, _ := actor.NewActor("Actor 1985", 1985)
+	actorRepo.Save(ctx, actor1)
+	actorRepo.Save(ctx, actor2)
+
+	// Search by birth year range
+	criteria := actor.SearchCriteria{
+		MinBirthYear: 1989,
+		MaxBirthYear: 1991,
+	}
+
+	results, err := actorRepo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	if len(results) != 1 {
+		t.Errorf("Expected 1 actor in birth year range, got %d", len(results))
+	}
+
+	if len(results) > 0 && results[0].Name() != "Actor 1990" {
+		t.Errorf("Expected 'Actor 1990', got '%s'", results[0].Name())
+	}
+}
+
+func TestActorRepository_DeleteAll_WithData(t *testing.T) {
+	db := setupActorTestDB(t)
+	defer db.Close()
+
+	actorRepo := NewActorRepository(db)
+	ctx := context.Background()
+
+	// Insert multiple test actors
+	for i := 1; i <= 3; i++ {
+		testActor, _ := actor.NewActor(fmt.Sprintf("Actor %d", i), 1980+i)
+		err := actorRepo.Save(ctx, testActor)
+		if err != nil {
+			t.Fatalf("Failed to save test actor: %v", err)
+		}
+	}
+
+	// Verify actors exist
+	count, err := actorRepo.CountAll(ctx)
+	if err != nil {
+		t.Fatalf("CountAll() error = %v", err)
+	}
+	if count != 3 {
+		t.Fatalf("Expected 3 actors before DeleteAll, got %d", count)
+	}
+
+	// Delete all
+	err = actorRepo.DeleteAll(ctx)
+	if err != nil {
+		t.Fatalf("DeleteAll() error = %v", err)
+	}
+
+	// Verify all deleted
+	count, err = actorRepo.CountAll(ctx)
+	if err != nil {
+		t.Fatalf("CountAll() error = %v", err)
+	}
+	if count != 0 {
+		t.Errorf("Expected 0 actors after DeleteAll, got %d", count)
+	}
+}
+
+func TestActorRepository_Update_WithMovieRelationships(t *testing.T) {
+	db := setupActorTestDB(t)
+	defer db.Close()
+
+	actorRepo := NewActorRepository(db)
+	movieRepo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create and save a movie
+	testMovie, _ := movie.NewMovie("Test Movie", "Director", 2020)
+	err := movieRepo.Save(ctx, testMovie)
+	if err != nil {
+		t.Fatalf("Failed to save test movie: %v", err)
+	}
+
+	// Create and save an actor with the movie
+	testActor, _ := actor.NewActor("Test Actor", 1990)
+	testActor.AddMovie(testMovie.ID())
+	err = actorRepo.Save(ctx, testActor)
+	if err != nil {
+		t.Fatalf("Failed to save test actor: %v", err)
+	}
+
+	// Update the actor's bio
+	testActor.SetBio("Updated bio")
+	err = actorRepo.Save(ctx, testActor)
+	if err != nil {
+		t.Fatalf("Failed to update test actor: %v", err)
+	}
+
+	// Verify the update persisted
+	retrieved, err := actorRepo.FindByID(ctx, testActor.ID())
+	if err != nil {
+		t.Fatalf("Failed to retrieve updated actor: %v", err)
+	}
+
+	if retrieved.Bio() != "Updated bio" {
+		t.Errorf("Expected bio 'Updated bio', got '%s'", retrieved.Bio())
+	}
+
+	// Verify movie relationship is still there
+	if len(retrieved.MovieIDs()) != 1 {
+		t.Errorf("Expected 1 movie relationship after update, got %d", len(retrieved.MovieIDs()))
+	}
+}
+
+func TestActorRepository_FindByCriteria_WithMovieID(t *testing.T) {
+	db := setupActorTestDB(t)
+	defer db.Close()
+
+	actorRepo := NewActorRepository(db)
+	movieRepo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create a movie
+	testMovie, _ := movie.NewMovie("Test Movie", "Director", 2020)
+	err := movieRepo.Save(ctx, testMovie)
+	if err != nil {
+		t.Fatalf("Failed to save movie: %v", err)
+	}
+
+	// Create actors with and without the movie
+	actor1, _ := actor.NewActor("Actor in Movie", 1990)
+	actor1.AddMovie(testMovie.ID())
+	err = actorRepo.Save(ctx, actor1)
+	if err != nil {
+		t.Fatalf("Failed to save actor1: %v", err)
+	}
+
+	actor2, _ := actor.NewActor("Actor not in Movie", 1985)
+	err = actorRepo.Save(ctx, actor2)
+	if err != nil {
+		t.Fatalf("Failed to save actor2: %v", err)
+	}
+
+	// Search by movie ID
+	criteria := actor.SearchCriteria{
+		MovieID: testMovie.ID(),
+	}
+
+	results, err := actorRepo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	// Should only find actor1
+	if len(results) != 1 {
+		t.Errorf("Expected 1 actor for movie, got %d", len(results))
+	}
+
+	if len(results) > 0 && results[0].Name() != "Actor in Movie" {
+		t.Errorf("Expected 'Actor in Movie', got '%s'", results[0].Name())
+	}
+}
+
+func TestActorRepository_FindByCriteria_WithName(t *testing.T) {
+	db := setupActorTestDB(t)
+	defer db.Close()
+
+	actorRepo := NewActorRepository(db)
+	ctx := context.Background()
+
+	// Create actors
+	actor1, _ := actor.NewActor("John Smith", 1990)
+	actor2, _ := actor.NewActor("Jane Doe", 1985)
+	actorRepo.Save(ctx, actor1)
+	actorRepo.Save(ctx, actor2)
+
+	// Search by partial name
+	criteria := actor.SearchCriteria{
+		Name: "John",
+	}
+
+	results, err := actorRepo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	// Should find John Smith
+	if len(results) != 1 {
+		t.Errorf("Expected 1 actor matching 'John', got %d", len(results))
+	}
+
+	if len(results) > 0 && results[0].Name() != "John Smith" {
+		t.Errorf("Expected 'John Smith', got '%s'", results[0].Name())
+	}
+}
+
+func TestActorRepository_DeleteAll_EmptyTable(t *testing.T) {
+	db := setupActorTestDB(t)
+	defer db.Close()
+
+	actorRepo := NewActorRepository(db)
+	ctx := context.Background()
+
+	// Delete from empty table (should succeed)
+	err := actorRepo.DeleteAll(ctx)
+	if err != nil {
+		t.Errorf("DeleteAll() on empty table error = %v", err)
+	}
+
+	// Verify count is 0
+	count, err := actorRepo.CountAll(ctx)
+	if err != nil {
+		t.Fatalf("CountAll() error = %v", err)
+	}
+
+	if count != 0 {
+		t.Errorf("Expected count 0 after DeleteAll on empty table, got %d", count)
+	}
+}
+
+func TestActorRepository_FindByCriteria_OrderByBirthYear(t *testing.T) {
+	db := setupActorTestDB(t)
+	defer db.Close()
+
+	actorRepo := NewActorRepository(db)
+	ctx := context.Background()
+
+	// Create actors with different birth years
+	actor1, _ := actor.NewActor("Actor 1990", 1990)
+	actor2, _ := actor.NewActor("Actor 1985", 1985)
+	actor3, _ := actor.NewActor("Actor 1995", 1995)
+	actorRepo.Save(ctx, actor1)
+	actorRepo.Save(ctx, actor2)
+	actorRepo.Save(ctx, actor3)
+
+	// Search ordered by birth year ascending
+	criteria := actor.SearchCriteria{
+		OrderBy:  actor.OrderByBirthYear,
+		OrderDir: actor.OrderAsc,
+	}
+
+	results, err := actorRepo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	if len(results) != 3 {
+		t.Fatalf("Expected 3 actors, got %d", len(results))
+	}
+
+	// Verify ordering
+	if results[0].BirthYear().Value() != 1985 || results[1].BirthYear().Value() != 1990 || results[2].BirthYear().Value() != 1995 {
+		t.Errorf("Actors not ordered by birth year ascending")
+	}
+}
+
+func TestActorRepository_FindByCriteria_OrderDescending(t *testing.T) {
+	db := setupActorTestDB(t)
+	defer db.Close()
+
+	actorRepo := NewActorRepository(db)
+	ctx := context.Background()
+
+	// Create actors
+	actor1, _ := actor.NewActor("Alice", 1990)
+	actor2, _ := actor.NewActor("Bob", 1985)
+	actorRepo.Save(ctx, actor1)
+	actorRepo.Save(ctx, actor2)
+
+	// Search ordered by name descending
+	criteria := actor.SearchCriteria{
+		OrderBy:  actor.OrderByName,
+		OrderDir: actor.OrderDesc,
+	}
+
+	results, err := actorRepo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	if len(results) != 2 {
+		t.Fatalf("Expected 2 actors, got %d", len(results))
+	}
+
+	// Verify descending order (Bob should come before Alice)
+	if results[0].Name() != "Bob" {
+		t.Errorf("Expected 'Bob' first in descending order, got '%s'", results[0].Name())
 	}
 }
