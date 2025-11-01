@@ -2,11 +2,11 @@
 
 A production-ready **Model Context Protocol (MCP) server** for intelligent movie database management, built with Clean Architecture principles and optimized for AI-assisted environments.
 
-> **🎉 Now powered by the Official Golang MCP SDK v1.1.0!**
-> This project has been fully migrated to use the official MCP SDK maintained by Anthropic and Google, providing better type safety, automatic schema generation, and improved maintainability. See [SDK Migration](#sdk-migration) for details.
+> **🎉 Powered by Official Golang MCP SDK v1.1.0**
+> Built with the official MCP SDK maintained by Anthropic and Google, providing type safety, automatic schema generation, and production-ready reliability. See [SDK Migration](#sdk-migration) for migration details.
 
-> **⚠️ IMPORTANT: Legacy Server Deprecated**
-> The custom server at `cmd/server/` has been **deprecated**. Use the SDK-based server at `cmd/server-sdk/` for all deployments. See [Server Status](#️-server-status-legacy-server-deprecated) for details.
+> **✅ SDK-Only Implementation**
+> The legacy custom server has been **archived**. This project now uses only the official SDK-based server at `cmd/server-sdk/`. See [Server Status](#-server-status-sdk-only-implementation) for details.
 
 ## What is Movies MCP Server?
 
@@ -296,23 +296,20 @@ This project has been **fully migrated** from a custom MCP protocol implementati
 - [Testing Comparison](docs/TESTING_COMPARISON.md) - Testing improvements
 - [Migration Complete](docs/SDK_MIGRATION_COMPLETE.md) - Full migration summary
 
-### ⚠️ Server Status: Legacy Server Deprecated
+### ✅ Server Status: SDK-Only Implementation
 
-| Server | Status | When to Use |
-|--------|--------|-------------|
-| **SDK Server** (`cmd/server-sdk/`) | ✅ **Active & Recommended** | All deployments (production & development) |
-| **Legacy Server** (`cmd/server/`) | ⚠️ **DEPRECATED** | Backwards compatibility testing only |
+**Active Server:** `cmd/server-sdk/` - Official SDK-based implementation
 
-**IMPORTANT:** The legacy custom server at `cmd/server/` has been **deprecated** as of the SDK migration completion. All users should migrate to the SDK-based server.
+The Movies MCP Server now uses **only** the official Golang MCP SDK v1.1.0, providing:
+- ✅ Official SDK maintained by Anthropic and Google
+- ✅ 26% less code with better type safety
+- ✅ Automatic schema generation
+- ✅ Improved maintainability and testing
+- ✅ Production-ready and fully tested
 
-**Why SDK Server?**
-- Official Golang MCP SDK v1.1.0 maintained by Anthropic and Google
-- 26% less code with better type safety
-- Automatic schema generation
-- Improved maintainability and testing
-- 100% feature parity validated via CI/CD
-
-**Migration:** See [`cmd/server/DEPRECATED.md`](cmd/server/DEPRECATED.md) for detailed migration instructions.
+**Legacy Server Archived:**
+The deprecated custom server has been archived to `legacy/` directory.
+See [`legacy/README.md`](legacy/README.md) for archival details.
 
 ---
 
@@ -509,19 +506,20 @@ Comprehensive documentation available in the `/docs` directory:
 ```
 movies-mcp-server/
 ├── cmd/
-│   ├── server-sdk/          # ✅ SDK-based server (RECOMMENDED)
-│   └── server/              # ⚠️ Legacy custom server (DEPRECATED)
+│   └── server-sdk/          # ✅ Official SDK-based server (ACTIVE)
 ├── internal/
 │   ├── domain/              # Business logic (entities, value objects)
 │   ├── application/         # Use cases and services
 │   ├── infrastructure/      # Database and integrations
-│   ├── mcp/                # ✅ MCP SDK tools and handlers (ACTIVE)
-│   ├── interfaces/          # ⚠️ Legacy MCP protocol handlers (DEPRECATED)
-│   ├── schemas/             # ⚠️ Legacy tool definitions (DEPRECATED)
-│   └── server/              # ⚠️ Legacy MCP server core (DEPRECATED)
+│   ├── mcp/                # ✅ MCP SDK tools and handlers (58 tests)
+│   └── config/              # Configuration management
+├── legacy/                  # 📦 Archived legacy server code
+│   ├── cmd/server/          # Deprecated custom server
+│   ├── internal/            # Deprecated handlers and schemas
+│   └── tests/integration/   # Legacy integration tests
 ├── migrations/              # Database migrations
-├── tests/                   # Comprehensive test suites
-│   └── bdd/                # BDD feature files (tests both servers)
+├── tests/
+│   └── bdd/                # BDD feature files (tests SDK server)
 ├── docs/                    # Documentation
 ├── monitoring/              # Prometheus and Grafana configs
 └── docker/                  # Docker configurations
