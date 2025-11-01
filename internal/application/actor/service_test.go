@@ -975,3 +975,196 @@ func TestService_SearchActors_InvalidMovieID(t *testing.T) {
 		t.Error("Expected error for invalid movie ID")
 	}
 }
+
+func TestService_SearchActors_OrderByOptions(t *testing.T) {
+	repo := NewMockActorRepository()
+	service := NewService(repo)
+
+	// Create test actors
+	actors := []CreateActorCommand{
+		{Name: "Charlie", BirthYear: 1990},
+		{Name: "Alice", BirthYear: 1980},
+		{Name: "Bob", BirthYear: 1985},
+	}
+
+	for _, cmd := range actors {
+		_, err := service.CreateActor(context.Background(), cmd)
+		if err != nil {
+			t.Fatalf("Failed to create actor: %v", err)
+		}
+	}
+
+	tests := []struct {
+		name    string
+		orderBy string
+		desc    string
+	}{
+		{
+			name:    "order by name",
+			orderBy: "name",
+			desc:    "Should order by actor name",
+		},
+		{
+			name:    "order by birth_year",
+			orderBy: "birth_year",
+			desc:    "Should order by birth year",
+		},
+		{
+			name:    "order by created_at",
+			orderBy: "created_at",
+			desc:    "Should order by creation timestamp",
+		},
+		{
+			name:    "order by updated_at",
+			orderBy: "updated_at",
+			desc:    "Should order by update timestamp",
+		},
+		{
+			name:    "invalid order defaults to name",
+			orderBy: "invalid_field",
+			desc:    "Should default to name ordering for invalid field",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			query := SearchActorsQuery{
+				OrderBy: tt.orderBy,
+				Limit:   10,
+			}
+			results, err := service.SearchActors(context.Background(), query)
+			if err != nil {
+				t.Fatalf("SearchActors() error = %v", err)
+			}
+			if len(results) == 0 {
+				t.Error("Expected results from search")
+			}
+		})
+	}
+}
+
+func TestService_SearchActors_OrderDirection(t *testing.T) {
+	repo := NewMockActorRepository()
+	service := NewService(repo)
+
+	// Create test actors
+	actors := []CreateActorCommand{
+		{Name: "Alice", BirthYear: 1980},
+		{Name: "Bob", BirthYear: 1985},
+	}
+
+	for _, cmd := range actors {
+		_, err := service.CreateActor(context.Background(), cmd)
+		if err != nil {
+			t.Fatalf("Failed to create actor: %v", err)
+		}
+	}
+
+	tests := []struct {
+		name     string
+		orderDir string
+		desc     string
+	}{
+		{
+			name:     "ascending order",
+			orderDir: "asc",
+			desc:     "Should order ascending",
+		},
+		{
+			name:     "descending order",
+			orderDir: "desc",
+			desc:     "Should order descending",
+		},
+		{
+			name:     "default to ascending for invalid",
+			orderDir: "invalid",
+			desc:     "Should default to ascending for invalid direction",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			query := SearchActorsQuery{
+				OrderBy:  "name",
+				OrderDir: tt.orderDir,
+				Limit:    10,
+			}
+			results, err := service.SearchActors(context.Background(), query)
+			if err != nil {
+				t.Fatalf("SearchActors() error = %v", err)
+			}
+			if len(results) != 2 {
+				t.Errorf("Expected 2 results, got %d", len(results))
+			}
+		})
+	}
+}
+
+func TestService_UpdateActor_MovieLinks(t *testing.T) {
+	repo := NewMockActorRepository()
+	service := NewService(repo)
+
+	// Create an actor
+	createCmd := CreateActorCommand{
+		Name:      "Test Actor",
+		BirthYear: 1980,
+	}
+	created, err := service.CreateActor(context.Background(), createCmd)
+	if err != nil {
+		t.Fatalf("Failed to create actor: %v", err)
+	}
+
+	// Link actor to two movies
+	err = service.LinkActorToMovie(context.Background(), created.ID, 123)
+	if err != nil {
+		t.Fatalf("Failed to link actor to movie 123: %v", err)
+	}
+	err = service.LinkActorToMovie(context.Background(), created.ID, 456)
+	if err != nil {
+		t.Fatalf("Failed to link actor to movie 456: %v", err)
+	}
+
+	// Update actor - movie links should be preserved
+	updateCmd := UpdateActorCommand{
+		ID:        created.ID,
+		Name:      "Updated Actor",
+		BirthYear: 1985,
+		Bio:       "Updated biography",
+	}
+
+	updated, err := service.UpdateActor(context.Background(), updateCmd)
+	if err != nil {
+		t.Fatalf("UpdateActor() error = %v", err)
+	}
+
+	// Verify actor was updated
+	if updated.Name != "Updated Actor" {
+		t.Errorf("Expected name 'Updated Actor', got '%s'", updated.Name)
+	}
+	if updated.BirthYear != 1985 {
+		t.Errorf("Expected birth year 1985, got %d", updated.BirthYear)
+	}
+	if updated.Bio != "Updated biography" {
+		t.Errorf("Expected bio 'Updated biography', got '%s'", updated.Bio)
+	}
+
+	// Verify movie links were preserved
+	if len(updated.MovieIDs) != 2 {
+		t.Errorf("Expected 2 movie IDs (preserved from before update), got %d", len(updated.MovieIDs))
+	}
+
+	// Verify the specific movie IDs are present
+	hasMovie123 := false
+	hasMovie456 := false
+	for _, id := range updated.MovieIDs {
+		if id == 123 {
+			hasMovie123 = true
+		}
+		if id == 456 {
+			hasMovie456 = true
+		}
+	}
+	if !hasMovie123 || !hasMovie456 {
+		t.Errorf("Expected movie IDs 123 and 456 to be preserved, got %v", updated.MovieIDs)
+	}
+}
