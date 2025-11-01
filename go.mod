@@ -13,6 +13,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.37.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	gopkg.in/yaml.v2 v2.4.0
+	modernc.org/sqlite v1.39.1
 )
 
 require (

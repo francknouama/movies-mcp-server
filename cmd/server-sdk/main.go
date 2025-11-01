@@ -11,12 +11,16 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	_ "modernc.org/sqlite"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	actorApp "github.com/francknouama/movies-mcp-server/internal/application/actor"
 	movieApp "github.com/francknouama/movies-mcp-server/internal/application/movie"
 	"github.com/francknouama/movies-mcp-server/internal/config"
+	"github.com/francknouama/movies-mcp-server/internal/domain/actor"
+	"github.com/francknouama/movies-mcp-server/internal/domain/movie"
 	"github.com/francknouama/movies-mcp-server/internal/infrastructure/postgres"
+	"github.com/francknouama/movies-mcp-server/internal/infrastructure/sqlite"
 	"github.com/francknouama/movies-mcp-server/internal/mcp/resources"
 	"github.com/francknouama/movies-mcp-server/internal/mcp/tools"
 )
@@ -62,7 +66,7 @@ func main() {
 		fmt.Printf("  - 23 tools across movie/actor management, search, and analysis\n")
 		fmt.Printf("  - 3 database resources for movie data and statistics\n")
 		fmt.Printf("  - Clean Architecture with Domain-Driven Design\n")
-		fmt.Printf("  - PostgreSQL with automatic migrations\n")
+		fmt.Printf("  - SQLite or PostgreSQL with automatic migrations\n")
 		os.Exit(0)
 	}
 
@@ -100,12 +104,20 @@ func main() {
 		os.Exit(0)
 	}
 
-	fmt.Fprintf(os.Stderr, "Connected to database: %s\n", cfg.Database.Name)
+	fmt.Fprintf(os.Stderr, "Connected to database: %s (driver: %s)\n", cfg.Database.Name, cfg.Database.Driver)
 	fmt.Fprintf(os.Stderr, "Starting Movies MCP Server with Official SDK...\n")
 
-	// Initialize repositories
-	movieRepo := postgres.NewMovieRepository(db)
-	actorRepo := postgres.NewActorRepository(db)
+	// Initialize repositories based on driver
+	var movieRepo movie.Repository
+	var actorRepo actor.Repository
+
+	if cfg.Database.Driver == "sqlite" {
+		movieRepo = sqlite.NewMovieRepository(db)
+		actorRepo = sqlite.NewActorRepository(db)
+	} else {
+		movieRepo = postgres.NewMovieRepository(db)
+		actorRepo = postgres.NewActorRepository(db)
+	}
 
 	// Initialize services
 	movieService := movieApp.NewService(movieRepo)
@@ -279,10 +291,19 @@ func main() {
 	}
 }
 
-// connectToDatabase establishes a connection to PostgreSQL with retries
+// connectToDatabase establishes a connection to the database with retries
 func connectToDatabase(cfg *config.DatabaseConfig) (*sql.DB, error) {
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Name, cfg.SSLMode)
+	var driverName string
+	var dsn string
+
+	if cfg.Driver == "sqlite" {
+		driverName = "sqlite"
+		dsn = cfg.ConnectionString()
+	} else {
+		driverName = "postgres"
+		dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+			cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Name, cfg.SSLMode)
+	}
 
 	var db *sql.DB
 	var err error
@@ -290,7 +311,7 @@ func connectToDatabase(cfg *config.DatabaseConfig) (*sql.DB, error) {
 	// Retry connection with exponential backoff
 	maxRetries := 5
 	for i := 0; i < maxRetries; i++ {
-		db, err = sql.Open("postgres", dsn)
+		db, err = sql.Open(driverName, dsn)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open database: %w", err)
 		}
@@ -337,34 +358,47 @@ func runMigrations(migrationsPath string) error {
 	// Get database URL from environment
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		// Construct from individual components
-		host := os.Getenv("DB_HOST")
-		if host == "" {
-			host = "localhost"
-		}
-		port := os.Getenv("DB_PORT")
-		if port == "" {
-			port = "5432"
-		}
-		user := os.Getenv("DB_USER")
-		if user == "" {
-			user = "movies_user"
-		}
-		password := os.Getenv("DB_PASSWORD")
-		if password == "" {
-			password = "movies_password"
-		}
-		dbname := os.Getenv("DB_NAME")
-		if dbname == "" {
-			dbname = "movies_mcp"
-		}
-		sslmode := os.Getenv("DB_SSLMODE")
-		if sslmode == "" {
-			sslmode = "disable"
+		// Construct from individual components based on driver
+		driver := os.Getenv("DB_DRIVER")
+		if driver == "" {
+			driver = "sqlite"
 		}
 
-		dbURL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-			user, password, host, port, dbname, sslmode)
+		if driver == "sqlite" {
+			dbname := os.Getenv("DB_NAME")
+			if dbname == "" {
+				dbname = "movies.db"
+			}
+			dbURL = fmt.Sprintf("sqlite://%s", dbname)
+		} else {
+			host := os.Getenv("DB_HOST")
+			if host == "" {
+				host = "localhost"
+			}
+			port := os.Getenv("DB_PORT")
+			if port == "" {
+				port = "5432"
+			}
+			user := os.Getenv("DB_USER")
+			if user == "" {
+				user = "movies_user"
+			}
+			password := os.Getenv("DB_PASSWORD")
+			if password == "" {
+				password = "movies_password"
+			}
+			dbname := os.Getenv("DB_NAME")
+			if dbname == "" {
+				dbname = "movies_mcp"
+			}
+			sslmode := os.Getenv("DB_SSLMODE")
+			if sslmode == "" {
+				sslmode = "disable"
+			}
+
+			dbURL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+				user, password, host, port, dbname, sslmode)
+		}
 	}
 
 	// Run the migration tool
