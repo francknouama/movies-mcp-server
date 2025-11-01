@@ -1,5 +1,9 @@
 # BDD Testing Guide for Movies MCP Server
 
+![BDD Tests](https://github.com/francknouama/movies-mcp-server/workflows/CI%20Pipeline/badge.svg)
+![BDD Smoke Tests](https://github.com/francknouama/movies-mcp-server/workflows/BDD%20Smoke%20Tests/badge.svg)
+![Advanced Tests](https://github.com/francknouama/movies-mcp-server/workflows/Advanced%20Testing%20Pipeline/badge.svg)
+
 This guide provides comprehensive documentation for Behavior-Driven Development (BDD) testing using Godog (Cucumber for Go) in the Movies MCP Server project.
 
 ## Table of Contents
