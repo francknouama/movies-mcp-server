@@ -198,7 +198,7 @@ func (s *Service) LinkActorToMovie(ctx context.Context, actorID, movieID int) er
 		return err
 	}
 
-	return s.updateActorMovieLink(ctx, actorDomainID, movieDomainID, 
+	return s.updateActorMovieLink(ctx, actorDomainID, movieDomainID,
 		func(a *actor.Actor, m shared.MovieID) error { return a.AddMovie(m) },
 		"link actor to movie")
 }

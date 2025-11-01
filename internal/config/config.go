@@ -18,7 +18,7 @@ type Config struct {
 
 // DatabaseConfig holds database-specific configuration.
 type DatabaseConfig struct {
-	Name            string        // SQLite database file path
+	Name            string // SQLite database file path
 	MaxOpenConns    int
 	MaxIdleConns    int
 	ConnMaxLifetime time.Duration
@@ -44,7 +44,7 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		Database: DatabaseConfig{
 			Name:            getEnv("DB_NAME", "movies.db"),
-			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 1),  // SQLite works best with 1
+			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 1), // SQLite works best with 1
 			MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 1),
 			ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", "0"),
 			MigrationsPath:  getEnv("MIGRATIONS_PATH", "file://migrations"),

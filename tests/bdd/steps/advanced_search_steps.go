@@ -132,7 +132,7 @@ func (c *CommonStepContext) allReturnedMoviesShouldHaveRatingBetween(minRating, 
 		return err
 	}
 
-	return validateMovieRange(response.Movies, 
+	return validateMovieRange(response.Movies,
 		func(m MovieResponse) float64 { return m.Rating },
 		func(rating, min, max float64) bool { return rating >= min && rating <= max },
 		minRating, maxRating, "rating")

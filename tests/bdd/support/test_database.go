@@ -142,13 +142,11 @@ func (tdb *TestDatabase) insertMovie(movie Movie) error {
 	return inserter.insertMovie(movie)
 }
 
-
 // insertActor inserts an actor fixture into the database
 func (tdb *TestDatabase) insertActor(actor Actor) error {
 	inserter := NewDatabaseFixtureInserter(tdb.db)
 	return inserter.insertActor(actor)
 }
-
 
 // CleanupAfterScenario cleans up test data after each scenario
 func (tdb *TestDatabase) CleanupAfterScenario() error {

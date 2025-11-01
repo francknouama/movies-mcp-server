@@ -42,12 +42,12 @@ type MovieImportItem struct {
 
 // BulkMovieImportOutput defines the output schema for bulk_movie_import tool
 type BulkMovieImportOutput struct {
-	Imported    int                      `json:"imported" jsonschema:"description=Number of successfully imported movies"`
-	Failed      int                      `json:"failed" jsonschema:"description=Number of failed imports"`
-	Total       int                      `json:"total" jsonschema:"description=Total movies attempted"`
-	SuccessRate string                   `json:"success_rate" jsonschema:"description=Success rate percentage"`
-	Results     []ImportResult           `json:"results" jsonschema:"description=Successful import results"`
-	Errors      []ImportError            `json:"errors" jsonschema:"description=Failed import errors"`
+	Imported    int            `json:"imported" jsonschema:"description=Number of successfully imported movies"`
+	Failed      int            `json:"failed" jsonschema:"description=Number of failed imports"`
+	Total       int            `json:"total" jsonschema:"description=Total movies attempted"`
+	SuccessRate string         `json:"success_rate" jsonschema:"description=Success rate percentage"`
+	Results     []ImportResult `json:"results" jsonschema:"description=Successful import results"`
+	Errors      []ImportError  `json:"errors" jsonschema:"description=Failed import errors"`
 }
 
 // ImportResult represents a successful import
@@ -137,22 +137,22 @@ type UserPreferences struct {
 
 // MovieRecommendationOutput defines the output schema for movie_recommendation_engine tool
 type MovieRecommendationOutput struct {
-	Recommendations []Recommendation       `json:"recommendations" jsonschema:"description=List of recommended movies"`
-	TotalFound      int                    `json:"total_found" jsonschema:"description=Total recommendations found"`
-	PreferencesUsed PreferenceSummary      `json:"preferences_used" jsonschema:"description=Summary of preferences used"`
+	Recommendations []Recommendation  `json:"recommendations" jsonschema:"description=List of recommended movies"`
+	TotalFound      int               `json:"total_found" jsonschema:"description=Total recommendations found"`
+	PreferencesUsed PreferenceSummary `json:"preferences_used" jsonschema:"description=Summary of preferences used"`
 }
 
 // Recommendation represents a single movie recommendation
 type Recommendation struct {
-	Rank                int      `json:"rank" jsonschema:"description=Recommendation rank"`
-	MovieID             int      `json:"movie_id" jsonschema:"description=Movie ID"`
-	Title               string   `json:"title" jsonschema:"description=Movie title"`
-	Director            string   `json:"director" jsonschema:"description=Director name"`
-	Year                int      `json:"year" jsonschema:"description=Release year"`
-	Rating              float64  `json:"rating" jsonschema:"description=Movie rating"`
-	Genres              []string `json:"genres" jsonschema:"description=List of genres"`
-	MatchScore          string   `json:"match_score" jsonschema:"description=Match percentage"`
-	RecommendationReason string `json:"recommendation_reason" jsonschema:"description=Why this was recommended"`
+	Rank                 int      `json:"rank" jsonschema:"description=Recommendation rank"`
+	MovieID              int      `json:"movie_id" jsonschema:"description=Movie ID"`
+	Title                string   `json:"title" jsonschema:"description=Movie title"`
+	Director             string   `json:"director" jsonschema:"description=Director name"`
+	Year                 int      `json:"year" jsonschema:"description=Release year"`
+	Rating               float64  `json:"rating" jsonschema:"description=Movie rating"`
+	Genres               []string `json:"genres" jsonschema:"description=List of genres"`
+	MatchScore           string   `json:"match_score" jsonschema:"description=Match percentage"`
+	RecommendationReason string   `json:"recommendation_reason" jsonschema:"description=Why this was recommended"`
 }
 
 // PreferenceSummary summarizes the preferences used
@@ -263,13 +263,13 @@ type DirectorCareerAnalysisInput struct {
 
 // DirectorCareerAnalysisOutput defines the output schema for director_career_analysis tool
 type DirectorCareerAnalysisOutput struct {
-	Director              string                 `json:"director" jsonschema:"description=Director name"`
-	CareerOverview        CareerOverview         `json:"career_overview" jsonschema:"description=Overall career statistics"`
-	CareerPhases          CareerPhases           `json:"career_phases" jsonschema:"description=Career broken into phases"`
-	CareerTrajectory      string                 `json:"career_trajectory" jsonschema:"description=Description of career trajectory"`
-	GenreSpecialization   []GenreFrequency       `json:"genre_specialization" jsonschema:"description=Top genres by count"`
-	NotableWorks          NotableWorks           `json:"notable_works" jsonschema:"description=Highest and lowest rated works"`
-	Filmography           []FilmographyEntry     `json:"filmography" jsonschema:"description=Complete filmography"`
+	Director            string             `json:"director" jsonschema:"description=Director name"`
+	CareerOverview      CareerOverview     `json:"career_overview" jsonschema:"description=Overall career statistics"`
+	CareerPhases        CareerPhases       `json:"career_phases" jsonschema:"description=Career broken into phases"`
+	CareerTrajectory    string             `json:"career_trajectory" jsonschema:"description=Description of career trajectory"`
+	GenreSpecialization []GenreFrequency   `json:"genre_specialization" jsonschema:"description=Top genres by count"`
+	NotableWorks        NotableWorks       `json:"notable_works" jsonschema:"description=Highest and lowest rated works"`
+	Filmography         []FilmographyEntry `json:"filmography" jsonschema:"description=Complete filmography"`
 }
 
 // CareerOverview provides overall career stats

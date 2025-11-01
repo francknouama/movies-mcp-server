@@ -8,10 +8,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"time"
 
-	_ "modernc.org/sqlite"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	_ "modernc.org/sqlite"
 
 	actorApp "github.com/francknouama/movies-mcp-server/internal/application/actor"
 	movieApp "github.com/francknouama/movies-mcp-server/internal/application/movie"

@@ -1,9 +1,14 @@
+version: 2
+
 run:
   timeout: 5m
   go: "1.24.4"
   modules-download-mode: readonly
 
 output:
+  formats:
+    colored-line-number:
+      path: stdout
   print-issued-lines: true
   print-linter-name: true
 
@@ -87,19 +92,15 @@ linters:
     - govet
     - ineffassign
     - staticcheck
-    - typecheck
     - unused
     - gocyclo
     - dupl
     - goconst
-    - gofmt
-    - goimports
     - misspell
     - lll
     - gocritic
     - funlen
     - gosec
-    - gci
     - godot
     - nolintlint
     - revive
@@ -108,14 +109,11 @@ linters:
     - wastedassign
     - whitespace
 
-  disable:
-    - deadcode
-    - varcheck
-    - structcheck
-    - maligned
-    - golint
-    - interfacer
-    - scopelint
+formatters:
+  enable:
+    - gofmt
+    - goimports
+    - gci
 
 issues:
   exclude-rules:
