@@ -30,15 +30,10 @@ func TestLoad(t *testing.T) {
 			envVars: map[string]string{},
 			want: &Config{
 				Database: DatabaseConfig{
-					Host:            "localhost",
-					Port:            5432,
-					Name:            "movies_mcp",
-					User:            "movies_user",
-					Password:        "movies_password",
-					SSLMode:         "disable",
-					MaxOpenConns:    25,
-					MaxIdleConns:    5,
-					ConnMaxLifetime: time.Hour,
+					Name:            "movies.db",
+					MaxOpenConns:    1,
+					MaxIdleConns:    1,
+					ConnMaxLifetime: 0,
 					MigrationsPath:  "file://migrations",
 				},
 				Server: ServerConfig{
@@ -57,14 +52,9 @@ func TestLoad(t *testing.T) {
 		{
 			name: "custom values",
 			envVars: map[string]string{
-				"DB_HOST":              "db.example.com",
-				"DB_PORT":              "5433",
-				"DB_NAME":              "custom_db",
-				"DB_USER":              "custom_user",
-				"DB_PASSWORD":          "custom_pass",
-				"DB_SSLMODE":           "require",
-				"DB_MAX_OPEN_CONNS":    "50",
-				"DB_MAX_IDLE_CONNS":    "10",
+				"DB_NAME":              "custom.db",
+				"DB_MAX_OPEN_CONNS":    "2",
+				"DB_MAX_IDLE_CONNS":    "2",
 				"DB_CONN_MAX_LIFETIME": "2h",
 				"MIGRATIONS_PATH":      "file://custom/migrations",
 				"LOG_LEVEL":            "debug",
@@ -76,14 +66,9 @@ func TestLoad(t *testing.T) {
 			},
 			want: &Config{
 				Database: DatabaseConfig{
-					Host:            "db.example.com",
-					Port:            5433,
-					Name:            "custom_db",
-					User:            "custom_user",
-					Password:        "custom_pass",
-					SSLMode:         "require",
-					MaxOpenConns:    50,
-					MaxIdleConns:    10,
+					Name:            "custom.db",
+					MaxOpenConns:    2,
+					MaxIdleConns:    2,
 					ConnMaxLifetime: 2 * time.Hour,
 					MigrationsPath:  "file://custom/migrations",
 				},
@@ -101,17 +86,9 @@ func TestLoad(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "invalid port",
+			name: "empty database name",
 			envVars: map[string]string{
-				"DB_PORT": "99999",
-			},
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name: "empty host",
-			envVars: map[string]string{
-				"DB_HOST": "",
+				"DB_NAME": "",
 			},
 			want:    nil,
 			wantErr: true,
@@ -167,10 +144,7 @@ func TestConfig_Validate(t *testing.T) {
 			name: "valid config",
 			config: &Config{
 				Database: DatabaseConfig{
-					Host: "localhost",
-					Port: 5432,
-					Name: "test_db",
-					User: "test_user",
+					Name: "test.db",
 				},
 				Image: ImageConfig{
 					MaxSize:      1024,
@@ -180,62 +154,10 @@ func TestConfig_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "missing host",
-			config: &Config{
-				Database: DatabaseConfig{
-					Port: 5432,
-					Name: "test_db",
-					User: "test_user",
-				},
-				Image: ImageConfig{
-					MaxSize:      1024,
-					AllowedTypes: []string{"image/jpeg"},
-				},
-			},
-			wantErr: true,
-			errMsg:  "DB_HOST is required",
-		},
-		{
-			name: "invalid port - zero",
-			config: &Config{
-				Database: DatabaseConfig{
-					Host: "localhost",
-					Port: 0,
-					Name: "test_db",
-					User: "test_user",
-				},
-				Image: ImageConfig{
-					MaxSize:      1024,
-					AllowedTypes: []string{"image/jpeg"},
-				},
-			},
-			wantErr: true,
-			errMsg:  "DB_PORT must be between 1 and 65535",
-		},
-		{
-			name: "invalid port - too high",
-			config: &Config{
-				Database: DatabaseConfig{
-					Host: "localhost",
-					Port: 99999,
-					Name: "test_db",
-					User: "test_user",
-				},
-				Image: ImageConfig{
-					MaxSize:      1024,
-					AllowedTypes: []string{"image/jpeg"},
-				},
-			},
-			wantErr: true,
-			errMsg:  "DB_PORT must be between 1 and 65535",
-		},
-		{
 			name: "missing db name",
 			config: &Config{
 				Database: DatabaseConfig{
-					Host: "localhost",
-					Port: 5432,
-					User: "test_user",
+					Name: "",
 				},
 				Image: ImageConfig{
 					MaxSize:      1024,
@@ -246,29 +168,10 @@ func TestConfig_Validate(t *testing.T) {
 			errMsg:  "DB_NAME is required",
 		},
 		{
-			name: "missing db user",
-			config: &Config{
-				Database: DatabaseConfig{
-					Host: "localhost",
-					Port: 5432,
-					Name: "test_db",
-				},
-				Image: ImageConfig{
-					MaxSize:      1024,
-					AllowedTypes: []string{"image/jpeg"},
-				},
-			},
-			wantErr: true,
-			errMsg:  "DB_USER is required",
-		},
-		{
 			name: "invalid image size",
 			config: &Config{
 				Database: DatabaseConfig{
-					Host: "localhost",
-					Port: 5432,
-					Name: "test_db",
-					User: "test_user",
+					Name: "test.db",
 				},
 				Image: ImageConfig{
 					MaxSize:      0,
@@ -282,10 +185,7 @@ func TestConfig_Validate(t *testing.T) {
 			name: "empty allowed types",
 			config: &Config{
 				Database: DatabaseConfig{
-					Host: "localhost",
-					Port: 5432,
-					Name: "test_db",
-					User: "test_user",
+					Name: "test.db",
 				},
 				Image: ImageConfig{
 					MaxSize:      1024,
@@ -319,26 +219,16 @@ func TestDatabaseConfig_ConnectionString(t *testing.T) {
 		{
 			name: "basic connection string",
 			config: DatabaseConfig{
-				Host:     "localhost",
-				Port:     5432,
-				User:     "test_user",
-				Password: "test_pass",
-				Name:     "test_db",
-				SSLMode:  "disable",
+				Name: "movies.db",
 			},
-			want: "host=localhost port=5432 user=test_user password=test_pass dbname=test_db sslmode=disable",
+			want: "movies.db",
 		},
 		{
-			name: "with special characters",
+			name: "custom database path",
 			config: DatabaseConfig{
-				Host:     "db.example.com",
-				Port:     5433,
-				User:     "user@example",
-				Password: "p@ss!word",
-				Name:     "my-db",
-				SSLMode:  "require",
+				Name: "/var/data/custom.db",
 			},
-			want: "host=db.example.com port=5433 user=user@example password=p@ss!word dbname=my-db sslmode=require",
+			want: "/var/data/custom.db",
 		},
 	}
 
