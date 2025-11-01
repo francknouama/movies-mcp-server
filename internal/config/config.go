@@ -18,12 +18,7 @@ type Config struct {
 
 // DatabaseConfig holds database-specific configuration.
 type DatabaseConfig struct {
-	Host            string
-	Port            int
-	Name            string
-	User            string
-	Password        string
-	SSLMode         string
+	Name            string        // SQLite database file path
 	MaxOpenConns    int
 	MaxIdleConns    int
 	ConnMaxLifetime time.Duration
@@ -48,15 +43,10 @@ type ImageConfig struct {
 func Load() (*Config, error) {
 	cfg := &Config{
 		Database: DatabaseConfig{
-			Host:            getEnv("DB_HOST", "localhost"),
-			Port:            getEnvAsInt("DB_PORT", 5432),
-			Name:            getEnv("DB_NAME", "movies_mcp"),
-			User:            getEnv("DB_USER", "movies_user"),
-			Password:        getEnv("DB_PASSWORD", "movies_password"),
-			SSLMode:         getEnv("DB_SSLMODE", "disable"),
-			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 25),
-			MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 5),
-			ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", "1h"),
+			Name:            getEnv("DB_NAME", "movies.db"),
+			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 1),  // SQLite works best with 1
+			MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 1),
+			ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", "0"),
 			MigrationsPath:  getEnv("MIGRATIONS_PATH", "file://migrations"),
 		},
 		Server: ServerConfig{
@@ -81,17 +71,8 @@ func Load() (*Config, error) {
 
 // Validate checks if all required configuration is present and valid
 func (c *Config) Validate() error {
-	if c.Database.Host == "" {
-		return fmt.Errorf("DB_HOST is required")
-	}
-	if c.Database.Port <= 0 || c.Database.Port > 65535 {
-		return fmt.Errorf("DB_PORT must be between 1 and 65535")
-	}
 	if c.Database.Name == "" {
 		return fmt.Errorf("DB_NAME is required")
-	}
-	if c.Database.User == "" {
-		return fmt.Errorf("DB_USER is required")
 	}
 	if c.Image.MaxSize <= 0 {
 		return fmt.Errorf("MAX_IMAGE_SIZE must be positive")
@@ -102,12 +83,9 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// ConnectionString returns a PostgreSQL connection string
+// ConnectionString returns the SQLite database file path
 func (c *DatabaseConfig) ConnectionString() string {
-	return fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		c.Host, c.Port, c.User, c.Password, c.Name, c.SSLMode,
-	)
+	return c.Name
 }
 
 // Helper functions

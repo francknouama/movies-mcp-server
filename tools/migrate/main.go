@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	_ "github.com/lib/pq"
+	_ "modernc.org/sqlite"
 )
 
 // Migration represents a database migration
@@ -40,10 +40,13 @@ func main() {
 		command = os.Args[3]
 	}
 
-	// Connect to database
-	db, err := sql.Open("postgres", dbURL)
+	// Parse SQLite URL (format: sqlite://path/to/db.db)
+	dsn := strings.TrimPrefix(dbURL, "sqlite://")
+
+	// Connect to SQLite database
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to connect to database: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to connect to SQLite database: %v\n", err)
 		os.Exit(1)
 	}
 	defer func() {
@@ -53,7 +56,7 @@ func main() {
 	}()
 
 	if err := db.Ping(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to ping database: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to ping SQLite database: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -90,7 +93,7 @@ func (m *MigrationTool) ensureMigrationsTable() error {
 	query := `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			version INTEGER PRIMARY KEY,
-			applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+			applied_at TEXT DEFAULT CURRENT_TIMESTAMP
 		);
 	`
 	_, err := m.db.Exec(query)
@@ -235,7 +238,7 @@ func (m *MigrationTool) up() error {
 		}
 
 		// Record the migration
-		if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES ($1)", migration.Version); err != nil {
+		if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES (?)", migration.Version); err != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
 				return fmt.Errorf("failed to record migration %d: %v (rollback failed: %v)", migration.Version, err, rollbackErr)
 			}
@@ -309,7 +312,7 @@ func (m *MigrationTool) down() error {
 	}
 
 	// Remove the migration record
-	if _, err := tx.Exec("DELETE FROM schema_migrations WHERE version = $1", targetMigration.Version); err != nil {
+	if _, err := tx.Exec("DELETE FROM schema_migrations WHERE version = ?", targetMigration.Version); err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return fmt.Errorf("failed to remove migration record %d: %v (rollback failed: %v)", targetMigration.Version, err, rollbackErr)
 		}

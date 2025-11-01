@@ -1,4 +1,4 @@
-package postgres
+package sqlite
 
 import (
 	"context"
@@ -10,13 +10,13 @@ import (
 	"github.com/francknouama/movies-mcp-server/pkg/database"
 )
 
-// ActorRepository implements the actor.Repository interface for PostgreSQL
+// ActorRepository implements the actor.Repository interface for SQLite
 type ActorRepository struct {
 	*database.BaseRepository
 	txManager *database.TransactionManager
 }
 
-// NewActorRepository creates a new PostgreSQL actor repository
+// NewActorRepository creates a new SQLite actor repository
 func NewActorRepository(db *sql.DB) *ActorRepository {
 	return &ActorRepository{
 		BaseRepository: database.NewBaseRepository(db),
@@ -51,7 +51,7 @@ func (r *ActorRepository) insert(ctx context.Context, dbActor *dbActor, domainAc
 		// Insert actor
 		query := `
 			INSERT INTO actors (name, birth_year, bio, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5)
+			VALUES (?, ?, ?, ?, ?)
 			RETURNING id`
 
 		id, err := helper.InsertWithID(ctx, query,
@@ -88,16 +88,16 @@ func (r *ActorRepository) update(ctx context.Context, dbActor *dbActor, domainAc
 
 		// Update actor
 		query := `
-			UPDATE actors 
-			SET name = $2, birth_year = $3, bio = $4, updated_at = $5
-			WHERE id = $1`
+			UPDATE actors
+			SET name = ?, birth_year = ?, bio = ?, updated_at = ?
+			WHERE id = ?`
 
 		err := helper.Update(ctx, query, "actor",
-			domainActor.ID().Value(),
 			dbActor.Name,
 			dbActor.BirthYear,
 			dbActor.Bio,
 			dbActor.UpdatedAt.Time,
+			domainActor.ID().Value(),
 		)
 
 		if err != nil {
@@ -117,7 +117,7 @@ func (r *ActorRepository) insertMovieRelationships(ctx context.Context, tx *sql.
 	for _, movieID := range domainActor.MovieIDs() {
 		query := `
 			INSERT INTO movie_actors (movie_id, actor_id, created_at)
-			VALUES ($1, $2, CURRENT_TIMESTAMP)
+			VALUES (?, ?, CURRENT_TIMESTAMP)
 			ON CONFLICT (movie_id, actor_id) DO NOTHING`
 
 		_, err := tx.ExecContext(ctx, query, movieID.Value(), domainActor.ID().Value())
@@ -130,7 +130,7 @@ func (r *ActorRepository) insertMovieRelationships(ctx context.Context, tx *sql.
 
 func (r *ActorRepository) updateMovieRelationships(ctx context.Context, tx *sql.Tx, domainActor *actor.Actor) error {
 	// Delete existing relationships
-	deleteQuery := "DELETE FROM movie_actors WHERE actor_id = $1"
+	deleteQuery := "DELETE FROM movie_actors WHERE actor_id = ?"
 	_, err := tx.ExecContext(ctx, deleteQuery, domainActor.ID().Value())
 	if err != nil {
 		return fmt.Errorf("failed to delete existing movie relationships: %w", err)
@@ -144,8 +144,8 @@ func (r *ActorRepository) updateMovieRelationships(ctx context.Context, tx *sql.
 func (r *ActorRepository) FindByID(ctx context.Context, id shared.ActorID) (*actor.Actor, error) {
 	query := `
 		SELECT id, name, birth_year, bio, created_at, updated_at
-		FROM actors 
-		WHERE id = $1`
+		FROM actors
+		WHERE id = ?`
 
 	var dbActor dbActor
 	err := r.QueryRowContext(ctx, query, id.Value()).Scan(
@@ -171,7 +171,7 @@ func (r *ActorRepository) FindByID(ctx context.Context, id shared.ActorID) (*act
 }
 
 func (r *ActorRepository) getActorMovieIDs(ctx context.Context, actorID shared.ActorID) ([]shared.MovieID, error) {
-	query := "SELECT movie_id FROM movie_actors WHERE actor_id = $1"
+	query := "SELECT movie_id FROM movie_actors WHERE actor_id = ?"
 	rows, err := r.QueryContext(ctx, query, actorID.Value())
 	if err != nil {
 		return nil, fmt.Errorf("failed to query movie relationships: %w", err)
@@ -249,34 +249,29 @@ func (r *ActorRepository) buildSearchQuery(criteria actor.SearchCriteria) (strin
 		FROM actors a`
 
 	var args []interface{}
-	argIndex := 1
 	var conditions []string
 
 	// Join with movie_actors if searching by movie
 	if !criteria.MovieID.IsZero() {
 		query += " INNER JOIN movie_actors ma ON a.id = ma.actor_id"
-		conditions = append(conditions, fmt.Sprintf("ma.movie_id = $%d", argIndex))
+		conditions = append(conditions, "ma.movie_id = ?")
 		args = append(args, criteria.MovieID.Value())
-		argIndex++
 	}
 
 	// Add WHERE conditions
 	if criteria.Name != "" {
-		conditions = append(conditions, fmt.Sprintf("a.name ILIKE $%d", argIndex))
+		conditions = append(conditions, "a.name LIKE ? COLLATE NOCASE")
 		args = append(args, "%"+criteria.Name+"%")
-		argIndex++
 	}
 
 	if criteria.MinBirthYear > 0 {
-		conditions = append(conditions, fmt.Sprintf("a.birth_year >= $%d", argIndex))
+		conditions = append(conditions, "a.birth_year >= ?")
 		args = append(args, criteria.MinBirthYear)
-		argIndex++
 	}
 
 	if criteria.MaxBirthYear > 0 {
-		conditions = append(conditions, fmt.Sprintf("a.birth_year <= $%d", argIndex))
+		conditions = append(conditions, "a.birth_year <= ?")
 		args = append(args, criteria.MaxBirthYear)
-		argIndex++
 	}
 
 	if len(conditions) > 0 {
@@ -306,13 +301,12 @@ func (r *ActorRepository) buildSearchQuery(criteria actor.SearchCriteria) (strin
 
 	// Add LIMIT and OFFSET
 	if criteria.Limit > 0 {
-		query += fmt.Sprintf(" LIMIT $%d", argIndex)
+		query += " LIMIT ?"
 		args = append(args, criteria.Limit)
-		argIndex++
 	}
 
 	if criteria.Offset > 0 {
-		query += fmt.Sprintf(" OFFSET $%d", argIndex)
+		query += " OFFSET ?"
 		args = append(args, criteria.Offset)
 	}
 
@@ -349,14 +343,14 @@ func (r *ActorRepository) Delete(ctx context.Context, id shared.ActorID) error {
 		helper := database.NewTransactionHelper(tx)
 
 		// Delete movie relationships first (foreign key constraints)
-		deleteRelQuery := "DELETE FROM movie_actors WHERE actor_id = $1"
+		deleteRelQuery := "DELETE FROM movie_actors WHERE actor_id = ?"
 		_, err := tx.ExecContext(ctx, deleteRelQuery, id.Value())
 		if err != nil {
 			return fmt.Errorf("failed to delete actor movie relationships: %w", err)
 		}
 
 		// Delete actor
-		deleteQuery := "DELETE FROM actors WHERE id = $1"
+		deleteQuery := "DELETE FROM actors WHERE id = ?"
 		return helper.Delete(ctx, deleteQuery, "actor", id.Value())
 	})
 }

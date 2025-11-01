@@ -1,23 +1,23 @@
-package postgres
+package sqlite
 
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
-
-	"github.com/lib/pq"
+	"strings"
 
 	"github.com/francknouama/movies-mcp-server/internal/domain/movie"
 	"github.com/francknouama/movies-mcp-server/internal/domain/shared"
 	"github.com/francknouama/movies-mcp-server/pkg/database"
 )
 
-// MovieRepository implements the movie.Repository interface for PostgreSQL
+// MovieRepository implements the movie.Repository interface for SQLite
 type MovieRepository struct {
 	*database.BaseRepository
 }
 
-// NewMovieRepository creates a new PostgreSQL movie repository
+// NewMovieRepository creates a new SQLite movie repository
 func NewMovieRepository(db *sql.DB) *MovieRepository {
 	return &MovieRepository{
 		BaseRepository: database.NewBaseRepository(db),
@@ -31,7 +31,7 @@ type dbMovie struct {
 	Director    string          `db:"director"`
 	Year        int             `db:"year"`
 	Rating      sql.NullFloat64 `db:"rating"`
-	Genres      pq.StringArray  `db:"genre"`
+	Genres      string          `db:"genre"` // JSON-encoded array
 	Description sql.NullString  `db:"description"`
 	Duration    sql.NullInt64   `db:"duration"`
 	Language    sql.NullString  `db:"language"`
@@ -45,7 +45,10 @@ type dbMovie struct {
 
 // Save persists a movie (insert or update)
 func (r *MovieRepository) Save(ctx context.Context, domainMovie *movie.Movie) error {
-	dbMovie := r.toDBModel(domainMovie)
+	dbMovie, err := r.toDBModel(domainMovie)
+	if err != nil {
+		return fmt.Errorf("failed to convert to DB model: %w", err)
+	}
 
 	if domainMovie.ID().IsZero() {
 		return r.insert(ctx, dbMovie, domainMovie)
@@ -56,7 +59,7 @@ func (r *MovieRepository) Save(ctx context.Context, domainMovie *movie.Movie) er
 func (r *MovieRepository) insert(ctx context.Context, dbMovie *dbMovie, domainMovie *movie.Movie) error {
 	query := `
 		INSERT INTO movies (title, director, year, rating, genre, poster_url, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		RETURNING id`
 
 	id, err := r.InsertWithID(ctx, query,
@@ -86,13 +89,12 @@ func (r *MovieRepository) insert(ctx context.Context, dbMovie *dbMovie, domainMo
 
 func (r *MovieRepository) update(ctx context.Context, dbMovie *dbMovie, domainMovie *movie.Movie) error {
 	query := `
-		UPDATE movies 
-		SET title = $2, director = $3, year = $4, rating = $5, genre = $6, 
-		    poster_url = $7, updated_at = $8
-		WHERE id = $1`
+		UPDATE movies
+		SET title = ?, director = ?, year = ?, rating = ?, genre = ?,
+		    poster_url = ?, updated_at = ?
+		WHERE id = ?`
 
 	return r.Update(ctx, query, "movie",
-		domainMovie.ID().Value(),
 		dbMovie.Title,
 		dbMovie.Director,
 		dbMovie.Year,
@@ -100,6 +102,7 @@ func (r *MovieRepository) update(ctx context.Context, dbMovie *dbMovie, domainMo
 		dbMovie.Genres,
 		dbMovie.PosterURL,
 		dbMovie.UpdatedAt.Time,
+		domainMovie.ID().Value(),
 	)
 }
 
@@ -107,8 +110,8 @@ func (r *MovieRepository) update(ctx context.Context, dbMovie *dbMovie, domainMo
 func (r *MovieRepository) FindByID(ctx context.Context, id shared.MovieID) (*movie.Movie, error) {
 	query := `
 		SELECT id, title, director, year, rating, genre, poster_url, created_at, updated_at
-		FROM movies 
-		WHERE id = $1`
+		FROM movies
+		WHERE id = ?`
 
 	var dbMovie dbMovie
 	err := r.QueryRowContext(ctx, query, id.Value()).Scan(
@@ -175,49 +178,42 @@ func (r *MovieRepository) buildSearchQuery(criteria movie.SearchCriteria) (strin
 		FROM movies WHERE 1=1`
 
 	var args []interface{}
-	argIndex := 1
 
-	// Add WHERE conditions
+	// Add WHERE conditions using ? placeholders
 	if criteria.Title != "" {
-		query += fmt.Sprintf(" AND title ILIKE $%d", argIndex)
+		query += " AND title LIKE ? COLLATE NOCASE"
 		args = append(args, "%"+criteria.Title+"%")
-		argIndex++
 	}
 
 	if criteria.Director != "" {
-		query += fmt.Sprintf(" AND director ILIKE $%d", argIndex)
+		query += " AND director LIKE ? COLLATE NOCASE"
 		args = append(args, "%"+criteria.Director+"%")
-		argIndex++
 	}
 
 	if criteria.Genre != "" {
-		query += fmt.Sprintf(" AND $%d = ANY(genre)", argIndex)
+		// SQLite JSON search: check if genre array contains the value
+		query += " AND EXISTS (SELECT 1 FROM json_each(genre) WHERE value = ?)"
 		args = append(args, criteria.Genre)
-		argIndex++
 	}
 
 	if criteria.MinYear > 0 {
-		query += fmt.Sprintf(" AND year >= $%d", argIndex)
+		query += " AND year >= ?"
 		args = append(args, criteria.MinYear)
-		argIndex++
 	}
 
 	if criteria.MaxYear > 0 {
-		query += fmt.Sprintf(" AND year <= $%d", argIndex)
+		query += " AND year <= ?"
 		args = append(args, criteria.MaxYear)
-		argIndex++
 	}
 
 	if criteria.MinRating > 0 {
-		query += fmt.Sprintf(" AND rating >= $%d", argIndex)
+		query += " AND rating >= ?"
 		args = append(args, criteria.MinRating)
-		argIndex++
 	}
 
 	if criteria.MaxRating > 0 {
-		query += fmt.Sprintf(" AND rating <= $%d", argIndex)
+		query += " AND rating <= ?"
 		args = append(args, criteria.MaxRating)
-		argIndex++
 	}
 
 	// Add ORDER BY
@@ -244,13 +240,12 @@ func (r *MovieRepository) buildSearchQuery(criteria movie.SearchCriteria) (strin
 
 	// Add LIMIT and OFFSET
 	if criteria.Limit > 0 {
-		query += fmt.Sprintf(" LIMIT $%d", argIndex)
+		query += " LIMIT ?"
 		args = append(args, criteria.Limit)
-		argIndex++
 	}
 
 	if criteria.Offset > 0 {
-		query += fmt.Sprintf(" OFFSET $%d", argIndex)
+		query += " OFFSET ?"
 		args = append(args, criteria.Offset)
 	}
 
@@ -303,7 +298,7 @@ func (r *MovieRepository) CountAll(ctx context.Context) (int, error) {
 
 // Delete removes a movie by ID
 func (r *MovieRepository) Delete(ctx context.Context, id shared.MovieID) error {
-	query := "DELETE FROM movies WHERE id = $1"
+	query := "DELETE FROM movies WHERE id = ?"
 	return r.BaseRepository.Delete(ctx, query, "movie", id.Value())
 }
 
@@ -318,13 +313,19 @@ func (r *MovieRepository) DeleteAll(ctx context.Context) error {
 }
 
 // toDBModel converts a domain movie to a database model
-func (r *MovieRepository) toDBModel(domainMovie *movie.Movie) *dbMovie {
+func (r *MovieRepository) toDBModel(domainMovie *movie.Movie) (*dbMovie, error) {
+	// Encode genres as JSON
+	genresJSON, err := json.Marshal(domainMovie.Genres())
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal genres: %w", err)
+	}
+
 	dbMovie := &dbMovie{
 		ID:       domainMovie.ID().Value(),
 		Title:    domainMovie.Title(),
 		Director: domainMovie.Director(),
 		Year:     domainMovie.Year().Value(),
-		Genres:   pq.StringArray(domainMovie.Genres()),
+		Genres:   string(genresJSON),
 	}
 
 	// Handle optional rating
@@ -353,7 +354,7 @@ func (r *MovieRepository) toDBModel(domainMovie *movie.Movie) *dbMovie {
 		Valid: true,
 	}
 
-	return dbMovie
+	return dbMovie, nil
 }
 
 // toDomainModel converts a database model to a domain movie
@@ -375,10 +376,22 @@ func (r *MovieRepository) toDomainModel(dbMovie *dbMovie) (*movie.Movie, error) 
 		}
 	}
 
-	// Add genres
-	for _, genre := range dbMovie.Genres {
-		if err := domainMovie.AddGenre(genre); err != nil {
-			return nil, fmt.Errorf("failed to add genre: %w", err)
+	// Decode and add genres
+	if dbMovie.Genres != "" && dbMovie.Genres != "null" {
+		var genres []string
+		if err := json.Unmarshal([]byte(dbMovie.Genres), &genres); err != nil {
+			// Handle legacy non-JSON genre data gracefully
+			if strings.HasPrefix(dbMovie.Genres, "[") {
+				return nil, fmt.Errorf("failed to unmarshal genres: %w", err)
+			}
+			// Treat as single genre if not JSON
+			genres = []string{dbMovie.Genres}
+		}
+
+		for _, genre := range genres {
+			if err := domainMovie.AddGenre(genre); err != nil {
+				return nil, fmt.Errorf("failed to add genre: %w", err)
+			}
 		}
 	}
 
