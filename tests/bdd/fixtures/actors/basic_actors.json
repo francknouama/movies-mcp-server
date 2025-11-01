@@ -1,0 +1,29 @@
+{
+  "actors": [
+    {
+      "name": "Tom Hanks",
+      "birth_year": 1956,
+      "bio": "Thomas Jeffrey Hanks is an American actor and filmmaker known for both comedic and dramatic roles."
+    },
+    {
+      "name": "Meryl Streep",
+      "birth_year": 1949,
+      "bio": "Mary Louise Streep is an American actress often described as the best actress of her generation."
+    },
+    {
+      "name": "Leonardo DiCaprio",
+      "birth_year": 1974,
+      "bio": "Leonardo Wilhelm DiCaprio is an American actor and film producer known for his work in biopics and period films."
+    },
+    {
+      "name": "Cate Blanchett",
+      "birth_year": 1969,
+      "bio": "Catherine Elise Blanchett is an Australian actor and producer, regarded as one of the finest actresses of her generation."
+    },
+    {
+      "name": "Denzel Washington",
+      "birth_year": 1954,
+      "bio": "Denzel Hayes Washington Jr. is an American actor, producer, and director known for his dramatic roles."
+    }
+  ]
+}

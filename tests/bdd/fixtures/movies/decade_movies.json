@@ -1,0 +1,76 @@
+{
+  "description": "Movies from different decades for testing year-based filtering and search",
+  "decades": {
+    "1970s": [
+      {
+        "title": "Star Wars",
+        "director": "George Lucas",
+        "year": 1977,
+        "rating": 8.6,
+        "genres": ["Action", "Adventure", "Fantasy"]
+      },
+      {
+        "title": "Taxi Driver",
+        "director": "Martin Scorsese",
+        "year": 1976,
+        "rating": 8.2,
+        "genres": ["Crime", "Drama"]
+      }
+    ],
+    "1990s": [
+      {
+        "title": "The Matrix",
+        "director": "Lana Wachowski, Lilly Wachowski",
+        "year": 1999,
+        "rating": 8.7,
+        "genres": ["Action", "Sci-Fi"]
+      },
+      {
+        "title": "Goodfellas",
+        "director": "Martin Scorsese",
+        "year": 1990,
+        "rating": 8.7,
+        "genres": ["Biography", "Crime", "Drama"]
+      },
+      {
+        "title": "The Silence of the Lambs",
+        "director": "Jonathan Demme",
+        "year": 1991,
+        "rating": 8.6,
+        "genres": ["Crime", "Drama", "Thriller"]
+      }
+    ],
+    "2000s": [
+      {
+        "title": "Inception",
+        "director": "Christopher Nolan",
+        "year": 2010,
+        "rating": 8.8,
+        "genres": ["Action", "Adventure", "Sci-Fi"]
+      },
+      {
+        "title": "The Departed",
+        "director": "Martin Scorsese",
+        "year": 2006,
+        "rating": 8.5,
+        "genres": ["Crime", "Drama", "Thriller"]
+      }
+    ],
+    "2010s": [
+      {
+        "title": "Interstellar",
+        "director": "Christopher Nolan",
+        "year": 2014,
+        "rating": 8.6,
+        "genres": ["Adventure", "Drama", "Sci-Fi"]
+      },
+      {
+        "title": "Django Unchained",
+        "director": "Quentin Tarantino",
+        "year": 2012,
+        "rating": 8.4,
+        "genres": ["Drama", "Western"]
+      }
+    ]
+  }
+}

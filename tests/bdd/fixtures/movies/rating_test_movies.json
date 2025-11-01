@@ -1,0 +1,53 @@
+{
+  "description": "Movies with specific ratings for testing rating-based queries and filtering",
+  "rating_ranges": {
+    "high_rated": [
+      {
+        "title": "12 Angry Men",
+        "director": "Sidney Lumet",
+        "year": 1957,
+        "rating": 9.0,
+        "genres": ["Crime", "Drama"]
+      },
+      {
+        "title": "Schindler's List",
+        "director": "Steven Spielberg",
+        "year": 1993,
+        "rating": 9.0,
+        "genres": ["Biography", "Drama", "History"]
+      }
+    ],
+    "mid_rated": [
+      {
+        "title": "The Avengers",
+        "director": "Joss Whedon",
+        "year": 2012,
+        "rating": 8.0,
+        "genres": ["Action", "Adventure", "Sci-Fi"]
+      },
+      {
+        "title": "Iron Man",
+        "director": "Jon Favreau",
+        "year": 2008,
+        "rating": 7.9,
+        "genres": ["Action", "Adventure", "Sci-Fi"]
+      }
+    ],
+    "lower_rated": [
+      {
+        "title": "Transformers",
+        "director": "Michael Bay",
+        "year": 2007,
+        "rating": 7.0,
+        "genres": ["Action", "Adventure", "Sci-Fi"]
+      },
+      {
+        "title": "The Fast and the Furious",
+        "director": "Rob Cohen",
+        "year": 2001,
+        "rating": 6.8,
+        "genres": ["Action", "Crime", "Thriller"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "description": "Large dataset for testing search performance and pagination",
+  "scenario_name": "Performance Testing Dataset",
+  "movie_count": 100,
+  "actor_count": 50,
+  "sample_movies": [
+    {
+      "title": "Performance Test Movie 1",
+      "director": "Director A",
+      "year": 2020,
+      "rating": 7.5,
+      "genres": ["Action", "Adventure"]
+    },
+    {
+      "title": "Performance Test Movie 2",
+      "director": "Director B",
+      "year": 2021,
+      "rating": 8.0,
+      "genres": ["Drama", "Thriller"]
+    }
+  ],
+  "sample_actors": [
+    {
+      "name": "Performance Actor 1",
+      "birth_year": 1980,
+      "bio": "Actor for performance testing purposes."
+    },
+    {
+      "name": "Performance Actor 2",
+      "birth_year": 1985,
+      "bio": "Another actor for performance testing."
+    }
+  ],
+  "generation_rules": {
+    "movies": {
+      "title_pattern": "Performance Test Movie {n}",
+      "director_pattern": "Director {letter}",
+      "year_range": [2000, 2023],
+      "rating_range": [6.0, 9.5],
+      "genres_pool": ["Action", "Adventure", "Comedy", "Drama", "Horror", "Sci-Fi", "Thriller"]
+    },
+    "actors": {
+      "name_pattern": "Performance Actor {n}",
+      "birth_year_range": [1950, 2000],
+      "bio_pattern": "Actor {n} for performance testing purposes."
+    }
+  }
+}
