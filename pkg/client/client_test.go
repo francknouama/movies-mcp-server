@@ -459,3 +459,332 @@ func TestMCPClient_ZeroValueFields(t *testing.T) {
 		t.Error("Expected serverInfo to be nil")
 	}
 }
+
+// Integration tests for methods requiring transport interaction
+
+func TestMCPClient_Initialize_Success(t *testing.T) {
+	mockTransport := communication.NewMockTransport()
+	client := NewMCPClient(ClientOptions{Transport: mockTransport})
+
+	clientInfo := protocol.ClientInfo{
+		Name:    "test-client",
+		Version: "1.0.0",
+	}
+	capabilities := protocol.ClientCapabilities{}
+
+	// Pre-queue the response that will be returned
+	initResponse := &protocol.JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      int64(1), // First request ID
+		Params: json.RawMessage(`{
+			"protocolVersion": "2024-11-05",
+			"capabilities": {"tools": {"listChanged": true}},
+			"serverInfo": {"name": "test-server", "version": "1.0.0"}
+		}`),
+	}
+	mockTransport.SendRequest(initResponse)
+
+	err := client.Initialize(clientInfo, capabilities)
+	if err != nil {
+		t.Fatalf("Initialize() error = %v", err)
+	}
+
+	if !client.IsInitialized() {
+		t.Error("Client should be initialized after successful Initialize()")
+	}
+
+	if client.GetServerInfo() == nil {
+		t.Error("ServerInfo should be set after Initialize()")
+	}
+
+	if client.GetServerCapabilities() == nil {
+		t.Error("ServerCapabilities should be set after Initialize()")
+	}
+}
+
+func TestMCPClient_Initialize_TransportError(t *testing.T) {
+	mockTransport := communication.NewMockTransport()
+	client := NewMCPClient(ClientOptions{Transport: mockTransport})
+
+	// Close transport to cause send error
+	mockTransport.Close()
+
+	err := client.Initialize(protocol.ClientInfo{}, protocol.ClientCapabilities{})
+	if err == nil {
+		t.Error("Initialize() should return error when transport fails")
+	}
+}
+
+func TestMCPClient_Initialize_ResponseError(t *testing.T) {
+	mockTransport := communication.NewMockTransport()
+	client := NewMCPClient(ClientOptions{Transport: mockTransport})
+
+	// Set up mock error response
+	go func() {
+		resp, err := mockTransport.GetResponse()
+		if err != nil {
+			return
+		}
+
+		// Send back error response
+		errorResponse := &protocol.JSONRPCRequest{
+			JSONRPC: "2.0",
+			ID:      resp.ID,
+			Params: json.RawMessage(`{
+				"error": {"code": -32600, "message": "Invalid request"}
+			}`),
+		}
+		mockTransport.SendRequest(errorResponse)
+	}()
+
+	err := client.Initialize(protocol.ClientInfo{}, protocol.ClientCapabilities{})
+	if err == nil {
+		t.Error("Initialize() should return error when server returns error")
+	}
+}
+
+func TestMCPClient_CallTool_Success(t *testing.T) {
+	mockTransport := communication.NewMockTransport()
+	client := NewMCPClient(ClientOptions{Transport: mockTransport})
+	client.initialized = true // Manually set for testing
+
+	// Pre-queue the response
+	toolResponse := &protocol.JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      int64(1),
+		Params: json.RawMessage(`{
+			"content": [{"type": "text", "text": "Tool result"}]
+		}`),
+	}
+	mockTransport.SendRequest(toolResponse)
+
+	result, err := client.CallTool("test-tool", map[string]interface{}{"arg": "value"})
+	if err != nil {
+		t.Fatalf("CallTool() error = %v", err)
+	}
+
+	if result == nil {
+		t.Error("CallTool() should return result")
+	}
+}
+
+func TestMCPClient_CallTool_ErrorResponse(t *testing.T) {
+	mockTransport := communication.NewMockTransport()
+	client := NewMCPClient(ClientOptions{Transport: mockTransport})
+	client.initialized = true
+
+	// Set up mock error response
+	go func() {
+		resp, err := mockTransport.GetResponse()
+		if err != nil {
+			return
+		}
+
+		errorResponse := &protocol.JSONRPCRequest{
+			JSONRPC: "2.0",
+			ID:      resp.ID,
+			Params: json.RawMessage(`{
+				"error": {"code": -32000, "message": "Tool not found"}
+			}`),
+		}
+		mockTransport.SendRequest(errorResponse)
+	}()
+
+	_, err := client.CallTool("nonexistent-tool", nil)
+	if err == nil {
+		t.Error("CallTool() should return error when server returns error")
+	}
+}
+
+func TestMCPClient_ListTools_Success(t *testing.T) {
+	mockTransport := communication.NewMockTransport()
+	client := NewMCPClient(ClientOptions{Transport: mockTransport})
+	client.initialized = true
+
+	// Pre-queue the response
+	listResponse := &protocol.JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      int64(1),
+		Params: json.RawMessage(`{
+			"tools": [
+				{"name": "tool1", "description": "First tool"},
+				{"name": "tool2", "description": "Second tool"}
+			]
+		}`),
+	}
+	mockTransport.SendRequest(listResponse)
+
+	result, err := client.ListTools()
+	if err != nil {
+		t.Fatalf("ListTools() error = %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("ListTools() should return result")
+	}
+
+	if len(result.Tools) != 2 {
+		t.Errorf("ListTools() returned %d tools, want 2", len(result.Tools))
+	}
+}
+
+func TestMCPClient_ListTools_ErrorResponse(t *testing.T) {
+	mockTransport := communication.NewMockTransport()
+	client := NewMCPClient(ClientOptions{Transport: mockTransport})
+	client.initialized = true
+
+	// Set up mock error response
+	go func() {
+		resp, err := mockTransport.GetResponse()
+		if err != nil {
+			return
+		}
+
+		errorResponse := &protocol.JSONRPCRequest{
+			JSONRPC: "2.0",
+			ID:      resp.ID,
+			Params: json.RawMessage(`{
+				"error": {"code": -32603, "message": "Internal error"}
+			}`),
+		}
+		mockTransport.SendRequest(errorResponse)
+	}()
+
+	_, err := client.ListTools()
+	if err == nil {
+		t.Error("ListTools() should return error when server returns error")
+	}
+}
+
+func TestMCPClient_ListResources_Success(t *testing.T) {
+	mockTransport := communication.NewMockTransport()
+	client := NewMCPClient(ClientOptions{Transport: mockTransport})
+	client.initialized = true
+
+	// Pre-queue the response
+	listResponse := &protocol.JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      int64(1),
+		Params: json.RawMessage(`{
+			"resources": [
+				{"uri": "resource://1", "name": "Resource 1"},
+				{"uri": "resource://2", "name": "Resource 2"}
+			]
+		}`),
+	}
+	mockTransport.SendRequest(listResponse)
+
+	result, err := client.ListResources()
+	if err != nil {
+		t.Fatalf("ListResources() error = %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("ListResources() should return result")
+	}
+
+	if len(result.Resources) != 2 {
+		t.Errorf("ListResources() returned %d resources, want 2", len(result.Resources))
+	}
+}
+
+func TestMCPClient_ListResources_ErrorResponse(t *testing.T) {
+	mockTransport := communication.NewMockTransport()
+	client := NewMCPClient(ClientOptions{Transport: mockTransport})
+	client.initialized = true
+
+	// Set up mock error response
+	go func() {
+		resp, err := mockTransport.GetResponse()
+		if err != nil {
+			return
+		}
+
+		errorResponse := &protocol.JSONRPCRequest{
+			JSONRPC: "2.0",
+			ID:      resp.ID,
+			Params: json.RawMessage(`{
+				"error": {"code": -32603, "message": "Internal error"}
+			}`),
+		}
+		mockTransport.SendRequest(errorResponse)
+	}()
+
+	_, err := client.ListResources()
+	if err == nil {
+		t.Error("ListResources() should return error when server returns error")
+	}
+}
+
+func TestMCPClient_ReadResource_Success(t *testing.T) {
+	mockTransport := communication.NewMockTransport()
+	client := NewMCPClient(ClientOptions{Transport: mockTransport})
+	client.initialized = true
+
+	// Pre-queue the response
+	readResponse := &protocol.JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      int64(1),
+		Params: json.RawMessage(`{
+			"contents": [
+				{"uri": "resource://test", "mimeType": "text/plain", "text": "Resource content"}
+			]
+		}`),
+	}
+	mockTransport.SendRequest(readResponse)
+
+	result, err := client.ReadResource("resource://test")
+	if err != nil {
+		t.Fatalf("ReadResource() error = %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("ReadResource() should return result")
+	}
+
+	if len(result.Contents) != 1 {
+		t.Errorf("ReadResource() returned %d contents, want 1", len(result.Contents))
+	}
+}
+
+func TestMCPClient_ReadResource_ErrorResponse(t *testing.T) {
+	mockTransport := communication.NewMockTransport()
+	client := NewMCPClient(ClientOptions{Transport: mockTransport})
+	client.initialized = true
+
+	// Set up mock error response
+	go func() {
+		resp, err := mockTransport.GetResponse()
+		if err != nil {
+			return
+		}
+
+		errorResponse := &protocol.JSONRPCRequest{
+			JSONRPC: "2.0",
+			ID:      resp.ID,
+			Params: json.RawMessage(`{
+				"error": {"code": -32010, "message": "Resource not found"}
+			}`),
+		}
+		mockTransport.SendRequest(errorResponse)
+	}()
+
+	_, err := client.ReadResource("resource://nonexistent")
+	if err == nil {
+		t.Error("ReadResource() should return error when server returns error")
+	}
+}
+
+func TestMCPClient_ReadResource_TransportError(t *testing.T) {
+	mockTransport := communication.NewMockTransport()
+	client := NewMCPClient(ClientOptions{Transport: mockTransport})
+	client.initialized = true
+
+	// Close transport to cause error
+	mockTransport.Close()
+
+	_, err := client.ReadResource("resource://test")
+	if err == nil {
+		t.Error("ReadResource() should return error when transport fails")
+	}
+}
