@@ -565,3 +565,63 @@ func TestTransactionHelper_Delete(t *testing.T) {
 		})
 	}
 }
+
+func TestTransactionHelper_InsertWithID_InvalidQuery(t *testing.T) {
+	db := setupTransactionTestDB(t)
+	defer db.Close()
+
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatalf("failed to begin transaction: %v", err)
+	}
+	defer tx.Rollback()
+
+	helper := NewTransactionHelper(tx)
+	ctx := context.Background()
+
+	// Invalid query should return error
+	_, err = helper.InsertWithID(ctx, "INSERT INTO non_existent_table (name) VALUES (?) RETURNING id", "test")
+	if err == nil {
+		t.Error("InsertWithID() should return error for invalid table")
+	}
+}
+
+func TestTransactionHelper_Update_DatabaseError(t *testing.T) {
+	db := setupTransactionTestDB(t)
+	defer db.Close()
+
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatalf("failed to begin transaction: %v", err)
+	}
+	defer tx.Rollback()
+
+	helper := NewTransactionHelper(tx)
+	ctx := context.Background()
+
+	// Invalid query should return error
+	err = helper.Update(ctx, "UPDATE non_existent_table SET name = ? WHERE id = ?", "test_entity", "test", 1)
+	if err == nil {
+		t.Error("Update() should return error for invalid table")
+	}
+}
+
+func TestTransactionHelper_Delete_DatabaseError(t *testing.T) {
+	db := setupTransactionTestDB(t)
+	defer db.Close()
+
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatalf("failed to begin transaction: %v", err)
+	}
+	defer tx.Rollback()
+
+	helper := NewTransactionHelper(tx)
+	ctx := context.Background()
+
+	// Invalid query should return error
+	err = helper.Delete(ctx, "DELETE FROM non_existent_table WHERE id = ?", "test_entity", 1)
+	if err == nil {
+		t.Error("Delete() should return error for invalid table")
+	}
+}

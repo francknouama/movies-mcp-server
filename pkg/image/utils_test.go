@@ -5,6 +5,8 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -586,6 +588,140 @@ func createTestWebPData() []byte {
 		0x30, 0x01, 0x00, 0x9D, // Frame tag
 		0x01, 0x2A, 0x01, 0x00, 0x01, 0x00, // Image dimensions
 	}
+}
+
+func TestImageProcessor_DownloadImageFromURL_WithMockServer(t *testing.T) {
+	// Test successful download
+	t.Run("Successful download", func(t *testing.T) {
+		// Create a test HTTP server
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "image/jpeg")
+			w.WriteHeader(http.StatusOK)
+			w.Write(createValidJPEGImage())
+		}))
+		defer server.Close()
+
+		cfg := &ImageConfig{
+			MaxSize:      1024 * 1024,
+			AllowedTypes: []string{"image/jpeg", "image/png"},
+		}
+		processor := NewImageProcessor(cfg)
+
+		data, mimeType, err := processor.DownloadImageFromURL(server.URL)
+		if err != nil {
+			t.Fatalf("DownloadImageFromURL() error = %v", err)
+		}
+
+		if len(data) == 0 {
+			t.Error("Downloaded data is empty")
+		}
+
+		if mimeType != "image/jpeg" {
+			t.Errorf("MimeType = %s, want image/jpeg", mimeType)
+		}
+	})
+
+	// Test HTTP error response
+	t.Run("HTTP error response", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		cfg := &ImageConfig{
+			MaxSize:      1024 * 1024,
+			AllowedTypes: []string{"image/jpeg"},
+		}
+		processor := NewImageProcessor(cfg)
+
+		_, _, err := processor.DownloadImageFromURL(server.URL)
+		if err == nil {
+			t.Error("DownloadImageFromURL() should return error for HTTP 404")
+		}
+	})
+
+	// Test image too large
+	t.Run("Image size exceeds limit", func(t *testing.T) {
+		largeData := make([]byte, 2*1024*1024) // 2MB
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "image/jpeg")
+			w.WriteHeader(http.StatusOK)
+			w.Write(largeData)
+		}))
+		defer server.Close()
+
+		cfg := &ImageConfig{
+			MaxSize:      1024 * 1024, // 1MB limit
+			AllowedTypes: []string{"image/jpeg"},
+		}
+		processor := NewImageProcessor(cfg)
+
+		_, _, err := processor.DownloadImageFromURL(server.URL)
+		if err == nil {
+			t.Error("DownloadImageFromURL() should return error for oversized image")
+		}
+	})
+
+	// Test invalid image data
+	t.Run("Invalid image data", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "image/jpeg")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("not an image"))
+		}))
+		defer server.Close()
+
+		cfg := &ImageConfig{
+			MaxSize:      1024 * 1024,
+			AllowedTypes: []string{"image/jpeg"},
+		}
+		processor := NewImageProcessor(cfg)
+
+		_, _, err := processor.DownloadImageFromURL(server.URL)
+		if err == nil {
+			t.Error("DownloadImageFromURL() should return error for invalid image data")
+		}
+	})
+
+	// Test MIME type detection when header is missing
+	t.Run("MIME type detection from data", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Don't set Content-Type header
+			w.WriteHeader(http.StatusOK)
+			w.Write(createValidJPEGImage())
+		}))
+		defer server.Close()
+
+		cfg := &ImageConfig{
+			MaxSize:      1024 * 1024,
+			AllowedTypes: []string{"image/jpeg"},
+		}
+		processor := NewImageProcessor(cfg)
+
+		_, mimeType, err := processor.DownloadImageFromURL(server.URL)
+		if err != nil {
+			t.Fatalf("DownloadImageFromURL() error = %v", err)
+		}
+
+		if mimeType != "image/jpeg" {
+			t.Errorf("Detected MimeType = %s, want image/jpeg", mimeType)
+		}
+	})
+
+	// Test network error
+	t.Run("Network error", func(t *testing.T) {
+		cfg := &ImageConfig{
+			MaxSize:      1024 * 1024,
+			AllowedTypes: []string{"image/jpeg"},
+		}
+		processor := NewImageProcessor(cfg)
+
+		// Use an invalid URL
+		_, _, err := processor.DownloadImageFromURL("http://invalid-url-that-does-not-exist-12345.com")
+		if err == nil {
+			t.Error("DownloadImageFromURL() should return error for network failure")
+		}
+	})
 }
 
 func BenchmarkImageProcessor_Base64Encoding(b *testing.B) {
