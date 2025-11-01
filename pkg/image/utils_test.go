@@ -1,6 +1,10 @@
 package image
 
 import (
+	"bytes"
+	"image"
+	"image/jpeg"
+	"image/png"
 	"testing"
 )
 
@@ -219,6 +223,368 @@ func createTestPNGData() []byte {
 		0x00, 0x00, 0x00, 0x00, // IEND chunk length
 		0x49, 0x45, 0x4E, 0x44, // "IEND"
 		0xAE, 0x42, 0x60, 0x82, // CRC
+	}
+}
+
+func TestNewImageProcessor(t *testing.T) {
+	cfg := &ImageConfig{
+		MaxSize:      1024 * 1024,
+		AllowedTypes: []string{"image/jpeg"},
+	}
+
+	processor := NewImageProcessor(cfg)
+	if processor == nil {
+		t.Fatal("NewImageProcessor() returned nil")
+	}
+
+	if processor.config != cfg {
+		t.Error("ImageProcessor.config is not set correctly")
+	}
+}
+
+func TestDefaultImageConfig(t *testing.T) {
+	cfg := DefaultImageConfig()
+
+	if cfg == nil {
+		t.Fatal("DefaultImageConfig() returned nil")
+	}
+
+	if cfg.MaxSize != 10*1024*1024 {
+		t.Errorf("DefaultImageConfig() MaxSize = %d, want %d", cfg.MaxSize, 10*1024*1024)
+	}
+
+	if len(cfg.AllowedTypes) != 3 {
+		t.Errorf("DefaultImageConfig() AllowedTypes length = %d, want 3", len(cfg.AllowedTypes))
+	}
+
+	if !cfg.EnableThumbnails {
+		t.Error("DefaultImageConfig() EnableThumbnails should be true")
+	}
+
+	if cfg.ThumbnailSize != "200x200" {
+		t.Errorf("DefaultImageConfig() ThumbnailSize = %s, want 200x200", cfg.ThumbnailSize)
+	}
+}
+
+func TestImageProcessor_ValidateImageFormat_WebP(t *testing.T) {
+	cfg := &ImageConfig{
+		MaxSize:      1024 * 1024,
+		AllowedTypes: []string{"image/webp"},
+	}
+	processor := NewImageProcessor(cfg)
+
+	webpData := createTestWebPData()
+	err := processor.ValidateImage(webpData, "image/webp")
+	if err != nil {
+		t.Errorf("ValidateImage() error = %v for valid WebP", err)
+	}
+}
+
+func TestImageProcessor_DecodeFromBase64_InvalidData(t *testing.T) {
+	cfg := &ImageConfig{}
+	processor := NewImageProcessor(cfg)
+
+	// Test with invalid base64
+	_, err := processor.DecodeFromBase64("!!!invalid base64!!!")
+	if err == nil {
+		t.Error("DecodeFromBase64() should return error for invalid base64")
+	}
+}
+
+func TestImageProcessor_DetectMimeType_WebP(t *testing.T) {
+	cfg := &ImageConfig{}
+	processor := NewImageProcessor(cfg)
+
+	webpData := createTestWebPData()
+	mimeType := processor.detectMimeType(webpData)
+	if mimeType != "image/webp" {
+		t.Errorf("detectMimeType() = %s, want image/webp", mimeType)
+	}
+}
+
+func TestImageProcessor_GetImageInfo(t *testing.T) {
+	cfg := &ImageConfig{}
+	processor := NewImageProcessor(cfg)
+
+	tests := []struct {
+		name        string
+		data        []byte
+		mimeType    string
+		expectError bool
+	}{
+		{
+			name:        "Valid JPEG",
+			data:        createValidJPEGImage(),
+			mimeType:    "image/jpeg",
+			expectError: false,
+		},
+		{
+			name:        "Valid PNG",
+			data:        createValidPNGImage(),
+			mimeType:    "image/png",
+			expectError: false,
+		},
+		{
+			name:        "Invalid image data",
+			data:        []byte("not an image"),
+			mimeType:    "image/jpeg",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info, err := processor.GetImageInfo(tt.data, tt.mimeType)
+			if (err != nil) != tt.expectError {
+				t.Errorf("GetImageInfo() error = %v, expectError %v", err, tt.expectError)
+				return
+			}
+
+			if !tt.expectError {
+				if info == nil {
+					t.Fatal("GetImageInfo() returned nil info")
+				}
+				if info.Width <= 0 || info.Height <= 0 {
+					t.Errorf("GetImageInfo() invalid dimensions: %dx%d", info.Width, info.Height)
+				}
+				if info.Size <= 0 {
+					t.Errorf("GetImageInfo() invalid size: %d", info.Size)
+				}
+				if info.MimeType != tt.mimeType {
+					t.Errorf("GetImageInfo() MimeType = %s, want %s", info.MimeType, tt.mimeType)
+				}
+			}
+		})
+	}
+}
+
+func TestImageProcessor_GetFormatFromMimeType(t *testing.T) {
+	cfg := &ImageConfig{}
+	processor := NewImageProcessor(cfg)
+
+	tests := []struct {
+		mimeType       string
+		expectedFormat string
+	}{
+		{"image/jpeg", "JPEG"},
+		{"image/png", "PNG"},
+		{"image/webp", "WebP"},
+		{"image/unknown", "Unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.mimeType, func(t *testing.T) {
+			format := processor.getFormatFromMimeType(tt.mimeType)
+			if format != tt.expectedFormat {
+				t.Errorf("getFormatFromMimeType(%s) = %s, want %s", tt.mimeType, format, tt.expectedFormat)
+			}
+		})
+	}
+}
+
+func TestImageProcessor_GenerateThumbnail(t *testing.T) {
+	tests := []struct {
+		name        string
+		cfg         *ImageConfig
+		data        []byte
+		mimeType    string
+		expectError bool
+	}{
+		{
+			name: "Thumbnails disabled",
+			cfg: &ImageConfig{
+				EnableThumbnails: false,
+			},
+			data:        createValidJPEGImage(),
+			mimeType:    "image/jpeg",
+			expectError: true,
+		},
+		{
+			name: "Invalid thumbnail size",
+			cfg: &ImageConfig{
+				EnableThumbnails: true,
+				ThumbnailSize:    "invalid",
+			},
+			data:        createValidJPEGImage(),
+			mimeType:    "image/jpeg",
+			expectError: true,
+		},
+		{
+			name: "Valid JPEG thumbnail",
+			cfg: &ImageConfig{
+				EnableThumbnails: true,
+				ThumbnailSize:    "50x50",
+			},
+			data:        createValidJPEGImage(),
+			mimeType:    "image/jpeg",
+			expectError: false,
+		},
+		{
+			name: "Valid PNG thumbnail",
+			cfg: &ImageConfig{
+				EnableThumbnails: true,
+				ThumbnailSize:    "50x50",
+			},
+			data:        createValidPNGImage(),
+			mimeType:    "image/png",
+			expectError: false,
+		},
+		{
+			name: "Invalid image data",
+			cfg: &ImageConfig{
+				EnableThumbnails: true,
+				ThumbnailSize:    "50x50",
+			},
+			data:        []byte("not an image"),
+			mimeType:    "image/jpeg",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			processor := NewImageProcessor(tt.cfg)
+			thumbnail, err := processor.GenerateThumbnail(tt.data, tt.mimeType)
+
+			if (err != nil) != tt.expectError {
+				t.Errorf("GenerateThumbnail() error = %v, expectError %v", err, tt.expectError)
+				return
+			}
+
+			if !tt.expectError {
+				if thumbnail == nil || len(thumbnail) == 0 {
+					t.Error("GenerateThumbnail() returned empty thumbnail")
+				}
+			}
+		})
+	}
+}
+
+func TestImageProcessor_DecodeImage(t *testing.T) {
+	cfg := &ImageConfig{}
+	processor := NewImageProcessor(cfg)
+
+	tests := []struct {
+		name        string
+		data        []byte
+		mimeType    string
+		expectError bool
+	}{
+		{
+			name:        "Valid JPEG",
+			data:        createValidJPEGImage(),
+			mimeType:    "image/jpeg",
+			expectError: false,
+		},
+		{
+			name:        "Valid PNG",
+			data:        createValidPNGImage(),
+			mimeType:    "image/png",
+			expectError: false,
+		},
+		{
+			name:        "Unknown MIME type but valid PNG",
+			data:        createValidPNGImage(),
+			mimeType:    "image/unknown",
+			expectError: false,
+		},
+		{
+			name:        "Invalid image data",
+			data:        []byte("not an image"),
+			mimeType:    "image/jpeg",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img, err := processor.decodeImage(tt.data, tt.mimeType)
+			if (err != nil) != tt.expectError {
+				t.Errorf("decodeImage() error = %v, expectError %v", err, tt.expectError)
+				return
+			}
+
+			if !tt.expectError && img == nil {
+				t.Error("decodeImage() returned nil image")
+			}
+		})
+	}
+}
+
+func TestImageProcessor_ResizeImage(t *testing.T) {
+	cfg := &ImageConfig{}
+	processor := NewImageProcessor(cfg)
+
+	// Decode a valid image first
+	img, err := processor.decodeImage(createValidPNGImage(), "image/png")
+	if err != nil {
+		t.Fatalf("Failed to decode test image: %v", err)
+	}
+
+	// Test resizing
+	resized := processor.resizeImage(img, 10, 10)
+	if resized == nil {
+		t.Fatal("resizeImage() returned nil")
+	}
+
+	bounds := resized.Bounds()
+	if bounds.Dx() != 10 || bounds.Dy() != 10 {
+		t.Errorf("resizeImage() dimensions = %dx%d, want 10x10", bounds.Dx(), bounds.Dy())
+	}
+}
+
+func TestImageProcessor_ParseThumbnailSize_NonNumericHeight(t *testing.T) {
+	cfg := &ImageConfig{
+		ThumbnailSize: "200xabc",
+	}
+	processor := NewImageProcessor(cfg)
+
+	_, err := processor.parseThumbnailSize()
+	if err == nil {
+		t.Error("parseThumbnailSize() should return error for non-numeric height")
+	}
+}
+
+func TestImageProcessor_DownloadImageFromURL_EmptyURL(t *testing.T) {
+	cfg := &ImageConfig{
+		MaxSize:      1024 * 1024,
+		AllowedTypes: []string{"image/jpeg", "image/png"},
+	}
+	processor := NewImageProcessor(cfg)
+
+	_, _, err := processor.DownloadImageFromURL("")
+	if err == nil {
+		t.Error("DownloadImageFromURL() should return error for empty URL")
+	}
+}
+
+// Helper functions to create valid image data for actual decoding
+
+func createValidJPEGImage() []byte {
+	// Create a minimal valid 1x1 JPEG image using the jpeg encoder
+	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	var buf bytes.Buffer
+	jpeg.Encode(&buf, img, nil)
+	return buf.Bytes()
+}
+
+func createValidPNGImage() []byte {
+	// Create a minimal valid 1x1 PNG image using the png encoder
+	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	var buf bytes.Buffer
+	png.Encode(&buf, img)
+	return buf.Bytes()
+}
+
+func createTestWebPData() []byte {
+	return []byte{
+		0x52, 0x49, 0x46, 0x46, // "RIFF"
+		0x1A, 0x00, 0x00, 0x00, // File size
+		0x57, 0x45, 0x42, 0x50, // "WEBP"
+		0x56, 0x50, 0x38, 0x20, // "VP8 "
+		0x0E, 0x00, 0x00, 0x00, // Chunk size
+		0x30, 0x01, 0x00, 0x9D, // Frame tag
+		0x01, 0x2A, 0x01, 0x00, 0x01, 0x00, // Image dimensions
 	}
 }
 
