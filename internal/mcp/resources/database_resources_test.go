@@ -10,6 +10,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	movieApp "github.com/francknouama/movies-mcp-server/internal/application/movie"
+	"github.com/francknouama/movies-mcp-server/internal/domain/movie"
+	"github.com/francknouama/movies-mcp-server/internal/domain/shared"
 )
 
 // MockMovieService is a mock implementation for testing resources
@@ -390,5 +392,455 @@ func TestPosterURIGeneration(t *testing.T) {
 			// We're just verifying the logic works for poster collection
 			t.Logf("Testing poster URI for movie ID: %d", tc.movieID)
 		})
+	}
+}
+
+// MockMovieRepository is a mock implementation of the movie repository for testing
+type MockMovieRepository struct {
+	FindByCriteriaFunc func(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error)
+}
+
+func (m *MockMovieRepository) Save(ctx context.Context, mov *movie.Movie) error {
+	return errors.New("not implemented")
+}
+
+func (m *MockMovieRepository) FindByID(ctx context.Context, id shared.MovieID) (*movie.Movie, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockMovieRepository) FindByCriteria(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error) {
+	if m.FindByCriteriaFunc != nil {
+		return m.FindByCriteriaFunc(ctx, criteria)
+	}
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockMovieRepository) FindByTitle(ctx context.Context, title string) ([]*movie.Movie, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockMovieRepository) FindByDirector(ctx context.Context, director string) ([]*movie.Movie, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockMovieRepository) FindByGenre(ctx context.Context, genre string) ([]*movie.Movie, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockMovieRepository) FindTopRated(ctx context.Context, limit int) ([]*movie.Movie, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *MockMovieRepository) Delete(ctx context.Context, id shared.MovieID) error {
+	return errors.New("not implemented")
+}
+
+func (m *MockMovieRepository) DeleteAll(ctx context.Context) error {
+	return errors.New("not implemented")
+}
+
+func (m *MockMovieRepository) CountAll(ctx context.Context) (int, error) {
+	return 0, errors.New("not implemented")
+}
+
+// Handler Tests
+
+func TestHandleAllMovies_Success(t *testing.T) {
+	// Create mock repository
+	mockRepo := &MockMovieRepository{
+		FindByCriteriaFunc: func(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error) {
+			// Create test movies
+			movie1, _ := movie.NewMovie("The Shawshank Redemption", "Frank Darabont", 1994)
+			movie1.SetRating(9.3)
+			movie1.AddGenre("Drama")
+
+			movie2, _ := movie.NewMovie("The Godfather", "Francis Ford Coppola", 1972)
+			movie2.SetRating(9.2)
+			movie2.AddGenre("Crime")
+			movie2.AddGenre("Drama")
+
+			return []*movie.Movie{movie1, movie2}, nil
+		},
+	}
+
+	// Create service with mock repository
+	service := movieApp.NewService(mockRepo)
+	resources := NewDatabaseResources(service)
+
+	// Create request - the request parameter is not used by the handler
+	var req *mcp.ReadResourceRequest
+
+	// Call handler
+	result, err := resources.HandleAllMovies(context.Background(), req)
+
+	// Verify no error
+	if err != nil {
+		t.Fatalf("HandleAllMovies() error = %v", err)
+	}
+
+	// Verify result
+	if result == nil {
+		t.Fatal("Expected non-nil result")
+	}
+
+	if len(result.Contents) != 1 {
+		t.Fatalf("Expected 1 content item, got %d", len(result.Contents))
+	}
+
+	content := result.Contents[0]
+	if content.URI != "movies://database/all" {
+		t.Errorf("Expected URI 'movies://database/all', got '%s'", content.URI)
+	}
+
+	if content.MIMEType != "application/json" {
+		t.Errorf("Expected MIMEType 'application/json', got '%s'", content.MIMEType)
+	}
+
+	// Verify JSON structure
+	var data map[string]interface{}
+	err = json.Unmarshal([]byte(content.Text), &data)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal JSON: %v", err)
+	}
+
+	if data["total_movies"].(float64) != 2 {
+		t.Errorf("Expected total_movies=2, got %v", data["total_movies"])
+	}
+
+	movies := data["movies"].([]interface{})
+	if len(movies) != 2 {
+		t.Errorf("Expected 2 movies, got %d", len(movies))
+	}
+}
+
+func TestHandleAllMovies_EmptyDatabase(t *testing.T) {
+	mockRepo := &MockMovieRepository{
+		FindByCriteriaFunc: func(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error) {
+			return []*movie.Movie{}, nil
+		},
+	}
+
+	service := movieApp.NewService(mockRepo)
+	resources := NewDatabaseResources(service)
+	var req *mcp.ReadResourceRequest
+
+	result, err := resources.HandleAllMovies(context.Background(), req)
+
+	if err != nil {
+		t.Fatalf("HandleAllMovies() error = %v", err)
+	}
+
+	// Verify JSON structure for empty database
+	var data map[string]interface{}
+	err = json.Unmarshal([]byte(result.Contents[0].Text), &data)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal JSON: %v", err)
+	}
+
+	if data["total_movies"].(float64) != 0 {
+		t.Errorf("Expected total_movies=0, got %v", data["total_movies"])
+	}
+}
+
+func TestHandleAllMovies_RepositoryError(t *testing.T) {
+	mockRepo := &MockMovieRepository{
+		FindByCriteriaFunc: func(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error) {
+			return nil, errors.New("database connection failed")
+		},
+	}
+
+	service := movieApp.NewService(mockRepo)
+	resources := NewDatabaseResources(service)
+	var req *mcp.ReadResourceRequest
+
+	result, err := resources.HandleAllMovies(context.Background(), req)
+
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	if result != nil {
+		t.Errorf("Expected nil result on error, got %v", result)
+	}
+
+	if !strings.Contains(err.Error(), "failed to fetch all movies") {
+		t.Errorf("Expected error message to contain 'failed to fetch all movies', got '%s'", err.Error())
+	}
+}
+
+func TestHandleDatabaseStats_Success(t *testing.T) {
+	mockRepo := &MockMovieRepository{
+		FindByCriteriaFunc: func(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error) {
+			movie1, _ := movie.NewMovie("The Shawshank Redemption", "Frank Darabont", 1994)
+			movie1.SetRating(9.3)
+			movie1.AddGenre("Drama")
+
+			movie2, _ := movie.NewMovie("The Godfather", "Francis Ford Coppola", 1972)
+			movie2.SetRating(9.2)
+			movie2.AddGenre("Crime")
+			movie2.AddGenre("Drama")
+
+			movie3, _ := movie.NewMovie("Inception", "Christopher Nolan", 2010)
+			movie3.SetRating(8.8)
+			movie3.AddGenre("Sci-Fi")
+			movie3.AddGenre("Action")
+
+			return []*movie.Movie{movie1, movie2, movie3}, nil
+		},
+	}
+
+	service := movieApp.NewService(mockRepo)
+	resources := NewDatabaseResources(service)
+	var req *mcp.ReadResourceRequest
+
+	result, err := resources.HandleDatabaseStats(context.Background(), req)
+
+	if err != nil {
+		t.Fatalf("HandleDatabaseStats() error = %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("Expected non-nil result")
+	}
+
+	// Verify JSON structure
+	var data map[string]interface{}
+	err = json.Unmarshal([]byte(result.Contents[0].Text), &data)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal JSON: %v", err)
+	}
+
+	if data["total_movies"].(float64) != 3 {
+		t.Errorf("Expected total_movies=3, got %v", data["total_movies"])
+	}
+
+	if data["total_genres"].(float64) != 4 {
+		t.Errorf("Expected total_genres=4 (Drama, Crime, Sci-Fi, Action), got %v", data["total_genres"])
+	}
+
+	yearRange := data["year_range"].(map[string]interface{})
+	if yearRange["earliest"].(float64) != 1972 {
+		t.Errorf("Expected earliest year=1972, got %v", yearRange["earliest"])
+	}
+	if yearRange["latest"].(float64) != 2010 {
+		t.Errorf("Expected latest year=2010, got %v", yearRange["latest"])
+	}
+
+	// Average rating should be (9.3 + 9.2 + 8.8) / 3 = 9.1
+	avgRating := data["average_rating"].(string)
+	if avgRating != "9.1" {
+		t.Errorf("Expected average_rating='9.1', got '%s'", avgRating)
+	}
+}
+
+func TestHandleDatabaseStats_EmptyDatabase(t *testing.T) {
+	mockRepo := &MockMovieRepository{
+		FindByCriteriaFunc: func(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error) {
+			return []*movie.Movie{}, nil
+		},
+	}
+
+	service := movieApp.NewService(mockRepo)
+	resources := NewDatabaseResources(service)
+	var req *mcp.ReadResourceRequest
+
+	result, err := resources.HandleDatabaseStats(context.Background(), req)
+
+	if err != nil {
+		t.Fatalf("HandleDatabaseStats() error = %v", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal([]byte(result.Contents[0].Text), &data)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal JSON: %v", err)
+	}
+
+	if data["total_movies"].(float64) != 0 {
+		t.Errorf("Expected total_movies=0, got %v", data["total_movies"])
+	}
+
+	if data["total_genres"].(float64) != 0 {
+		t.Errorf("Expected total_genres=0, got %v", data["total_genres"])
+	}
+
+	// Average rating should be "0.0" for empty database
+	avgRating := data["average_rating"].(string)
+	if avgRating != "0.0" {
+		t.Errorf("Expected average_rating='0.0', got '%s'", avgRating)
+	}
+}
+
+func TestHandleDatabaseStats_NoRatings(t *testing.T) {
+	mockRepo := &MockMovieRepository{
+		FindByCriteriaFunc: func(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error) {
+			unratedMovie, _ := movie.NewMovie("Unrated Movie", "Director", 2020)
+			// Don't set rating - it will be 0
+			unratedMovie.AddGenre("Drama")
+
+			return []*movie.Movie{unratedMovie}, nil
+		},
+	}
+
+	service := movieApp.NewService(mockRepo)
+	resources := NewDatabaseResources(service)
+	var req *mcp.ReadResourceRequest
+
+	result, err := resources.HandleDatabaseStats(context.Background(), req)
+
+	if err != nil {
+		t.Fatalf("HandleDatabaseStats() error = %v", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal([]byte(result.Contents[0].Text), &data)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal JSON: %v", err)
+	}
+
+	// Average rating should be "0.0" when no movies have ratings
+	avgRating := data["average_rating"].(string)
+	if avgRating != "0.0" {
+		t.Errorf("Expected average_rating='0.0' for movies without ratings, got '%s'", avgRating)
+	}
+}
+
+func TestHandleDatabaseStats_RepositoryError(t *testing.T) {
+	mockRepo := &MockMovieRepository{
+		FindByCriteriaFunc: func(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error) {
+			return nil, errors.New("database error")
+		},
+	}
+
+	service := movieApp.NewService(mockRepo)
+	resources := NewDatabaseResources(service)
+	var req *mcp.ReadResourceRequest
+
+	_, err := resources.HandleDatabaseStats(context.Background(), req)
+
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "failed to fetch movies for stats") {
+		t.Errorf("Expected error message to contain 'failed to fetch movies for stats', got '%s'", err.Error())
+	}
+}
+
+func TestHandlePosterCollection_Success(t *testing.T) {
+	mockRepo := &MockMovieRepository{
+		FindByCriteriaFunc: func(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error) {
+			id1, _ := shared.NewMovieID(1)
+			movie1, _ := movie.NewMovieWithID(id1, "Movie 1", "Director 1", 2020)
+			movie1.SetRating(8.5)
+			movie1.AddGenre("Action")
+
+			id2, _ := shared.NewMovieID(2)
+			movie2, _ := movie.NewMovieWithID(id2, "Movie 2", "Director 2", 2021)
+			movie2.SetRating(7.5)
+			movie2.AddGenre("Drama")
+
+			return []*movie.Movie{movie1, movie2}, nil
+		},
+	}
+
+	service := movieApp.NewService(mockRepo)
+	resources := NewDatabaseResources(service)
+	var req *mcp.ReadResourceRequest
+
+	result, err := resources.HandlePosterCollection(context.Background(), req)
+
+	if err != nil {
+		t.Fatalf("HandlePosterCollection() error = %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("Expected non-nil result")
+	}
+
+	// Verify JSON structure
+	var data map[string]interface{}
+	err = json.Unmarshal([]byte(result.Contents[0].Text), &data)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal JSON: %v", err)
+	}
+
+	if data["total"].(float64) != 2 {
+		t.Errorf("Expected total=2, got %v", data["total"])
+	}
+
+	posters := data["posters"].([]interface{})
+	if len(posters) != 2 {
+		t.Fatalf("Expected 2 posters, got %d", len(posters))
+	}
+
+	// Verify poster structure
+	poster1 := posters[0].(map[string]interface{})
+	if poster1["movie_id"].(float64) != 1 {
+		t.Errorf("Expected movie_id=1, got %v", poster1["movie_id"])
+	}
+	if poster1["title"].(string) != "Movie 1" {
+		t.Errorf("Expected title='Movie 1', got '%s'", poster1["title"])
+	}
+	if poster1["year"].(float64) != 2020 {
+		t.Errorf("Expected year=2020, got %v", poster1["year"])
+	}
+	if poster1["uri"].(string) != "movies://posters/1" {
+		t.Errorf("Expected uri='movies://posters/1', got '%s'", poster1["uri"])
+	}
+}
+
+func TestHandlePosterCollection_EmptyDatabase(t *testing.T) {
+	mockRepo := &MockMovieRepository{
+		FindByCriteriaFunc: func(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error) {
+			return []*movie.Movie{}, nil
+		},
+	}
+
+	service := movieApp.NewService(mockRepo)
+	resources := NewDatabaseResources(service)
+	var req *mcp.ReadResourceRequest
+
+	result, err := resources.HandlePosterCollection(context.Background(), req)
+
+	if err != nil {
+		t.Fatalf("HandlePosterCollection() error = %v", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal([]byte(result.Contents[0].Text), &data)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal JSON: %v", err)
+	}
+
+	if data["total"].(float64) != 0 {
+		t.Errorf("Expected total=0, got %v", data["total"])
+	}
+
+	posters := data["posters"].([]interface{})
+	if len(posters) != 0 {
+		t.Errorf("Expected 0 posters, got %d", len(posters))
+	}
+}
+
+func TestHandlePosterCollection_RepositoryError(t *testing.T) {
+	mockRepo := &MockMovieRepository{
+		FindByCriteriaFunc: func(ctx context.Context, criteria movie.SearchCriteria) ([]*movie.Movie, error) {
+			return nil, errors.New("database error")
+		},
+	}
+
+	service := movieApp.NewService(mockRepo)
+	resources := NewDatabaseResources(service)
+	var req *mcp.ReadResourceRequest
+
+	_, err := resources.HandlePosterCollection(context.Background(), req)
+
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "failed to fetch movies for poster collection") {
+		t.Errorf("Expected error message to contain 'failed to fetch movies for poster collection', got '%s'", err.Error())
 	}
 }
