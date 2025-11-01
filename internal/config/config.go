@@ -18,13 +18,7 @@ type Config struct {
 
 // DatabaseConfig holds database-specific configuration.
 type DatabaseConfig struct {
-	Driver          string        // "sqlite" or "postgres"
-	Host            string        // Used for PostgreSQL
-	Port            int           // Used for PostgreSQL
-	Name            string        // Database name for PostgreSQL, file path for SQLite
-	User            string        // Used for PostgreSQL
-	Password        string        // Used for PostgreSQL
-	SSLMode         string        // Used for PostgreSQL
+	Name            string        // SQLite database file path
 	MaxOpenConns    int
 	MaxIdleConns    int
 	ConnMaxLifetime time.Duration
@@ -47,37 +41,14 @@ type ImageConfig struct {
 
 // Load reads configuration from environment variables
 func Load() (*Config, error) {
-	driver := getEnv("DB_DRIVER", "sqlite")
-
-	// Set defaults based on driver type
-	var dbConfig DatabaseConfig
-	if driver == "sqlite" {
-		dbConfig = DatabaseConfig{
-			Driver:          driver,
+	cfg := &Config{
+		Database: DatabaseConfig{
 			Name:            getEnv("DB_NAME", "movies.db"),
 			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 1),  // SQLite works best with 1
 			MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 1),
 			ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", "0"),
 			MigrationsPath:  getEnv("MIGRATIONS_PATH", "file://migrations"),
-		}
-	} else {
-		dbConfig = DatabaseConfig{
-			Driver:          driver,
-			Host:            getEnv("DB_HOST", "localhost"),
-			Port:            getEnvAsInt("DB_PORT", 5432),
-			Name:            getEnv("DB_NAME", "movies_mcp"),
-			User:            getEnv("DB_USER", "movies_user"),
-			Password:        getEnv("DB_PASSWORD", "movies_password"),
-			SSLMode:         getEnv("DB_SSLMODE", "disable"),
-			MaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 25),
-			MaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 5),
-			ConnMaxLifetime: getEnvAsDuration("DB_CONN_MAX_LIFETIME", "1h"),
-			MigrationsPath:  getEnv("MIGRATIONS_PATH", "file://migrations"),
-		}
-	}
-
-	cfg := &Config{
-		Database: dbConfig,
+		},
 		Server: ServerConfig{
 			LogLevel: getEnv("LOG_LEVEL", "info"),
 			Timeout:  getEnvAsDuration("SERVER_TIMEOUT", "30s"),
@@ -100,25 +71,6 @@ func Load() (*Config, error) {
 
 // Validate checks if all required configuration is present and valid
 func (c *Config) Validate() error {
-	// Validate driver type
-	if c.Database.Driver != "sqlite" && c.Database.Driver != "postgres" {
-		return fmt.Errorf("DB_DRIVER must be 'sqlite' or 'postgres', got: %s", c.Database.Driver)
-	}
-
-	// PostgreSQL-specific validation
-	if c.Database.Driver == "postgres" {
-		if c.Database.Host == "" {
-			return fmt.Errorf("DB_HOST is required for PostgreSQL")
-		}
-		if c.Database.Port <= 0 || c.Database.Port > 65535 {
-			return fmt.Errorf("DB_PORT must be between 1 and 65535")
-		}
-		if c.Database.User == "" {
-			return fmt.Errorf("DB_USER is required for PostgreSQL")
-		}
-	}
-
-	// Common validation
 	if c.Database.Name == "" {
 		return fmt.Errorf("DB_NAME is required")
 	}
@@ -131,17 +83,9 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// ConnectionString returns a database connection string based on driver type
+// ConnectionString returns the SQLite database file path
 func (c *DatabaseConfig) ConnectionString() string {
-	if c.Driver == "sqlite" {
-		// SQLite connection string format
-		return c.Name
-	}
-	// PostgreSQL connection string format
-	return fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		c.Host, c.Port, c.User, c.Password, c.Name, c.SSLMode,
-	)
+	return c.Name
 }
 
 // Helper functions

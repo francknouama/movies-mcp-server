@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	_ "github.com/lib/pq"
 	_ "modernc.org/sqlite"
 )
 
@@ -26,7 +25,6 @@ type Migration struct {
 type MigrationTool struct {
 	db             *sql.DB
 	migrationsPath string
-	driver         string // "postgres" or "sqlite"
 }
 
 func main() {
@@ -42,24 +40,13 @@ func main() {
 		command = os.Args[3]
 	}
 
-	// Detect driver from URL
-	var driver, dsn string
-	if strings.HasPrefix(dbURL, "sqlite://") {
-		driver = "sqlite"
-		dsn = strings.TrimPrefix(dbURL, "sqlite://")
-	} else if strings.HasPrefix(dbURL, "postgres://") {
-		driver = "postgres"
-		dsn = dbURL
-	} else {
-		// Default to postgres for backwards compatibility
-		driver = "postgres"
-		dsn = dbURL
-	}
+	// Parse SQLite URL (format: sqlite://path/to/db.db)
+	dsn := strings.TrimPrefix(dbURL, "sqlite://")
 
-	// Connect to database
-	db, err := sql.Open(driver, dsn)
+	// Connect to SQLite database
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to connect to database: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to connect to SQLite database: %v\n", err)
 		os.Exit(1)
 	}
 	defer func() {
@@ -69,14 +56,13 @@ func main() {
 	}()
 
 	if err := db.Ping(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to ping database: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to ping SQLite database: %v\n", err)
 		os.Exit(1)
 	}
 
 	tool := &MigrationTool{
 		db:             db,
 		migrationsPath: migrationsPath,
-		driver:         driver,
 	}
 
 	// Ensure migrations table exists
@@ -104,22 +90,12 @@ func main() {
 
 // ensureMigrationsTable creates the migrations tracking table if it doesn't exist
 func (m *MigrationTool) ensureMigrationsTable() error {
-	var query string
-	if m.driver == "sqlite" {
-		query = `
-			CREATE TABLE IF NOT EXISTS schema_migrations (
-				version INTEGER PRIMARY KEY,
-				applied_at TEXT DEFAULT CURRENT_TIMESTAMP
-			);
-		`
-	} else {
-		query = `
-			CREATE TABLE IF NOT EXISTS schema_migrations (
-				version INTEGER PRIMARY KEY,
-				applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-			);
-		`
-	}
+	query := `
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			version INTEGER PRIMARY KEY,
+			applied_at TEXT DEFAULT CURRENT_TIMESTAMP
+		);
+	`
 	_, err := m.db.Exec(query)
 	return err
 }
@@ -261,12 +237,8 @@ func (m *MigrationTool) up() error {
 			return fmt.Errorf("failed to execute migration %d: %v", migration.Version, err)
 		}
 
-		// Record the migration (use ? placeholder for SQLite, $1 for PostgreSQL)
-		recordQuery := "INSERT INTO schema_migrations (version) VALUES ($1)"
-		if m.driver == "sqlite" {
-			recordQuery = "INSERT INTO schema_migrations (version) VALUES (?)"
-		}
-		if _, err := tx.Exec(recordQuery, migration.Version); err != nil {
+		// Record the migration
+		if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES (?)", migration.Version); err != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
 				return fmt.Errorf("failed to record migration %d: %v (rollback failed: %v)", migration.Version, err, rollbackErr)
 			}
@@ -339,12 +311,8 @@ func (m *MigrationTool) down() error {
 		return fmt.Errorf("failed to execute rollback %d: %v", targetMigration.Version, err)
 	}
 
-	// Remove the migration record (use ? placeholder for SQLite, $1 for PostgreSQL)
-	deleteQuery := "DELETE FROM schema_migrations WHERE version = $1"
-	if m.driver == "sqlite" {
-		deleteQuery = "DELETE FROM schema_migrations WHERE version = ?"
-	}
-	if _, err := tx.Exec(deleteQuery, targetMigration.Version); err != nil {
+	// Remove the migration record
+	if _, err := tx.Exec("DELETE FROM schema_migrations WHERE version = ?", targetMigration.Version); err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return fmt.Errorf("failed to remove migration record %d: %v (rollback failed: %v)", targetMigration.Version, err, rollbackErr)
 		}
