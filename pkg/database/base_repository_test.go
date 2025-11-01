@@ -458,3 +458,59 @@ func TestBaseRepository_WrapNotFound(t *testing.T) {
 		})
 	}
 }
+
+func TestBaseRepository_Count_InvalidQuery(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewBaseRepository(db)
+	ctx := context.Background()
+
+	// Invalid query should return error
+	_, err := repo.Count(ctx, "SELECT COUNT(*) FROM non_existent_table")
+	if err == nil {
+		t.Error("Count() should return error for invalid table")
+	}
+}
+
+func TestBaseRepository_Delete_DatabaseError(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewBaseRepository(db)
+	ctx := context.Background()
+
+	// Invalid query should return error
+	err := repo.Delete(ctx, "DELETE FROM non_existent_table WHERE id = ?", "test_entity", 1)
+	if err == nil {
+		t.Error("Delete() should return error for invalid table")
+	}
+}
+
+func TestBaseRepository_Update_DatabaseError(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewBaseRepository(db)
+	ctx := context.Background()
+
+	// Invalid query should return error
+	err := repo.Update(ctx, "UPDATE non_existent_table SET name = ? WHERE id = ?", "test_entity", "test", 1)
+	if err == nil {
+		t.Error("Update() should return error for invalid table")
+	}
+}
+
+func TestBaseRepository_InsertWithID_InvalidQuery(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewBaseRepository(db)
+	ctx := context.Background()
+
+	// Invalid query should return error
+	_, err := repo.InsertWithID(ctx, "INSERT INTO non_existent_table (name) VALUES (?) RETURNING id", "test")
+	if err == nil {
+		t.Error("InsertWithID() should return error for invalid table")
+	}
+}
