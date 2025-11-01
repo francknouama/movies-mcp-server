@@ -7,23 +7,14 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
+	"github.com/francknouama/movies-mcp-server/tests/bdd/types"
 )
 
-// MovieResponse represents the structure of a movie response
-type MovieResponse struct {
-	ID       int      `json:"id"`
-	Title    string   `json:"title"`
-	Director string   `json:"director"`
-	Year     int      `json:"year"`
-	Rating   float64  `json:"rating"`
-	Genres   []string `json:"genres"`
-}
+// MovieResponse represents the structure of a movie response (using local type alias)
+type MovieResponse = types.MovieResponse
 
-// MoviesResponse represents a list of movies response
-type MoviesResponse struct {
-	Movies []MovieResponse `json:"movies"`
-	Total  int             `json:"total"`
-}
+// MoviesResponse represents a list of movies response (using local type alias)
+type MoviesResponse = types.MoviesListResponse
 
 // InitializeMovieSteps registers movie-related step definitions
 func InitializeMovieSteps(ctx *godog.ScenarioContext) {
