@@ -3,7 +3,9 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/francknouama/movies-mcp-server/internal/domain/movie"
 	"github.com/francknouama/movies-mcp-server/internal/domain/shared"
@@ -828,5 +830,495 @@ func TestMovieRepository_ComplexSearch(t *testing.T) {
 	// First should be Inception (higher rating)
 	if len(results) > 0 && results[0].Title() != "Inception" {
 		t.Errorf("Expected 'Inception' first (highest rating), got '%s'", results[0].Title())
+	}
+}
+
+// Error scenario tests for better coverage
+
+func TestMovieRepository_Save_Insert_InvalidData(t *testing.T) {
+	// Create movie with invalid year (should fail domain validation)
+	_, err := movie.NewMovie("", "Director", -1)
+	if err == nil {
+		t.Error("Expected error for invalid movie data")
+	}
+}
+
+func TestMovieRepository_toDomainModel_InvalidGenresJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+
+	// Insert a movie with invalid JSON genres directly into DB
+	_, err := db.Exec(`
+		INSERT INTO movies (title, director, year, genre, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, "Test Movie", "Director", 2020, "[invalid json", time.Now(), time.Now())
+	if err != nil {
+		t.Fatalf("Failed to insert test data: %v", err)
+	}
+
+	// Try to retrieve it - should fail when parsing genres
+	ctx := context.Background()
+	_, err = repo.FindByTitle(ctx, "Test Movie")
+	if err == nil {
+		t.Error("Expected error when parsing invalid genres JSON")
+	}
+}
+
+func TestMovieRepository_toDomainModel_LegacyGenres(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Insert a movie with legacy non-JSON genre format
+	_, err := db.Exec(`
+		INSERT INTO movies (title, director, year, genre, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, "Legacy Movie", "Director", 2020, "Action", time.Now(), time.Now())
+	if err != nil {
+		t.Fatalf("Failed to insert test data: %v", err)
+	}
+
+	// Retrieve it - should handle legacy format gracefully
+	result, err := repo.FindByTitle(ctx, "Legacy Movie")
+	if err != nil {
+		t.Fatalf("FindByTitle() error = %v", err)
+	}
+
+	if len(result) == 0 {
+		t.Fatal("Expected to find legacy movie")
+	}
+
+	// Should have one genre
+	genres := result[0].Genres()
+	if len(genres) != 1 || genres[0] != "Action" {
+		t.Errorf("Expected genres [Action], got %v", genres)
+	}
+}
+
+func TestMovieRepository_toDomainModel_InvalidRating(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Insert a movie with invalid rating directly into DB (bypassing domain validation)
+	_, err := db.Exec(`
+		INSERT INTO movies (title, director, year, rating, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, "Bad Rating Movie", "Director", 2020, 15.0, time.Now(), time.Now())
+	if err != nil {
+		t.Fatalf("Failed to insert test data: %v", err)
+	}
+
+	// Try to retrieve it - should fail domain validation for rating
+	_, err = repo.FindByTitle(ctx, "Bad Rating Movie")
+	if err == nil {
+		t.Error("Expected error when domain validation fails for invalid rating")
+	}
+}
+
+func TestMovieRepository_toDomainModel_InvalidPosterURL(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Insert a movie with invalid poster URL format (not a valid URL)
+	_, err := db.Exec(`
+		INSERT INTO movies (title, director, year, poster_url, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, "Invalid Poster Movie", "Director", 2020, "not-a-valid-url", time.Now(), time.Now())
+	if err != nil {
+		t.Fatalf("Failed to insert test data: %v", err)
+	}
+
+	// Try to retrieve it - should fail domain validation for invalid URL format
+	_, err = repo.FindByTitle(ctx, "Invalid Poster Movie")
+	if err == nil {
+		t.Error("Expected error when domain validation fails for invalid poster URL format")
+	}
+}
+
+func TestMovieRepository_FindByCriteria_WithInvalidCriteria(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Insert test movie
+	testMovie, _ := movie.NewMovie("Test Movie", "Director", 2020)
+	testMovie.AddGenre("Action")
+	err := repo.Save(ctx, testMovie)
+	if err != nil {
+		t.Fatalf("Failed to save test movie: %v", err)
+	}
+
+	// Test with genre filter that has no matches
+	criteria := movie.SearchCriteria{
+		Genre: "NonExistent Genre",
+	}
+
+	results, err := repo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	if len(results) != 0 {
+		t.Errorf("Expected 0 movies for non-existent genre, got %d", len(results))
+	}
+}
+
+func TestMovieRepository_DeleteAll_WithData(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Insert multiple test movies
+	for i := 1; i <= 3; i++ {
+		testMovie, _ := movie.NewMovie(fmt.Sprintf("Movie %d", i), "Director", 2020)
+		err := repo.Save(ctx, testMovie)
+		if err != nil {
+			t.Fatalf("Failed to save test movie: %v", err)
+		}
+	}
+
+	// Verify movies exist
+	count, err := repo.CountAll(ctx)
+	if err != nil {
+		t.Fatalf("CountAll() error = %v", err)
+	}
+	if count != 3 {
+		t.Fatalf("Expected 3 movies before DeleteAll, got %d", count)
+	}
+
+	// Delete all
+	err = repo.DeleteAll(ctx)
+	if err != nil {
+		t.Fatalf("DeleteAll() error = %v", err)
+	}
+
+	// Verify all deleted
+	count, err = repo.CountAll(ctx)
+	if err != nil {
+		t.Fatalf("CountAll() error = %v", err)
+	}
+	if count != 0 {
+		t.Errorf("Expected 0 movies after DeleteAll, got %d", count)
+	}
+}
+
+func TestMovieRepository_DeleteAll_EmptyTable(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Delete from empty table (should succeed)
+	err := repo.DeleteAll(ctx)
+	if err != nil {
+		t.Errorf("DeleteAll() on empty table error = %v", err)
+	}
+
+	// Verify count is 0
+	count, err := repo.CountAll(ctx)
+	if err != nil {
+		t.Fatalf("CountAll() error = %v", err)
+	}
+
+	if count != 0 {
+		t.Errorf("Expected count 0 after DeleteAll on empty table, got %d", count)
+	}
+}
+
+func TestMovieRepository_FindByCriteria_WithRatingRange(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create movies with different ratings
+	movie1, _ := movie.NewMovie("Low Rated", "Director", 2020)
+	movie1.SetRating(5.0)
+	repo.Save(ctx, movie1)
+
+	movie2, _ := movie.NewMovie("High Rated", "Director", 2020)
+	movie2.SetRating(9.0)
+	repo.Save(ctx, movie2)
+
+	// Search for high-rated movies
+	criteria := movie.SearchCriteria{
+		MinRating: 8.0,
+		MaxRating: 10.0,
+	}
+
+	results, err := repo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	// Should only find high-rated movie
+	if len(results) != 1 {
+		t.Errorf("Expected 1 high-rated movie, got %d", len(results))
+	}
+
+	if len(results) > 0 && results[0].Title() != "High Rated" {
+		t.Errorf("Expected 'High Rated', got '%s'", results[0].Title())
+	}
+}
+
+func TestMovieRepository_FindByCriteria_WithYearRange(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create movies from different years
+	movie1, _ := movie.NewMovie("Old Movie", "Director", 1990)
+	repo.Save(ctx, movie1)
+
+	movie2, _ := movie.NewMovie("New Movie", "Director", 2020)
+	repo.Save(ctx, movie2)
+
+	// Search for movies from 2015-2025
+	criteria := movie.SearchCriteria{
+		MinYear: 2015,
+		MaxYear: 2025,
+	}
+
+	results, err := repo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	// Should only find new movie
+	if len(results) != 1 {
+		t.Errorf("Expected 1 movie in year range, got %d", len(results))
+	}
+
+	if len(results) > 0 && results[0].Title() != "New Movie" {
+		t.Errorf("Expected 'New Movie', got '%s'", results[0].Title())
+	}
+}
+
+func TestMovieRepository_FindByCriteria_WithGenre(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create movies with different genres
+	movie1, _ := movie.NewMovie("Action Movie", "Director", 2020)
+	movie1.AddGenre("Action")
+	repo.Save(ctx, movie1)
+
+	movie2, _ := movie.NewMovie("Drama Movie", "Director", 2020)
+	movie2.AddGenre("Drama")
+	repo.Save(ctx, movie2)
+
+	// Search for action movies
+	criteria := movie.SearchCriteria{
+		Genre: "Action",
+	}
+
+	results, err := repo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	// Should only find action movie
+	if len(results) != 1 {
+		t.Errorf("Expected 1 action movie, got %d", len(results))
+	}
+
+	if len(results) > 0 && results[0].Title() != "Action Movie" {
+		t.Errorf("Expected 'Action Movie', got '%s'", results[0].Title())
+	}
+}
+
+func TestMovieRepository_FindByCriteria_OrderByYear(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create movies from different years
+	movie1, _ := movie.NewMovie("Movie 2020", "Director", 2020)
+	movie2, _ := movie.NewMovie("Movie 2015", "Director", 2015)
+	movie3, _ := movie.NewMovie("Movie 2018", "Director", 2018)
+	repo.Save(ctx, movie1)
+	repo.Save(ctx, movie2)
+	repo.Save(ctx, movie3)
+
+	// Search ordered by year ascending
+	criteria := movie.SearchCriteria{
+		OrderBy: movie.OrderByYear,
+	}
+
+	results, err := repo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	if len(results) != 3 {
+		t.Fatalf("Expected 3 movies, got %d", len(results))
+	}
+
+	// Verify ordering
+	if results[0].Year().Value() != 2015 || results[1].Year().Value() != 2018 || results[2].Year().Value() != 2020 {
+		t.Errorf("Movies not ordered by year ascending")
+	}
+}
+
+func TestMovieRepository_FindByCriteria_OrderDescending(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create movies
+	movie1, _ := movie.NewMovie("A Movie", "Director", 2020)
+	movie2, _ := movie.NewMovie("Z Movie", "Director", 2020)
+	repo.Save(ctx, movie1)
+	repo.Save(ctx, movie2)
+
+	// Search ordered by title descending
+	criteria := movie.SearchCriteria{
+		OrderBy:  movie.OrderByTitle,
+		OrderDir: movie.OrderDesc,
+	}
+
+	results, err := repo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	if len(results) != 2 {
+		t.Fatalf("Expected 2 movies, got %d", len(results))
+	}
+
+	// Verify descending order (Z should come before A)
+	if results[0].Title() != "Z Movie" {
+		t.Errorf("Expected 'Z Movie' first in descending order, got '%s'", results[0].Title())
+	}
+}
+
+func TestMovieRepository_FindByCriteria_WithDirector(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create movies with different directors
+	movie1, _ := movie.NewMovie("Movie 1", "Christopher Nolan", 2020)
+	movie2, _ := movie.NewMovie("Movie 2", "Steven Spielberg", 2020)
+	repo.Save(ctx, movie1)
+	repo.Save(ctx, movie2)
+
+	// Search for Nolan's movies
+	criteria := movie.SearchCriteria{
+		Director: "Nolan",
+	}
+
+	results, err := repo.FindByCriteria(ctx, criteria)
+	if err != nil {
+		t.Fatalf("FindByCriteria() error = %v", err)
+	}
+
+	// Should find Nolan's movie
+	if len(results) != 1 {
+		t.Errorf("Expected 1 movie by Nolan, got %d", len(results))
+	}
+
+	if len(results) > 0 && results[0].Director() != "Christopher Nolan" {
+		t.Errorf("Expected Christopher Nolan, got '%s'", results[0].Director())
+	}
+}
+
+func TestMovieRepository_Save_WithMultipleGenres(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create a movie with multiple genres
+	testMovie, _ := movie.NewMovie("Multi-Genre Movie", "Director", 2020)
+	testMovie.AddGenre("Action")
+	testMovie.AddGenre("Sci-Fi")
+	testMovie.AddGenre("Thriller")
+
+	err := repo.Save(ctx, testMovie)
+	if err != nil {
+		t.Fatalf("Save() error = %v", err)
+	}
+
+	// Retrieve and verify
+	results, err := repo.FindByTitle(ctx, "Multi-Genre Movie")
+	if err != nil {
+		t.Fatalf("FindByTitle() error = %v", err)
+	}
+
+	if len(results) == 0 {
+		t.Fatal("Expected to find the movie")
+	}
+
+	genres := results[0].Genres()
+	if len(genres) != 3 {
+		t.Errorf("Expected 3 genres, got %d", len(genres))
+	}
+}
+
+func TestMovieRepository_Update_WithChangedFields(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create and save a movie
+	testMovie, _ := movie.NewMovie("Original Title", "Original Director", 2020)
+	testMovie.SetRating(7.0)
+	err := repo.Save(ctx, testMovie)
+	if err != nil {
+		t.Fatalf("Save() error = %v", err)
+	}
+
+	// Update the movie
+	testMovie.SetRating(9.0)
+	testMovie.AddGenre("Updated Genre")
+	err = repo.Save(ctx, testMovie)
+	if err != nil {
+		t.Fatalf("Update Save() error = %v", err)
+	}
+
+	// Retrieve and verify changes
+	results, err := repo.FindByID(ctx, testMovie.ID())
+	if err != nil {
+		t.Fatalf("FindByID() error = %v", err)
+	}
+
+	if results.Rating().Value() != 9.0 {
+		t.Errorf("Expected rating 9.0, got %v", results.Rating().Value())
+	}
+
+	genres := results.Genres()
+	if len(genres) == 0 {
+		t.Error("Expected genres to be saved")
 	}
 }
