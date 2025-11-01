@@ -142,32 +142,7 @@ Then in Claude Desktop, try:
 - "Search for movies with Sci-Fi genre"
 - "List top rated movies"
 
-## PostgreSQL Compatibility Test
-
-### Test with PostgreSQL (if you have it running)
-
-```bash
-# Set environment variables
-export DB_DRIVER=postgres
-export DB_HOST=localhost
-export DB_PORT=5432
-export DB_NAME=movies_mcp
-export DB_USER=movies_user
-export DB_PASSWORD=movies_password
-
-# Create database first
-psql -U postgres -c "CREATE DATABASE movies_mcp;"
-psql -U postgres -c "CREATE USER movies_user WITH PASSWORD 'movies_password';"
-psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE movies_mcp TO movies_user;"
-
-# Run migrations
-./movies-mcp-server --migrate-only
-
-# Start server
-./movies-mcp-server
-```
-
-## Verify Migration Features
+## Verify SQLite Features
 
 ### Feature 1: JSON Genre Storage
 

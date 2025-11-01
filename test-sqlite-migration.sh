@@ -213,18 +213,6 @@ if [ -f "movies.db" ]; then
 fi
 echo ""
 
-echo "Step 10: Test PostgreSQL Compatibility (Optional)"
-echo "--------------------------------------------------"
-info "To test PostgreSQL compatibility, set these environment variables:"
-echo "  export DB_DRIVER=postgres"
-echo "  export DB_HOST=localhost"
-echo "  export DB_PORT=5432"
-echo "  export DB_NAME=movies_mcp"
-echo "  export DB_USER=movies_user"
-echo "  export DB_PASSWORD=movies_password"
-echo "  ./movies-mcp-server --migrate-only"
-echo ""
-
 echo "=========================================="
 echo "Test Summary"
 echo "=========================================="
