@@ -156,29 +156,13 @@ jobs:
 
   bdd-tests:
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: movies_mcp_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
+    strategy:
+      matrix:
+        server: [sdk, legacy]
+      fail-fast: false
 
     env:
-      DB_HOST: localhost
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: movies_mcp_test
-      DB_SSLMODE: disable
-      TEST_MCP_SERVER: sdk
+      TEST_MCP_SERVER: ${{ matrix.server }}
 
     steps:
       - uses: actions/checkout@v4
@@ -203,21 +187,23 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Run database migrations
+      - name: Build MCP servers
         run: |
-          go build -o migrate-tool ./cmd/server-sdk/main.go
-          ./migrate-tool -migrate-only
+          mkdir -p build
+          go build -o build/movies-mcp-server ./cmd/server/main.go
+          go build -o build/movies-mcp-server-sdk ./cmd/server-sdk/main.go
 
-      - name: Run BDD tests against SDK server
+      - name: Run BDD tests (${{ matrix.server }} server)
         run: |
-          echo "Testing SDK server implementation"
-          go test -v -timeout 5m ./tests/bdd/...
+          echo "Running BDD tests with ${{ matrix.server }} server implementation"
+          echo "Tests use temporary SQLite databases (no external DB required)"
+          timeout 120s go test -v -timeout=2m ./tests/bdd/...
 
       - name: Upload BDD test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bdd-test-results-sdk-${{ github.run_id }}
+          name: bdd-test-results-${{ matrix.server }}-${{ github.run_id }}
           path: |
             tests/bdd/**/*.log
             tests/bdd/**/*.out
